@@ -8,6 +8,7 @@ const SignUpScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phoneNumber, setPhoneNumber] = useState(''); // Optional
+  const [preferredUsername, setPreferredUsername] = useState(''); // Optional
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleSignUp = async () => {
@@ -16,7 +17,7 @@ const SignUpScreen = ({ navigation }) => {
         ? `+${phoneNumber.replace(/\D/g, '')}`
         : null;
 
-      await signUp(email, password, formattedPhoneNumber);
+      await signUp(email, password, formattedPhoneNumber, preferredUsername || null);
       console.log('Sign up successful');
       // Navigate to confirmation screen
       navigation.navigate('ConfirmSignUp', { email });
@@ -46,6 +47,13 @@ const SignUpScreen = ({ navigation }) => {
         value={password}
         secureTextEntry
         onChangeText={setPassword}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Preferred Username (Optional)"
+        value={preferredUsername}
+        autoCapitalize="none"
+        onChangeText={setPreferredUsername}
       />
       <TextInput
         style={styles.input}

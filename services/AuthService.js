@@ -14,11 +14,11 @@ import {
   
   const userPool = new CognitoUserPool(poolData);
   
-  // Sign Up Function
-  export const signUp = async (email, password, phoneNumber = null) => {
+  // Sign Up Function with a non-email username
+export const signUp = async (email, password, phoneNumber = null, preferredUsername = null) => {
     const attributeList = [];
   
-    // Email Attribute
+    // Email Attribute (treated as alias)
     const emailAttribute = new CognitoUserAttribute({
       Name: 'email',
       Value: email,
@@ -34,8 +34,21 @@ import {
       attributeList.push(phoneAttribute);
     }
   
+    // Optional Preferred Username Attribute
+    if (preferredUsername) {
+      const usernameAttribute = new CognitoUserAttribute({
+        Name: 'preferred_username',
+        Value: preferredUsername,
+      });
+      attributeList.push(usernameAttribute);
+    }
+  
+    // Create a username that's not the email
+    // For example, we could use the first part of the email as the username
+    const username = email.split('@')[0]; // or generate another identifier
+  
     return new Promise((resolve, reject) => {
-      userPool.signUp(email, password, attributeList, null, (err, result) => {
+      userPool.signUp(username, password, attributeList, null, (err, result) => {
         if (err) {
           reject(err);
           return;
@@ -129,4 +142,5 @@ import {
       return false;
     }
   };
+  
   
