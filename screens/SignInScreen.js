@@ -1,40 +1,30 @@
 import React, { useState, useCallback } from "react";
 import { View, TextInput, Text, StyleSheet, Alert } from "react-native";
 import { Button } from "react-native-elements";
-import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
-import jwtDecode from "jwt-decode";
-import { signIn } from "../services/AuthService";
+import * as Google from "expo-auth-session/providers/google";
 import { useNavigation } from "@react-navigation/native";
+import { signIn } from "../services/AuthService";
 
 WebBrowser.maybeCompleteAuthSession();
 
-const CLIENT_ID =
+// Replace with your actual Google Client ID
+const GOOGLE_CLIENT_ID =
   "78783695276-rtd863qci0mdjj06kf3c4sp2k12trv7n.apps.googleusercontent.com";
-const REDIRECT_URI = AuthSession.makeRedirectUri({ useProxy: true });
-
-const useGoogleAuth = () => {
-  const [request, response, promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: CLIENT_ID,
-      redirectUri: REDIRECT_URI,
-      scopes: ["openid", "profile", "email"],
-      responseType: AuthSession.ResponseType.Token,
-    },
-    {
-      authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
-      tokenEndpoint: "https://oauth2.googleapis.com/token",
-    }
-  );
-
-  return { request, response, promptAsync };
-};
 
 const SignInScreen = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigation = useNavigation();
-  const { promptAsync } = useGoogleAuth();
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    androidClientId: GOOGLE_CLIENT_ID,
+    iosClientId: GOOGLE_CLIENT_ID,
+    expoClientId: GOOGLE_CLIENT_ID,
+    webClientId: GOOGLE_CLIENT_ID,
+    responseType: "id_token",
+    scopes: ["profile", "email"],
+  });
 
   const handleEmailPasswordSignIn = useCallback(async () => {
     try {
@@ -50,18 +40,18 @@ const SignInScreen = () => {
 
   const handleGoogleSignIn = useCallback(async () => {
     try {
-      const result = await promptAsync();
-      if (result.type === "success") {
-        const { access_token } = result.params;
-        const decodedToken = jwtDecode(access_token);
-        console.log("User Info:", decodedToken);
+      const result = await promptAsync({ useProxy: true, showInRecents: true });
+      if (result?.type === "success") {
+        const { id_token } = result.params;
+        console.log("ID Token:", id_token);
 
+        // Send the ID token to your backend
         const backendResponse = await fetch(
           "http://your-backend-url/google-auth",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ accessToken: access_token }),
+            body: JSON.stringify({ idToken: id_token }),
           }
         );
 
