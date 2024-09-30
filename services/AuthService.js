@@ -1,10 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const serverURL = 'http://localhost:3000'
  
 // Sign Up Function (No preferred_username during sign-up)
 export const signUp = async (email, password, phoneNumber) => {
     try {
-      const response = await fetch('http://localhost:3000/signup', {
+      const response = await fetch(`${serverURL}/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -28,9 +29,9 @@ export const signUp = async (email, password, phoneNumber) => {
   // Confirm Sign Up Function
   export const confirmSignUp = async (email, confirmationCode) => {
     try {
-        console.log("ENAIL: "+ email)
+        console.log("EMAIL: "+ email)
         console.log("Code: " + confirmationCode);
-        const response = await fetch('http://localhost:3000/confirmsignup', {
+        const response = await fetch(`${serverURL}/confirmsignup`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -55,9 +56,9 @@ export const signUp = async (email, password, phoneNumber) => {
   // Sign In Function
   export const signIn = async (email, password) => {
     try {
-        console.log("ENAIL: "+ email)
+        console.log("EMAIL: "+ email)
         console.log("Code: " + password);
-        const response = await fetch('http://localhost:3000/signin', {
+        const response = await fetch(`${serverURL}/signin`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -82,8 +83,8 @@ export const signUp = async (email, password, phoneNumber) => {
   // Forgot Password Function
   export const forgotPassword = async (email) => {
     try {
-        console.log("ENAIL: "+ email)
-        const response = await fetch('http://localhost:3000/forgotpassword', {
+        console.log("EMAIL: "+ email)
+        const response = await fetch(`${serverURL}/forgotpassword`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -108,8 +109,8 @@ export const signUp = async (email, password, phoneNumber) => {
    // Confirm Password Reset Function
    export const confirmForgotPassword = async (email, confirmationCode, newPassword) => {
     try {
-        console.log("ENAIL: "+ email)
-        const response = await fetch('http://localhost:3000/confirmforgotpassword', {
+        console.log("EMAIL: "+ email)
+        const response = await fetch(`${serverURL}/confirmforgotpassword`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -132,12 +133,29 @@ export const signUp = async (email, password, phoneNumber) => {
   };
   
   // Sign Out Function
-  export const signOut = async () => {
-    const cognitoUser = userPool.getCurrentUser();
-    if (cognitoUser) {
-      cognitoUser.signOut();
-    }
-    await AsyncStorage.removeItem('idToken');
+  export const signOut = async (accessToken) => {
+    try {
+        console.log("EMAIL: "+ email)
+        const response = await fetch(`${serverURL}/signout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ accessToken }),
+        });
+
+        const result = await response.json();
+
+        console.log(result)
+    
+        if (response.ok) {
+          console.log('User Signed Out successfully:', result);
+        } else {
+          console.error('Error Signing User Out:', result.error);
+        }
+      } catch (err) {
+        console.error('Error:', err);
+      }
   };
 
 
