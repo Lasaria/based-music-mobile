@@ -1,83 +1,156 @@
-// SignInScreen.js
+import React, { useState, useCallback } from "react";
+import { View, TextInput, Text, StyleSheet, Alert } from "react-native";
+import { Button } from "react-native-elements";
+import * as AuthSession from "expo-auth-session";
+import * as WebBrowser from "expo-web-browser";
+import jwtDecode from "jwt-decode";
+import { signIn } from "../services/AuthService";
+import { useNavigation } from "@react-navigation/native";
 
-import React, { useState } from 'react';
-import { View, TextInput, Button, Text, StyleSheet } from 'react-native';
-import { signIn } from '../services/AuthService';
+WebBrowser.maybeCompleteAuthSession();
 
-const SignInScreen = ({ navigation }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+const CLIENT_ID =
+  "78783695276-rtd863qci0mdjj06kf3c4sp2k12trv7n.apps.googleusercontent.com";
+const REDIRECT_URI = AuthSession.makeRedirectUri({ useProxy: true });
 
-  const handleSignIn = async () => {
+const useGoogleAuth = () => {
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: CLIENT_ID,
+      redirectUri: REDIRECT_URI,
+      scopes: ["openid", "profile", "email"],
+      responseType: AuthSession.ResponseType.Token,
+    },
+    {
+      authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+      tokenEndpoint: "https://oauth2.googleapis.com/token",
+    }
+  );
+
+  return { request, response, promptAsync };
+};
+
+const SignInScreen = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const navigation = useNavigation();
+  const { promptAsync } = useGoogleAuth();
+
+  const handleEmailPasswordSignIn = useCallback(async () => {
     try {
       await signIn(email, password);
-      console.log('Sign in successful');
-      // Navigate to the main app screen
-      navigation.navigate('Home');
+      navigation.navigate("Home");
     } catch (err) {
-      console.error('Sign in error:', err);
-      setErrorMessage(err.message || 'An error occurred during sign-in.');
+      Alert.alert(
+        "Sign In Error",
+        err.message || "An error occurred during sign-in."
+      );
     }
-  };
+  }, [email, password, navigation]);
+
+  const handleGoogleSignIn = useCallback(async () => {
+    try {
+      const result = await promptAsync();
+      if (result.type === "success") {
+        const { access_token } = result.params;
+        const decodedToken = jwtDecode(access_token);
+        console.log("User Info:", decodedToken);
+
+        const backendResponse = await fetch(
+          "http://your-backend-url/google-auth",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ accessToken: access_token }),
+          }
+        );
+
+        const data = await backendResponse.json();
+        if (backendResponse.ok) {
+          console.log("AWS credentials received:", data.credentials);
+          navigation.navigate("Home");
+        } else {
+          throw new Error(data.error || "Failed to exchange token");
+        }
+      }
+    } catch (error) {
+      Alert.alert(
+        "Google Sign In Error",
+        error.message || "An error occurred during Google sign-in."
+      );
+    }
+  }, [promptAsync, navigation]);
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Sign In</Text>
-      {errorMessage !== '' && (
-        <Text style={styles.errorText}>{errorMessage}</Text>
-      )}
       <TextInput
         style={styles.input}
         placeholder="Email"
         value={email}
+        onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
-        onChangeText={setEmail}
       />
       <TextInput
         style={styles.input}
         placeholder="Password"
         value={password}
-        secureTextEntry
         onChangeText={setPassword}
+        secureTextEntry
       />
-      <Button title="Sign In" onPress={handleSignIn} />
+      <Button
+        title="Sign In"
+        onPress={handleEmailPasswordSignIn}
+        containerStyle={styles.buttonContainer}
+        buttonStyle={styles.button}
+      />
+      <Button
+        title="Sign in with Google"
+        onPress={handleGoogleSignIn}
+        containerStyle={styles.buttonContainer}
+        buttonStyle={styles.button}
+      />
       <Button
         title="Don't have an account? Sign Up"
-        onPress={() => navigation.navigate('SignUp')}
+        type="clear"
+        onPress={() => navigation.navigate("SignUp")}
       />
       <Button
-        title="Forgot Password? Click here to reset."
-        onPress={() => navigation.navigate('ForgotPassword')}
+        title="Forgot Password?"
+        type="clear"
+        onPress={() => navigation.navigate("ForgotPassword")}
       />
     </View>
   );
 };
 
-export default SignInScreen;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    marginTop: 50,
+    justifyContent: "center",
   },
   title: {
     fontSize: 24,
     marginBottom: 24,
-    textAlign: 'center',
+    textAlign: "center",
   },
   input: {
     height: 48,
-    borderColor: '#cccccc',
+    borderColor: "#cccccc",
     borderWidth: 1,
     marginBottom: 16,
     paddingHorizontal: 8,
+    borderRadius: 5,
   },
-  errorText: {
-    color: 'red',
-    marginBottom: 16,
-    textAlign: 'center',
+  buttonContainer: {
+    marginBottom: 10,
+  },
+  button: {
+    backgroundColor: "#007AFF",
+    borderRadius: 5,
   },
 });
+
+export default SignInScreen;
