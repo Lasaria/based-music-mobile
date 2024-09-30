@@ -2,7 +2,9 @@
   "expo": {
     "name": "mobile",
     "slug": "mobile",
+    "scheme": "basedmusic",
     "version": "1.0.0",
+    "jsEngine": "jsc",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
