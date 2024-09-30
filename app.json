@@ -27,9 +27,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.basedmusic.mobile",
-      "permissions": [
-        "android.permission.INTERNET"
-      ]
+      "permissions": ["android.permission.INTERNET"]
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -39,6 +37,7 @@
         "projectId": "974ced9c-baf2-4a96-b3cf-ecb8125b30a1"
       }
     },
-    "owner": "lasaria"
+    "owner": "lasaria",
+    "plugins": ["expo-router"]
   }
 }
