@@ -47,6 +47,10 @@ const SignInScreen = ({ navigation }) => {
         title="Don't have an account? Sign Up"
         onPress={() => navigation.navigate('SignUp')}
       />
+      <Button
+        title="Forgot Password? Click here to reset."
+        onPress={() => navigation.navigate('ForgotPassword')}
+      />
     </View>
   );
 };

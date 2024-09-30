@@ -13,7 +13,6 @@ const ConfirmSignUpScreen = ({ route, navigation }) => {
     try {
       await confirmSignUp(email, confirmationCode);
       console.log('Confirmation successful');
-      // Navigate to sign-in screen
       navigation.navigate('SignIn');
     } catch (err) {
       console.error('Confirmation error:', err);
@@ -24,10 +23,7 @@ const ConfirmSignUpScreen = ({ route, navigation }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Confirm Sign Up</Text>
-      {errorMessage !== '' && (
-        <Text style={styles.errorText}>{errorMessage}</Text>
-      )}
-      <Text style={styles.label}>Enter the confirmation code sent to {email}:</Text>
+      {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
       <TextInput
         style={styles.input}
         placeholder="Confirmation Code"
@@ -46,27 +42,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    marginTop: 50,
+    justifyContent: 'center',
   },
   title: {
     fontSize: 24,
     marginBottom: 24,
     textAlign: 'center',
   },
-  label: {
-    fontSize: 16,
-    marginBottom: 8,
-  },
   input: {
     height: 48,
-    borderColor: '#cccccc',
+    borderColor: '#ccc',
     borderWidth: 1,
     marginBottom: 16,
     paddingHorizontal: 8,
   },
   errorText: {
     color: 'red',
-    marginBottom: 16,
     textAlign: 'center',
   },
 });
