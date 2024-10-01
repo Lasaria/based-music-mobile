@@ -6,8 +6,7 @@ import * as BackgroundFetch from 'expo-background-fetch';
 import * as TaskManager from 'expo-task-manager';
 import * as Updates from 'expo-updates';
 
-const serverURL = 'http://localhost:3000'
-const BACKGROUND_FETCH_TASK = 'background-fetch-token-refresh';
+const serverURL = 'http://localhost:3001'
 
 export const AuthService = {
  
@@ -88,7 +87,6 @@ signUp: async (email, password) => {
 
         console.log('User signed in successfully:', response);
         await tokenManager.saveTokens(response.result.AuthenticationResult);
-        await AuthService.registerBackgroundFetch();
 
       } catch (err) {
         console.error('Error:', err.response.data.error);
@@ -153,7 +151,6 @@ signUp: async (email, password) => {
 
         console.log('User Signed Out successfully:', response);
         await tokenManager.deleteTokens();
-        await BackgroundFetch.unregisterTaskAsync(BACKGROUND_FETCH_TASK);
 
 
       } catch (err) {
@@ -181,7 +178,6 @@ signUp: async (email, password) => {
         });
 
         console.log('Tokens refreshed successfully:', response);
-        await tokenManager.saveTokens(response.result.AuthenticationResult);
 
 
       } catch (error) {
@@ -199,18 +195,6 @@ signUp: async (email, password) => {
     return await AuthService.refreshTokens();
   },
 
-  registerBackgroundFetch: async () => {
-    try {
-      await BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
-        minimumInterval: 60 * 60, // 1 hour in seconds
-        stopOnTerminate: false,
-        startOnBoot: true,
-      });
-      console.log('Background fetch registered');
-    } catch (err) {
-      console.error('Background fetch failed to register:', err);
-    }
-  },
 
   refreshTokensOnAppOpen: async () => {
     const isValid = await tokenManager.isTokenValid();
@@ -224,11 +208,6 @@ signUp: async (email, password) => {
 
 };
 
-
-    TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
-        const refreshed = await AuthService.refreshTokens();
-        return refreshed ? BackgroundFetch.Result.NewData : BackgroundFetch.Result.Failed;
-      });
   
   
   // Check Authentication State
