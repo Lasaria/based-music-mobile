@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button, Text, StyleSheet } from 'react-native';
-import { forgotPassword } from '../services/AuthService';
+import { AuthService } from '../services/AuthService';
 
 const ForgotPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -9,7 +9,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
   const handleForgotPassword = async () => {
     try {
-      await forgotPassword(email);
+      await AuthService.forgotPassword(email);
       setSuccessMessage('Password reset code sent. Check your email.');
       // Navigate to the ResetPasswordScreen and pass the email
       navigation.navigate('ResetPassword', { email });

@@ -1,216 +1,260 @@
+
+import { axiosPost } from '../utils/axiosCalls';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { tokenManager } from '../utils/tokenManager';
+import * as BackgroundFetch from 'expo-background-fetch';
+import * as TaskManager from 'expo-task-manager';
+import * as Updates from 'expo-updates';
 
 const serverURL = 'http://localhost:3000'
+const BACKGROUND_FETCH_TASK = 'background-fetch-token-refresh';
+
+export const AuthService = {
  
-// Sign Up Function (No preferred_username during sign-up)
-export const signUp = async (email, password, phoneNumber) => {
+// Sign Up Function
+signUp: async (email, password) => {
     try {
-      const response = await fetch(`${serverURL}/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password, phoneNumber }),
-      });
+      const response = await axiosPost({
+        url: `${serverURL}/signup`,
+        body: JSON.stringify({ email, password }),
+        isAuthenticated : false
+    });
   
-      const result = await response.json();
-  
-      if (response.ok) {
-        console.log('User signed up successfully:', result);
-      } else {
-        console.error('Sign-up error:', result.error);
-      }
+
+      console.log('User signed up successfully:', response);
+
     } catch (err) {
-      console.error('Error:', err);
+        console.error('Error:', err.response.data.error);
+        throw new Error(err.response.data.error);
     }
-  };
+  },
   
   
   // Confirm Sign Up Function
-  export const confirmSignUp = async (email, confirmationCode) => {
+  confirmSignUp: async (email, confirmationCode) => {
     try {
         console.log("EMAIL: "+ email)
         console.log("Code: " + confirmationCode);
-        const response = await fetch(`${serverURL}/confirm-signup`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+
+        const response = await axiosPost({
+          url: `${serverURL}/confirm-signup`,
           body: JSON.stringify({ email, confirmationCode }),
+          isAuthenticated : false
         });
 
-        const result = await response.json();
 
-        console.log(result)
-    
-        if (response.ok) {
-          console.log('User confirmed successfully:', result);
-        } else {
-          console.error('User confirmation error:', result.error);
-        }
+        console.log('User confirmed successfully:', response);
+
       } catch (err) {
-        console.error('Error:', err);
+        console.error('Error:', err.response.data.error);
+        throw new Error(err.response.data.error);
       }
-  };
+  },
+
 
   // Resend Confirmation Code Function
-  export const resendConfirmationCode = async (email) => {
+  resendConfirmationCode: async (email) => {
     try {
         console.log("EMAIL: "+ email)
-        const response = await fetch(`${serverURL}/resend-confirmation-code`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+        
+        const response = await axiosPost({
+          url: `${serverURL}/resend-confirmation-code`,
           body: JSON.stringify({ email }),
+          isAuthenticated : false
         });
 
-        const result = await response.json();
 
-        console.log(result)
-    
-        if (response.ok) {
-          console.log('Confirmation code resent successfully:', result);
-        } else {
-          console.error('Error sending another confirmation code:', result.error);
-        }
+        console.log('Confirmation code resent successfully:', response);
+ 
       } catch (err) {
-        console.error('Error:', err);
+        console.error('Error:', err.response.data.error);
+        throw new Error(err.response.data.error);
       }
-  };
+  },
   
+
   // Sign In Function
-  export const signIn = async (email, password) => {
+  signIn: async (email, password) => {
     try {
         console.log("EMAIL: "+ email)
         console.log("Code: " + password);
-        const response = await fetch(`${serverURL}/signin`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email, password }),
+
+        const response = await axiosPost({
+          url: `${serverURL}/signin`,
+          body: { email, password },
+          isAuthenticated : false
         });
 
-        const result = await response.json();
 
-        console.log(result)
-    
-        if (response.ok) {
-          console.log('User signed in successfully:', result);
-        } else {
-          console.error('Sign-in error:', result.error);
-        }
+        console.log('User signed in successfully:', response);
+        await tokenManager.saveTokens(response.result.AuthenticationResult);
+        await AuthService.registerBackgroundFetch();
+
       } catch (err) {
-        console.error('Error:', err);
+        console.error('Error:', err.response.data.error);
+        throw new Error(err.response.data.error);
       }
-  };
+  },
+
 
   // Forgot Password Function
-  export const forgotPassword = async (email) => {
+  forgotPassword: async (email) => {
     try {
         console.log("EMAIL: "+ email)
-        const response = await fetch(`${serverURL}/forgot-password`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+
+        const response = await axiosPost({
+          url : `${serverURL}/forgot-password`,
           body: JSON.stringify({ email }),
+          isAuthenticated : false
         });
 
-        const result = await response.json();
 
-        console.log(result)
-    
-        if (response.ok) {
-          console.log('Forgot password started successfully:', result);
-        } else {
-          console.error('Forgot password error:', result.error);
-        }
+        console.log('Forgot password started successfully:', response);
+
       } catch (err) {
-        console.error('Error:', err);
+        console.error('Error:', err.response.data.error);
+        throw new Error(err.response.data.error);
       }
-  };
+  },
+
 
    // Confirm Password Reset Function
-   export const confirmForgotPassword = async (email, confirmationCode, newPassword) => {
+   confirmForgotPassword: async (email, confirmationCode, newPassword) => {
     try {
         console.log("EMAIL: "+ email)
-        const response = await fetch(`${serverURL}/confirm-forgot-password`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+        const response = await axiosPost({
+          url: `${serverURL}/confirm-forgot-password`,
           body: JSON.stringify({ email, confirmationCode, newPassword }),
+          isAuthenticated : false
         });
 
-        const result = await response.json();
 
-        console.log(result)
-    
-        if (response.ok) {
-          console.log('Password reset successfully:', result);
-        } else {
-          console.error('Resetting password error:', result.error);
-        }
+        console.log('Password reset successfully:', response);
+
       } catch (err) {
-        console.error('Error:', err);
+        console.error('Error:', err.response.data.error);
+        throw new Error(err.response.data.error);
       }
-  };
+  },
   
+
   // Sign Out Function
-  export const signOut = async (accessToken) => {
+  signOut: async () => {
+
+    const accessToken = await tokenManager.getAccessToken();
+
     try {
-        console.log("EMAIL: "+ email)
-        const response = await fetch(`${serverURL}/signout`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+        const response = await axiosPost({ 
+          url: `${serverURL}/signout`,
           body: JSON.stringify({ accessToken }),
+          isAuthenticated : false
+        });
+        
+
+        console.log('User Signed Out successfully:', response);
+        await tokenManager.deleteTokens();
+        await BackgroundFetch.unregisterTaskAsync(BACKGROUND_FETCH_TASK);
+
+
+      } catch (err) {
+        console.error('Error:', err.response.data.error);
+        throw new Error(err.response.data.error);
+      }
+  },
+
+
+  // Refresh Tokens Function
+  refreshTokens: async () => {
+    try {
+        const refreshToken = await tokenManager.getRefreshToken();
+
+        // TODO: Needs logic to go to sign in page if this happens
+        if (!refreshToken) {
+          throw new Error('No refresh token available');
+        }
+
+
+        const response = await axiosPost({
+          url: `${serverURL}/refresh-tokens`,
+          body: { refreshToken },
+          isAuthenticated : false
         });
 
-        const result = await response.json();
+        console.log('Tokens refreshed successfully:', response);
+        await tokenManager.saveTokens(response.result.AuthenticationResult);
 
-        console.log(result)
-    
-        if (response.ok) {
-          console.log('User Signed Out successfully:', result);
-        } else {
-          console.error('Error Signing User Out:', result.error);
-        }
-      } catch (err) {
-        console.error('Error:', err);
+
+      } catch (error) {
+        // TODO: Needs logic to go to sign in page if this happens
+        console.error('Error refreshing tokens:', error.response?.data?.error || error.message);
+        throw new Error(error);
       }
-  };
+  },
+
+  isAuthenticated: async () => {
+    const isValid = await tokenManager.isTokenValid();
+    if (isValid) {
+      return true;
+    }
+    return await AuthService.refreshTokens();
+  },
+
+  registerBackgroundFetch: async () => {
+    try {
+      await BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
+        minimumInterval: 60 * 60, // 1 hour in seconds
+        stopOnTerminate: false,
+        startOnBoot: true,
+      });
+      console.log('Background fetch registered');
+    } catch (err) {
+      console.error('Background fetch failed to register:', err);
+    }
+  },
+
+  refreshTokensOnAppOpen: async () => {
+    const isValid = await tokenManager.isTokenValid();
+    if (!isValid) {
+      const refreshed = await AuthService.refreshTokens();
+      if (!refreshed) {
+        AuthService.handleFailedRefresh();
+      }
+    }
+  }
+
+};
 
 
+    TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
+        const refreshed = await AuthService.refreshTokens();
+        return refreshed ? BackgroundFetch.Result.NewData : BackgroundFetch.Result.Failed;
+      });
   
   
   // Check Authentication State
-  export const checkAuthState = async () => {
-    const cognitoUser = userPool.getCurrentUser();
-    if (cognitoUser) {
-      return new Promise((resolve, reject) => {
-        cognitoUser.getSession(async (err, session) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          if (session.isValid()) {
-            const idToken = session.getIdToken().getJwtToken();
-            await AsyncStorage.setItem('idToken', idToken);
-            resolve(true);
-          } else {
-            await AsyncStorage.removeItem('idToken');
-            resolve(false);
-          }
-        });
-      });
-    } else {
-      await AsyncStorage.removeItem('idToken');
-      return false;
-    }
-  };
+//   export const checkAuthState = async () => {
+//     const cognitoUser = userPool.getCurrentUser();
+//     if (cognitoUser) {
+//       return new Promise((resolve, reject) => {
+//         cognitoUser.getSession(async (err, session) => {
+//           if (err) {
+//             reject(err);
+//             return;
+//           }
+//           if (session.isValid()) {
+//             const idToken = session.getIdToken().getJwtToken();
+//             await AsyncStorage.setItem('idToken', idToken);
+//             resolve(true);
+//           } else {
+//             await AsyncStorage.removeItem('idToken');
+//             resolve(false);
+//           }
+//         });
+//       });
+//     } else {
+//       await AsyncStorage.removeItem('idToken');
+//       return false;
+//     }
+//   };
   
   

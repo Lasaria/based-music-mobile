@@ -4,7 +4,7 @@ import { Button } from "react-native-elements";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import { useNavigation } from "@react-navigation/native";
-import { signIn } from "../services/AuthService";
+import { AuthService } from "../services/AuthService";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -28,7 +28,7 @@ const SignInScreen = () => {
 
   const handleEmailPasswordSignIn = useCallback(async () => {
     try {
-      await signIn(email, password);
+      await AuthService.signIn(email, password);
       navigation.navigate("Home");
     } catch (err) {
       Alert.alert(

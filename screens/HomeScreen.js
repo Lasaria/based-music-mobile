@@ -2,21 +2,26 @@
 
 import React from 'react';
 import { View, Text, Button, StyleSheet } from 'react-native';
-import { signOut } from '../services/AuthService';
+import { AuthService } from '../services/AuthService';
 
 const HomeScreen = ({ navigation }) => {
   const handleSignOut = async () => {
-    await signOut();
+    await AuthService.signOut();
     navigation.reset({
       index: 0,
       routes: [{ name: 'SignIn' }],
     });
   };
 
+  const handleRefreshTokens = async () => {
+    await AuthService.refreshTokens();
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome to Based Music!</Text>
       <Button title="Sign Out" onPress={handleSignOut} />
+      <Button title="Refresh Tokens" onPress={handleRefreshTokens} />
     </View>
   );
 };

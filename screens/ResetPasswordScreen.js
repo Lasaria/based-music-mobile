@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button, Text, StyleSheet } from 'react-native';
-import { confirmForgotPassword } from '../services/AuthService';
+import { AuthService } from '../services/AuthService';
 
 const ResetPasswordScreen = ({ route, navigation }) => {
   const { email } = route.params;
@@ -11,7 +11,7 @@ const ResetPasswordScreen = ({ route, navigation }) => {
 
   const handleResetPassword = async () => {
     try {
-      await confirmForgotPassword(email, confirmationCode, newPassword);
+      await AuthService.confirmForgotPassword(email, confirmationCode, newPassword);
       setSuccessMessage('Password has been reset. You can now log in.');
       // Optionally, navigate to the login screen
       navigation.navigate('SignIn');

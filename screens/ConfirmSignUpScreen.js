@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { View, TextInput, Button, Text, StyleSheet } from 'react-native';
-import { confirmSignUp, resendConfirmationCode } from '../services/AuthService';
+import { AuthService } from '../services/AuthService';
 
 const ConfirmSignUpScreen = ({ route, navigation }) => {
   const { email } = route.params;
@@ -12,7 +12,7 @@ const ConfirmSignUpScreen = ({ route, navigation }) => {
 
   const handleConfirmSignUp = async () => {
     try {
-      await confirmSignUp(email, confirmationCode);
+      await AuthService.confirmSignUp(email, confirmationCode);
       console.log('Confirmation successful');
       navigation.navigate('SignIn');
     } catch (err) {
@@ -23,7 +23,7 @@ const ConfirmSignUpScreen = ({ route, navigation }) => {
 
   const handleResendConfirmationCode = async () => {
     try {
-      await resendConfirmationCode(email);
+      await AuthService.resendConfirmationCode(email);
       console.log('Confirmation code resent successfully');
       setSuccessMessage('Confirmation code has been resent to your email.');
       setErrorMessage(''); // Clear any existing error messages
