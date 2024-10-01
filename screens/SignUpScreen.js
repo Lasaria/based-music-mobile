@@ -17,8 +17,8 @@ const SignUpScreen = ({ navigation }) => {
         ? `+1${phoneNumber.replace(/\D/g, '')}`
         : null;
 
-      // Only pass email, password, and phoneNumber (preferredUsername is handled later)
-      await signUp(email, password, formattedPhoneNumber);
+      // Only pass email, password, and to come later: phoneNumber
+      await signUp(email, password);
       console.log('Sign up successful');
       // Navigate to confirmation screen with the email
       navigation.navigate('ConfirmSignUp', { email });
@@ -49,13 +49,13 @@ const SignUpScreen = ({ navigation }) => {
         secureTextEntry
         onChangeText={setPassword}
       />
-      <TextInput
+      {/* <TextInput
         style={styles.input}
         placeholder="Phone Number (Optional)"
         value={phoneNumber}
         keyboardType="phone-pad"
         onChangeText={setPhoneNumber}
-      />
+      /> */}
       <Button title="Sign Up" onPress={handleSignUp} />
     </View>
   );

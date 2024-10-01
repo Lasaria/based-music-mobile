@@ -31,7 +31,7 @@ export const signUp = async (email, password, phoneNumber) => {
     try {
         console.log("EMAIL: "+ email)
         console.log("Code: " + confirmationCode);
-        const response = await fetch(`${serverURL}/confirmsignup`, {
+        const response = await fetch(`${serverURL}/confirm-signup`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -47,6 +47,32 @@ export const signUp = async (email, password, phoneNumber) => {
           console.log('User confirmed successfully:', result);
         } else {
           console.error('User confirmation error:', result.error);
+        }
+      } catch (err) {
+        console.error('Error:', err);
+      }
+  };
+
+  // Resend Confirmation Code Function
+  export const resendConfirmationCode = async (email) => {
+    try {
+        console.log("EMAIL: "+ email)
+        const response = await fetch(`${serverURL}/resend-confirmation-code`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        });
+
+        const result = await response.json();
+
+        console.log(result)
+    
+        if (response.ok) {
+          console.log('Confirmation code resent successfully:', result);
+        } else {
+          console.error('Error sending another confirmation code:', result.error);
         }
       } catch (err) {
         console.error('Error:', err);
@@ -84,7 +110,7 @@ export const signUp = async (email, password, phoneNumber) => {
   export const forgotPassword = async (email) => {
     try {
         console.log("EMAIL: "+ email)
-        const response = await fetch(`${serverURL}/forgotpassword`, {
+        const response = await fetch(`${serverURL}/forgot-password`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -110,7 +136,7 @@ export const signUp = async (email, password, phoneNumber) => {
    export const confirmForgotPassword = async (email, confirmationCode, newPassword) => {
     try {
         console.log("EMAIL: "+ email)
-        const response = await fetch(`${serverURL}/confirmforgotpassword`, {
+        const response = await fetch(`${serverURL}/confirm-forgot-password`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

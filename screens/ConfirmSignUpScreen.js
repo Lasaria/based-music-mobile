@@ -2,12 +2,13 @@
 
 import React, { useState } from 'react';
 import { View, TextInput, Button, Text, StyleSheet } from 'react-native';
-import { confirmSignUp } from '../services/AuthService';
+import { confirmSignUp, resendConfirmationCode } from '../services/AuthService';
 
 const ConfirmSignUpScreen = ({ route, navigation }) => {
   const { email } = route.params;
   const [confirmationCode, setConfirmationCode] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleConfirmSignUp = async () => {
     try {
@@ -20,10 +21,34 @@ const ConfirmSignUpScreen = ({ route, navigation }) => {
     }
   };
 
+  const handleResendConfirmationCode = async () => {
+    try {
+      await resendConfirmationCode(email);
+      console.log('Confirmation code resent successfully');
+      setSuccessMessage('Confirmation code has been resent to your email.');
+      setErrorMessage(''); // Clear any existing error messages
+
+      // Optionally, clear the success message after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 5000);
+    } catch (err) {
+      console.error('Error resending confirmation code:', err);
+      setErrorMessage(err.message || 'An error occurred while resending the confirmation code.');
+      setSuccessMessage(''); // Clear success message if any
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Confirm Sign Up</Text>
-      {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+      {errorMessage ? (
+        <Text style={styles.errorText}>{errorMessage}</Text>
+      ) : null}
+
+      {successMessage ? (
+        <Text style={styles.successText}>{successMessage}</Text>
+      ) : null}
       <TextInput
         style={styles.input}
         placeholder="Confirmation Code"
@@ -32,6 +57,7 @@ const ConfirmSignUpScreen = ({ route, navigation }) => {
         onChangeText={setConfirmationCode}
       />
       <Button title="Confirm" onPress={handleConfirmSignUp} />
+      <Button title="Didn't get a Code? Press to resend" onPress={handleResendConfirmationCode} />
     </View>
   );
 };
