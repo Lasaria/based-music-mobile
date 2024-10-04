@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { View, Text, Button, StyleSheet } from 'react-native';
-import { AuthService } from '../services/AuthService';
+import { AuthService } from "../../../services/AuthService";
 
 const HomeScreen = ({ navigation }) => {
   const handleSignOut = async () => {

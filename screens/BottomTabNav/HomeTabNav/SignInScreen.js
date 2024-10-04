@@ -4,7 +4,7 @@ import { Button } from "react-native-elements";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import { useNavigation } from "@react-navigation/native";
-import { AuthService } from "../services/AuthService";
+import { AuthService } from "../../../services/AuthService";
 
 WebBrowser.maybeCompleteAuthSession();
 

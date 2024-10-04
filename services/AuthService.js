@@ -6,7 +6,7 @@ import * as BackgroundFetch from 'expo-background-fetch';
 import * as TaskManager from 'expo-task-manager';
 import * as Updates from 'expo-updates';
 
-const serverURL = 'http://localhost:3001'
+const serverURL = 'http://10.0.0.235:3001'
 
 export const AuthService = {
  
@@ -22,10 +22,11 @@ signUp: async (email, password) => {
 
       console.log('User signed up successfully:', response);
 
-    } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
-    }
+    }  catch (err) {
+      console.error('Error:', err.response?.data?.error || err.message || 'Unknown error');
+      throw new Error(err.response?.data?.error || err.message || 'Unknown error');
+  }
+  
   },
   
   

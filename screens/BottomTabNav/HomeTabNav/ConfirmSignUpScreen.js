@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { View, TextInput, Button, Text, StyleSheet } from 'react-native';
-import { AuthService } from '../services/AuthService';
+import { AuthService } from '../../../services/AuthService';
 
 const ConfirmSignUpScreen = ({ route, navigation }) => {
   const { email } = route.params;
