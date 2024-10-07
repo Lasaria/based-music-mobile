@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { View, TextInput, Button, Text, StyleSheet } from 'react-native';
-import { signUp } from '../services/AuthService';
+import { AuthService } from '../services/AuthService';
 
 const SignUpScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -18,7 +18,7 @@ const SignUpScreen = ({ navigation }) => {
         : null;
 
       // Only pass email, password, and to come later: phoneNumber
-      await signUp(email, password);
+      await AuthService.signUp(email, password);
       console.log('Sign up successful');
       // Navigate to confirmation screen with the email
       navigation.navigate('ConfirmSignUp', { email });
