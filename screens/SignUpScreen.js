@@ -23,8 +23,8 @@ const SignUpScreen = ({ navigation }) => {
       // Navigate to confirmation screen with the email
       navigation.navigate('ConfirmSignUp', { email });
     } catch (err) {
-      console.error('Sign up error:', err);
-      setErrorMessage(err.message || 'An error occurred during sign-up.');
+      console.error('Sign up error:', err.message);
+      //setErrorMessage(err.message || 'An error occurred during sign-up.');
     }
   };
 

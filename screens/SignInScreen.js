@@ -47,7 +47,7 @@ const SignInScreen = () => {
 
         // Send the ID token to your backend
         const backendResponse = await fetch(
-          "http://your-backend-url/google-auth",
+          "http://localhost:3001/google-auth",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

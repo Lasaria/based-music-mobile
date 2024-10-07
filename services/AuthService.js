@@ -23,8 +23,8 @@ signUp: async (email, password) => {
       console.log('User signed up successfully:', response);
 
     } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
     }
   },
   
@@ -45,8 +45,8 @@ signUp: async (email, password) => {
         console.log('User confirmed successfully:', response);
 
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
 
@@ -66,8 +66,8 @@ signUp: async (email, password) => {
         console.log('Confirmation code resent successfully:', response);
  
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
   
@@ -89,8 +89,8 @@ signUp: async (email, password) => {
         await tokenManager.saveTokens(response.result.AuthenticationResult);
 
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
 
@@ -110,8 +110,8 @@ signUp: async (email, password) => {
         console.log('Forgot password started successfully:', response);
 
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
 
@@ -130,8 +130,8 @@ signUp: async (email, password) => {
         console.log('Password reset successfully:', response);
 
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
   
@@ -154,8 +154,8 @@ signUp: async (email, password) => {
 
 
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
 
@@ -182,8 +182,8 @@ signUp: async (email, password) => {
 
       } catch (error) {
         // TODO: Needs logic to go to sign in page if this happens
-        console.error('Error refreshing tokens:', error.response?.data?.error || error.message);
-        throw new Error(error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
 
