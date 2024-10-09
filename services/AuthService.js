@@ -11,11 +11,11 @@ const serverURL = 'http://localhost:3001'
 export const AuthService = {
  
 // Sign Up Function
-signUp: async (email, password) => {
+signUp: async (fullName, email, password) => {
     try {
       const response = await axiosPost({
         url: `${serverURL}/signup`,
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ fullName, email, password }),
         isAuthenticated : false
     });
   
