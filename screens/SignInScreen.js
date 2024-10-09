@@ -8,6 +8,8 @@ import { Colors } from '../constants/Color';
 import InputComponent from "../components/InputComponent";
 import ButtonComponent from "../components/ButtonComponent";
 import { Ionicons, Feather, AntDesign, SimpleLineIcons } from '@expo/vector-icons';
+import { ActivityIndicator } from "react-native";
+import RadioButtonGroup, { RadioButtonItem } from "expo-radio-button";
 
 WebBrowser.maybeCompleteAuthSession();
 const { width, height } = Dimensions.get('window');
@@ -19,9 +21,12 @@ const SignInScreen = () => {
   const [passwordError, setPasswordError] = useState("");
   const [isEnabled, setIsEnabled] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [current, setCurrent] = useState(false);
   const navigation = useNavigation();
 
-  const GOOGLE_CLIENT_ID = "78783695276-rtd863qci0mdjj06kf3c4sp2k12trv7n.apps.googleusercontent.com";
+  const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"; // Replace with your actual client ID
   const [request, response, promptAsync] = Google.useAuthRequest({
     androidClientId: GOOGLE_CLIENT_ID,
     iosClientId: GOOGLE_CLIENT_ID,
@@ -31,57 +36,73 @@ const SignInScreen = () => {
     scopes: ["profile", "email"],
   });
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-
-  const validateInputs = useCallback(() => {
+  const validateInputs = () => {
     setEmailError('');
     setPasswordError('');
+    setErrorMessage('');
+
+    let isValid = true;
 
     if (!email) {
       setEmailError("Email is required");
-    } else if (!emailRegex.test(email)) {
-      setEmailError("Invalid email format");
+      isValid = false;
     }
 
     if (!password) {
       setPasswordError("Password is required");
-    } else if (!passwordRegex.test(password)) {
-      setPasswordError("Password must be at least 8 characters, 1 number, 1 special character, and 1 uppercase letter.");
+      isValid = false;
     }
-  }, [email, password]);
+
+    return isValid; // Return whether the inputs are valid
+  };
 
   const handleEmailPasswordSignIn = useCallback(async () => {
-    validateInputs(); 
+    // Validate inputs
+    const isValid = validateInputs();
 
-    if (emailError || passwordError) return; 
+    if (!isValid) return; // If not valid, exit the function
+
+    setLoading(true) // Start loading
 
     try {
       await AuthService.signIn(email, password);
       navigation.navigate("Home");
+      // Reset EMAIL and PASSWORD input fields
+      setEmail('');
+      setPassword('');
     } catch (err) {
-      Alert.alert(
-        "Sign In Error",
-        err.message || "An error occurred during sign-in."
-      );
+      setErrorMessage(err.message || 'An error occurred during sign-in.');
+    } finally {
+      setLoading(false); // Stop loading
     }
-  }, [email, password, emailError, passwordError, validateInputs, navigation]);
+  }, [email, password, navigation]);
+
+  // Handle changes in the email input
+  const handleEmailChange = (text) => {
+    setEmail(text);
+    if (text) {
+      setEmailError(''); // Clear email error when user starts typing
+    }
+  };
+
+  // Handle changes in the password input
+  const handlePasswordChange = (text) => {
+    setPassword(text);
+    if (text) {
+      setPasswordError(''); // Clear password error when user starts typing
+    }
+  };
 
   const handleGoogleSignIn = useCallback(async () => {
     try {
       const result = await promptAsync({ useProxy: true, showInRecents: true });
       if (result?.type === "success") {
         const { id_token } = result.params;
-        console.log("ID Token:", id_token);
-
-        const backendResponse = await fetch(
-          "http://your-backend-url/google-auth",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ idToken: id_token }),
-          }
-        );
+        const backendResponse = await fetch("http://your-backend-url/google-auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken: id_token }),
+        });
 
         const data = await backendResponse.json();
         if (backendResponse.ok) {
@@ -97,46 +118,55 @@ const SignInScreen = () => {
 
   const toggleSwitch = () => setIsEnabled(previousState => !previousState);
 
+  // LOADING SCREEN
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Image
+          source={require('../assets/images/bg2.png')}
+          style={styles.loadingImage}
+        />
+        <ActivityIndicator size="large" color={Colors.white} />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.signInView}>
-        {/* Welcome Back Title */}
         <Text style={styles.welcomeBackTitle}>Welcome Back</Text>
-        {/* Small Music Logo */}
         <View style={styles.musicLogoContainer}>
-          <Image
-            source={require('../assets/images/music.png')}
-            style={styles.musicLogo}
-          />
+          <Image source={require('../assets/images/music.png')} style={styles.musicLogo} />
         </View>
 
+        {errorMessage ? <Text style={styles.errorMessageText}>{errorMessage}</Text> : null}
         {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-        {/* Email Input */}
         <InputComponent
           placeholder="Email"
           placeholderTextColor={Colors.secondary}
           value={email}
-          onChangeText={setEmail}
+          onChangeText={handleEmailChange} // Updated to handle email change
           keyboardType="email-address"
           autoCapitalize="none"
           secureTextEntry={false}
+          emailError={emailError}
         />
 
         {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-        {/* Password Input and Toggle Icon */}
         <View style={styles.inputWithIconContainer}>
           <InputComponent
             placeholder="Password"
             placeholderTextColor={Colors.secondary}
             value={password}
-            onChangeText={setPassword}
+            onChangeText={handlePasswordChange} // Updated to handle password change
             keyboardType="default"
             autoCapitalize="none"
             secureTextEntry={!showPassword}
+            passwordError={passwordError}
             style={styles.passwordInput}
           />
           <Ionicons
-            name={showPassword ? "eye-off" : "eye"}
+            name={showPassword ? "eye-off-outline" : "eye-outline"}
             size={24}
             color={Colors.secondary}
             onPress={() => setShowPassword(!showPassword)}
@@ -144,27 +174,32 @@ const SignInScreen = () => {
           />
         </View>
 
-        {/* Sign in Controls */}
         <View style={styles.signInControls}>
-          <View style={styles.switchControl}>
-            {/* Switch Button */}
-            <Switch
-              trackColor={{ true: Colors.primary }}
-              thumbColor={isEnabled ? Colors.white : Colors.gray}
-              ios_backgroundColor="#3e3e3e"
-              onValueChange={toggleSwitch}
-              value={isEnabled}
-            />
-            <Text style={styles.rememberMeText}>Remember Me</Text>
+          <View style={styles.radioButtonControl}>
+            <RadioButtonGroup
+              containerStyle={{ marginBottom: 10 }}
+              selected={''}
+              onSelected={() => setCurrent(!current)}
+              radioBackground={Colors.primary}
+            >
+              {current ? (
+                <RadioButtonItem
+                  value={true}
+                  label={<Text style={styles.rememberMeText}>Remember Me</Text>} 
+                />
+              ) : (
+                <RadioButtonItem
+                  value={false}
+                  label={<Text style={styles.rememberMeText}>Remember Me</Text>} 
+                />
+              )}
+            </RadioButtonGroup>
           </View>
-          {/* Forgot password Link */}
           <Text onPress={() => navigation.navigate("ForgotPassword")} style={styles.forgotPasswordText}>Forgot password?</Text>
         </View>
 
-        {/* Sign in Button */}
         <ButtonComponent onPress={handleEmailPasswordSignIn} title={'Sign In'} buttonStyle={styles.signInButton} textStyle={styles.signInButtonText} />
 
-        {/* Sign in with Socials */}
         <View style={styles.socialLayout}>
           <Text style={styles.signInWithSocialsText}>or sign in with</Text>
           <View style={styles.socialButtonContainer}>
@@ -183,7 +218,7 @@ const SignInScreen = () => {
             />
           </View>
         </View>
-        {/* Don't have an account */}
+
         <Text style={styles.noAccountText}>Don't have an account?
           <Text style={styles.boldSignUpText} onPress={() => navigation.navigate("SignUp")}> Sign Up</Text>
         </Text>
@@ -192,15 +227,22 @@ const SignInScreen = () => {
   );
 };
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
   },
   errorText: {
-    color: 'red',
-    marginTop: 5,
-    marginLeft: width * 0.05,
+    fontSize: width * 0.04,
+    color: Colors.error,
+    marginLeft: width * 0.11,
+    marginBottom: -width * 0.02,
+  },
+  errorMessageText: {
+    fontSize: width * 0.04,
+    color: Colors.error,
+    textAlign: 'center',
   },
   signInView: {
     flex: 1,
@@ -210,7 +252,6 @@ const styles = StyleSheet.create({
   },
   inputWithIconContainer: {
     position: 'relative',
-    marginHorizontal: width * 0.01,
   },
   passwordInput: {
     paddingRight: 50, // Add space for the toggle icon
@@ -229,7 +270,6 @@ const styles = StyleSheet.create({
     fontSize: width * 0.08,
     color: Colors.white,
     fontWeight: '600',
-    textAlign: 'center',
   },
   musicLogo: {
     height: height * 0.2,
@@ -245,7 +285,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
   },
   signInButtonText: {
-    fontSize: width * 0.05,
+    fontSize: width * 0.04,
     fontWeight: 'bold',
   },
   signInControls: {
@@ -254,18 +294,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginHorizontal: width * 0.05,
   },
-  switchControl: {
+  radioButtonControl: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: width * 0.02,
   },
   rememberMeText: {
     color: Colors.white,
-    fontSize: width * 0.035,
+    fontSize: width * 0.030,
   },
   forgotPasswordText: {
     color: Colors.white,
-    fontSize: width * 0.035,
+    fontSize: width * 0.030,
   },
   socialLayout: {
     alignItems: 'center',
@@ -300,7 +340,22 @@ const styles = StyleSheet.create({
     color: Colors.secondary,
     marginTop: height * 0.03,
     fontSize: width * 0.04,
-  }
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
 });
 
 export default SignInScreen;
