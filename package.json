@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~3.2.3",
-    "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-community/checkbox": "^0.5.17",
+    "@react-navigation/bottom-tabs": "^6.6.1",
     "@react-navigation/native": "^6.1.18",
+    "@react-navigation/native-stack": "^6.11.0",
+    "@react-native-async-storage/async-storage": "1.23.1",
     "@react-navigation/stack": "^6.4.1",
     "axios": "^1.7.7",
     "expo": "^51.0.34",

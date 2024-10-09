@@ -1,5 +1,4 @@
 // SignUpScreen.js
-
 import React, { useState, useEffect } from 'react';
 import { View, TextInput, Text, StyleSheet, TouchableOpacity, Alert, StatusBar } from 'react-native';
 import { AuthService } from '../services/AuthService';
@@ -99,8 +98,8 @@ const SignUpScreen = ({ navigation }) => {
       console.log('Sign up successful');
       navigation.navigate('ConfirmSignUp', { email });
     } catch (err) {
-      console.error('Sign up error:', err);
-      setErrorMessage(err.message || 'An error occurred during sign-up.');
+      console.error('Sign up error:', err.message);
+      //setErrorMessage(err.message || 'An error occurred during sign-up.');
     }
   };
 
