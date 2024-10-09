@@ -51,7 +51,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer ref={navigationRef}>>
+      <NavigationContainer ref={navigationRef}>
           <Stack.Navigator initialRouteName="SignIn">
            <Stack.Screen name="SignUp" component={SignUpScreen} />
            <Stack.Screen name="ConfirmSignUp" component={ConfirmSignUpScreen} />
