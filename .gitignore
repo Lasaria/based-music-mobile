@@ -3,6 +3,10 @@
 # dependencies
 node_modules/
 
+# To avoid ios and android files
+ios/
+android/
+
 # Expo
 .expo/
 dist/

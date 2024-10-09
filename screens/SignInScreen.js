@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from "react";
-import { View, Switch, Text, StyleSheet, Alert, SafeAreaView, Image, Dimensions } from "react-native";
+import React, { useState, useCallback, useEffect } from "react";
+import { View, Switch, SafeAreaView, Image, Dimensions, TextInput, Text, StyleSheet, Alert } from "react-native";
+import { Button } from "react-native-elements";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import { useNavigation } from "@react-navigation/native";
@@ -10,6 +11,7 @@ import ButtonComponent from "../components/ButtonComponent";
 import { Ionicons, Feather, AntDesign, SimpleLineIcons } from '@expo/vector-icons';
 import { ActivityIndicator } from "react-native";
 import RadioButtonGroup, { RadioButtonItem } from "expo-radio-button";
+import { axiosPost } from "../utils/axiosCalls";
 
 WebBrowser.maybeCompleteAuthSession();
 const { width, height } = Dimensions.get('window');
@@ -26,15 +28,6 @@ const SignInScreen = () => {
   const [current, setCurrent] = useState(false);
   const navigation = useNavigation();
 
-  const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"; // Replace with your actual client ID
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: GOOGLE_CLIENT_ID,
-    iosClientId: GOOGLE_CLIENT_ID,
-    expoClientId: GOOGLE_CLIENT_ID,
-    webClientId: GOOGLE_CLIENT_ID,
-    responseType: "id_token",
-    scopes: ["profile", "email"],
-  });
 
   const validateInputs = () => {
     setEmailError('');
@@ -55,6 +48,39 @@ const SignInScreen = () => {
 
     return isValid; // Return whether the inputs are valid
   };
+
+  
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: GOOGLE_CLIENT_ID,
+    // iosClientId: "com.googleusercontent.apps.78783695276-rtd863qci0mdjj06kf3c4sp2k12trv7n",
+    // expoClientId: GOOGLE_CLIENT_ID,
+    // webClientId: GOOGLE_CLIENT_ID,
+    // responseType: "id_token",
+    scopes: ["profile", "email", "openid"],
+  });
+
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      handleGoogleSignIn(id_token);
+    }
+  }, [response]);
+
+
+  const handleGoogleSignIn = useCallback(async (idToken) => {
+    try {
+      await AuthService.googleSignIn(idToken);
+      navigation.navigate("Home");
+    } catch (error) {
+      console.error('Google Sign-In Error:', error);
+      Alert.alert(
+        "Sign In Error",
+        error.message || "An error occurred during Google sign-in."
+      );
+    }
+  }, [navigation]);
+
 
   const handleEmailPasswordSignIn = useCallback(async () => {
     // Validate inputs
@@ -93,28 +119,6 @@ const SignInScreen = () => {
     }
   };
 
-  const handleGoogleSignIn = useCallback(async () => {
-    try {
-      const result = await promptAsync({ useProxy: true, showInRecents: true });
-      if (result?.type === "success") {
-        const { id_token } = result.params;
-        const backendResponse = await fetch("http://your-backend-url/google-auth", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken: id_token }),
-        });
-
-        const data = await backendResponse.json();
-        if (backendResponse.ok) {
-          navigation.navigate("Home");
-        } else {
-          throw new Error(data.error || "Failed to exchange token");
-        }
-      }
-    } catch (error) {
-      Alert.alert("Google Sign In Error", error.message || "An error occurred during Google sign-in.");
-    }
-  }, [promptAsync, navigation]);
 
   const toggleSwitch = () => setIsEnabled(previousState => !previousState);
 
@@ -208,7 +212,7 @@ const SignInScreen = () => {
               title={<Feather name="facebook" size={24} color={Colors.white} />}
               buttonStyle={styles.socialButton} />
             <ButtonComponent
-              onPress={handleGoogleSignIn}
+              onPress={() => promptAsync()}
               title={<SimpleLineIcons name="social-google" size={24} color={Colors.white} />}
               buttonStyle={styles.socialButton} />
             <ButtonComponent
