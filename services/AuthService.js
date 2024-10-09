@@ -164,24 +164,17 @@ signUp: async (fullName, email, password) => {
   refreshTokens: async () => {
     try {
         const refreshToken = await tokenManager.getRefreshToken();
-
-        // TODO: Needs logic to go to sign in page if this happens
         if (!refreshToken) {
           throw new Error('No refresh token available');
         }
-
-
         const response = await axiosPost({
           url: `${serverURL}/refresh-tokens`,
           body: { refreshToken },
           isAuthenticated : false
         });
-
         console.log('Tokens refreshed successfully:', response);
 
-
       } catch (error) {
-        // TODO: Needs logic to go to sign in page if this happens
         console.error('Error:', err.message);
         throw new Error(err.message);
       }

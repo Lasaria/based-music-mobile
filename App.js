@@ -1,3 +1,7 @@
+// App.js
+import React from 'react';
+import { createStackNavigator } from '@react-navigation/stack';
+import { navigationRef } from './services/NavigationService';
 
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { NavigationContainer } from '@react-navigation/native'
@@ -47,7 +51,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>>
           <Stack.Navigator initialRouteName="SignIn">
            <Stack.Screen name="SignUp" component={SignUpScreen} />
            <Stack.Screen name="ConfirmSignUp" component={ConfirmSignUpScreen} />

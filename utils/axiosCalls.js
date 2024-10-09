@@ -1,5 +1,7 @@
 import axios from "axios";
 import { tokenManager } from "./tokenManager";
+import { AuthService } from "../services/AuthService"; // Import your AuthService
+import { navigate } from "../services/NavigationService";
 
 class ApiError extends Error {
   constructor(message, status, data) {
@@ -11,46 +13,54 @@ class ApiError extends Error {
 }
 
 const createAxiosRequest = async ({ url, method, body, isAuthenticated = true }) => {
-    let accessToken;
+  let accessToken;
 
-    if (isAuthenticated) {
-        try {
-            accessToken = await tokenManager.getAccessToken();
-        } catch (error) {
-            throw new ApiError('Failed to get access token', null, error);
-        }
+  if (isAuthenticated) {
+    const isAnyTokenInvalid = await tokenManager.IsAccessOrIdTokenExpired();
+    if (isAnyTokenInvalid) {
+      try {
+        await AuthService.refreshTokens();
+      } catch (error) {
+        // Cause1: Expired Refresh Tokens
+        navigate('SignIn');
+        throw new ApiError('Failed to refresh tokens', null, error);
+      }
     }
 
-    const headers = {
-        'Content-Type': 'application/json',
-        ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
-    };
-
+    // Retrieve the (new) access token
     try {
-        const response = await axios({
-            url,
-            method,
-            headers,
-            data: body,
-        });
-        return response.data;
+      accessToken = await tokenManager.getAccessToken();
     } catch (error) {
-        if (error.response) {
-            // The request was made and the server responded with a status code
-            // that falls out of the range of 2xx
-            throw new ApiError(
-                error.response.data.error || 'Server responded with an error',
-                error.response.status,
-                error.response.data
-            );
-        } else if (error.request) {
-            // The request was made but no response was received
-            throw new ApiError('No response received from server', null, error.request);
-        } else {
-            // Something happened in setting up the request that triggered an Error
-            throw new ApiError('Error setting up the request', null, error.message);
-        }
+      throw new ApiError('Failed to get access token', null, error);
     }
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
+  };
+
+  try {
+    const response = await axios({
+      url,
+      method,
+      headers,
+      data: body,
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new ApiError(
+        error.response.data.error || 'Server responded with an error',
+        error.response.status,
+        error.response.data
+      );
+    } else if (error.request) {
+      throw new ApiError('No response received from server', null, error.request);
+    } else {
+      throw new ApiError('Error setting up the request', null, error.message);
+    }
+  }
 };
 
 export const axiosPost = (config) => createAxiosRequest({ ...config, method: 'POST' });
