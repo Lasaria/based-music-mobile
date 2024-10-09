@@ -1,15 +1,13 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
-
-const InboxScreen = () => {
+const VenueEventsScreen = () => {
     return (
         <View style={styles.container}>
-            <Text>Coming Soon</Text>
+            <Text>Venue Events Screen Coming Soon</Text>
         </View>
     )
 }
-export default InboxScreen
-
+export default VenueEventsScreen
 const styles = StyleSheet.create({
     container: {
         flex: 1,

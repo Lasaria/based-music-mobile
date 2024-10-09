@@ -14,6 +14,14 @@ import ConfirmSignUpScreen from './screens/ConfirmSignUpScreen';
 import SignInScreen from './screens/SignInScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
+
+import HomeScreen from './screens/HomeScreen';
+import VenueProfileScreen from './screens/VenueProfileScreen';
+import VenueInfoScreen from './screens/VenueInfoScreen';
+import VenueEventsScreen from './screens/VenueEventsScreen';
+import VenueBookingsScreen from './screens/VenueBookingsScreen';
+
+
 import ListenerProfileScreen from './screens/ListenerProfileScreen';
 import FavoritesScreen from './screens/FavoritesScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -37,6 +45,7 @@ export default function App() {
   }
 
 
+
   return (
     <SafeAreaProvider>
       <NavigationContainer>
@@ -53,6 +62,13 @@ export default function App() {
            <Stack.Screen name='Favorites' component={FavoritesScreen} options={{ headerTitle: 'Favorites' }} />
            <Stack.Screen name='Settings' component={SettingsScreen} options={{ headerTitle: 'Settings' }} />
            <Stack.Screen name='Inbox' component={InboxScreen} options={{ headerTitle: 'Inbox' }} />
+
+           {/* Venue Profile screens */}
+           <Stack.Screen name='VenueProfileScreen' component={VenueProfileScreen} />
+           <Stack.Screen name="VenueInfo" component={VenueInfoScreen} />
+           <Stack.Screen name="Events" component={VenueEventsScreen} />
+           <Stack.Screen name="VenueBookings" component={VenueBookingsScreen} />
+           <Stack.Screen name="Inbox" component={InboxScreen} />
            {/* Add other screens as needed */}
 
            <Stack.Screen name="Tabs" children={() => <Tabs />} options={{ headerShown: false }} />
