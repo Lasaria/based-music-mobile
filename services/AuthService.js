@@ -187,6 +187,25 @@ signUp: async (email, password) => {
       }
   },
 
+  // Google Sign in Function
+  googleSignIn: async (idToken) => {
+    try {
+
+        const response = await axiosPost({
+            url: `${serverURL}/google-auth`,
+            body: JSON.stringify({ idToken }),
+            isAuthenticated: false
+        });
+
+        console.log('User signed in successfully using Google:', response);
+        await tokenManager.saveTokens(response.result.AuthenticationResult);
+
+      } catch (err) {
+        console.error('Error:', err.message);
+        throw new Error(err.message);
+      }
+  },
+
   isAuthenticated: async () => {
     const isValid = await tokenManager.isTokenValid();
     if (isValid) {
