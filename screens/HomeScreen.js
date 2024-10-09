@@ -22,6 +22,8 @@ const HomeScreen = ({ navigation }) => {
       <Text style={styles.title}>Welcome to Based Music!</Text>
       <Button title="Sign Out" onPress={handleSignOut} />
       <Button title="Refresh Tokens" onPress={handleRefreshTokens} />
+      {/* Listener Profile Button */}
+      <Button title="Listener Profile" onPress={() => navigation.navigate('ListenerProfile')} />
     </View>
   );
 };

@@ -9,6 +9,10 @@ import SignInScreen from './screens/SignInScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import HomeScreen from './screens/HomeScreen';
+import ListenerProfileScreen from './screens/ListenerProfileScreen';
+import FavoritesScreen from './screens/FavoritesScreen';
+import SettingsScreen from './screens/SettingsScreen';
+import InboxScreen from './screens/InboxScreen';
 
 const Stack = createStackNavigator();
 
@@ -22,6 +26,12 @@ const App = () => {
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
+
+        {/* Listener Profile Screens */}
+        <Stack.Screen name='ListenerProfile' component={ListenerProfileScreen} options={{ headerTitle: 'Listener Profile' }} />
+        <Stack.Screen name='Favorites' component={FavoritesScreen} options={{ headerTitle: 'Favorites' }} />
+        <Stack.Screen name='Settings' component={SettingsScreen} options={{ headerTitle: 'Settings' }} />
+        <Stack.Screen name='Inbox' component={InboxScreen} options={{ headerTitle: 'Inbox' }} />
         {/* Add other screens as needed */}
       </Stack.Navigator>
     </NavigationContainer>
