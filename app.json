@@ -6,6 +6,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
+    "jsEngine": "jsc",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/images/splash.png",
@@ -39,6 +40,9 @@
         "projectId": "974ced9c-baf2-4a96-b3cf-ecb8125b30a1"
       }
     },
-    "owner": "lasaria"
+    "owner": "lasaria",
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

@@ -11,22 +11,21 @@ const serverURL = 'http://10.0.0.235:3001'
 export const AuthService = {
  
 // Sign Up Function
-signUp: async (email, password) => {
+signUp: async (fullName, email, password) => {
     try {
       const response = await axiosPost({
         url: `${serverURL}/signup`,
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ fullName, email, password }),
         isAuthenticated : false
     });
   
 
       console.log('User signed up successfully:', response);
 
-    }  catch (err) {
-      console.error('Error:', err.response?.data?.error || err.message || 'Unknown error');
-      throw new Error(err.response?.data?.error || err.message || 'Unknown error');
-  }
-  
+    } catch (err) {
+        console.error('Error:', err.message);
+        throw new Error(err.message);
+    }
   },
   
   
@@ -46,8 +45,8 @@ signUp: async (email, password) => {
         console.log('User confirmed successfully:', response);
 
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
 
@@ -67,8 +66,8 @@ signUp: async (email, password) => {
         console.log('Confirmation code resent successfully:', response);
  
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
   
@@ -90,8 +89,8 @@ signUp: async (email, password) => {
         await tokenManager.saveTokens(response.result.AuthenticationResult);
 
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
 
@@ -111,8 +110,8 @@ signUp: async (email, password) => {
         console.log('Forgot password started successfully:', response);
 
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
 
@@ -131,8 +130,8 @@ signUp: async (email, password) => {
         console.log('Password reset successfully:', response);
 
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
   
@@ -155,8 +154,8 @@ signUp: async (email, password) => {
 
 
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
 
@@ -183,8 +182,27 @@ signUp: async (email, password) => {
 
       } catch (error) {
         // TODO: Needs logic to go to sign in page if this happens
-        console.error('Error refreshing tokens:', error.response?.data?.error || error.message);
-        throw new Error(error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
+      }
+  },
+
+  // Google Sign in Function
+  googleSignIn: async (idToken) => {
+    try {
+
+        const response = await axiosPost({
+            url: `${serverURL}/google-auth`,
+            body: JSON.stringify({ idToken }),
+            isAuthenticated: false
+        });
+
+        console.log('User signed in successfully using Google:', response);
+        await tokenManager.saveTokens(response.result.AuthenticationResult);
+
+      } catch (err) {
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
 
@@ -209,32 +227,6 @@ signUp: async (email, password) => {
 
 };
 
-  
-  
-  // Check Authentication State
-//   export const checkAuthState = async () => {
-//     const cognitoUser = userPool.getCurrentUser();
-//     if (cognitoUser) {
-//       return new Promise((resolve, reject) => {
-//         cognitoUser.getSession(async (err, session) => {
-//           if (err) {
-//             reject(err);
-//             return;
-//           }
-//           if (session.isValid()) {
-//             const idToken = session.getIdToken().getJwtToken();
-//             await AsyncStorage.setItem('idToken', idToken);
-//             resolve(true);
-//           } else {
-//             await AsyncStorage.removeItem('idToken');
-//             resolve(false);
-//           }
-//         });
-//       });
-//     } else {
-//       await AsyncStorage.removeItem('idToken');
-//       return false;
-//     }
-//   };
+ 
   
   
