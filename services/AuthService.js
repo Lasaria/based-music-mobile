@@ -173,6 +173,7 @@ signUp: async (fullName, email, password) => {
           isAuthenticated : false
         });
         console.log('Tokens refreshed successfully:', response);
+        await tokenManager.saveTokens(response.result.AuthenticationResult);
 
       } catch (error) {
         console.error('Error:', err.message);
