@@ -21,14 +21,27 @@ const TrackUploadScreen = () => {
       type: 'audio/*', // Allows only audio files
     });
 
-    if (result.type === 'success') {
+    console.log(result);
+    
+
+    if (result.assets && result.assets.length > 0) {
+      const file = result.assets[0]; // Access the first asset from the array
+      
       // Check file extension to ensure it's mp3 or wav
-      const fileExtension = result.uri.split('.').pop().toLowerCase();
+      const fileExtension = file.name.split('.').pop().toLowerCase();
       if (fileExtension === 'mp3' || fileExtension === 'wav') {
-        setSelectedFile(result);
+        setSelectedFile(file);
+  
+        // Display alert with file name and size
+        Alert.alert(
+          'File Selected',
+          `File Name: ${file.name}\nFile Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`
+        );
       } else {
         Alert.alert('Invalid File Type', 'Please select an MP3 or WAV file.');
       }
+    } else {
+      Alert.alert('No File Selected', 'Please choose a valid file.');
     }
   };
 
