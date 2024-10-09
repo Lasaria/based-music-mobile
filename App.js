@@ -25,6 +25,7 @@ import ListenerProfileScreen from './screens/ListenerProfileScreen';
 import FavoritesScreen from './screens/FavoritesScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import InboxScreen from './screens/InboxScreen';
+import WelcomeScreen from './screens/WelcomeScreen';
 
 const Tab = createBottomTabNavigator()
 const Stack = createNativeStackNavigator()
@@ -48,7 +49,8 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <NavigationContainer>
-          <Stack.Navigator initialRouteName="SignIn">
+          <Stack.Navigator initialRouteName="Welcome">
+           <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
            <Stack.Screen name="SignUp" component={SignUpScreen} />
            <Stack.Screen name="ConfirmSignUp" component={ConfirmSignUpScreen} />
            <Stack.Screen name="SignIn" component={SignInScreen} />
