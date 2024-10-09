@@ -28,24 +28,26 @@ const SignInScreen = () => {
   });
 
 
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      handleGoogleSignIn(id_token);
+    }
+  }, [response]);
 
-const handleGoogleSignIn = useCallback(async () => {
+
+  const handleGoogleSignIn = useCallback(async (idToken) => {
     try {
-      await promptAsync();
-      if (response?.type === 'success') {
-        const { id_token } = response.params;
-        await AuthService.googleSignIn(id_token);
-        navigation.navigate("Home");
-      }
+      await AuthService.googleSignIn(idToken);
+      navigation.navigate("Home");
     } catch (error) {
       console.error('Google Sign-In Error:', error);
       Alert.alert(
         "Sign In Error",
         error.message || "An error occurred during Google sign-in."
       );
-    } finally {
     }
-  }, [promptAsync, navigation]);
+  }, [navigation]);
 
 
   const handleEmailPasswordSignIn = useCallback(async () => {
@@ -87,7 +89,7 @@ const handleGoogleSignIn = useCallback(async () => {
       />
       <Button
         title="Sign in with Google"
-        onPress={handleGoogleSignIn}
+        onPress={() => promptAsync()}
         containerStyle={styles.buttonContainer}
         buttonStyle={styles.button}
       />
