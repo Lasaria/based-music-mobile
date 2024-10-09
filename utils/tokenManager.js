@@ -68,6 +68,12 @@ export const tokenManager = {
     }
   },
 
+  IsAccessOrIdTokenExpired: async () => {
+    const hasAccessTokenExpired = await isAccessTokenExpired();
+    const hasIdTokenExpired  = await isIdTokenExpired();
+    return (hasAccessTokenExpired || hasIdTokenExpired);
+  },
+
   isAccessTokenExpired: async () => {
     try {
       const accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
