@@ -18,18 +18,24 @@ const AlbumUploadScreen = () => {
       multiple: true, // Allow multiple file selection
     });
 
-    if (result.type === 'success') {
-      // Filter out files that are not MP3 or WAV
-      const validFiles = result.output.filter(file => {
-        const fileExtension = file.uri.split('.').pop().toLowerCase();
-        return fileExtension === 'mp3' || fileExtension === 'wav';
-      });
-
-      if (validFiles.length > 0) {
-        setSelectedFiles([...selectedFiles, ...validFiles]);
+    if (result.assets && result.assets.length > 0) {
+      const file = result.assets[0]; // Access the first asset from the array
+      
+      // Check file extension to ensure it's mp3 or wav
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+      if (fileExtension === 'mp3' || fileExtension === 'wav') {
+        setSelectedFiles(file);
+  
+        // Display alert with file name and size
+        Alert.alert(
+          'File Selected',
+          `File Name: ${file.name}\nFile Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`
+        );
       } else {
-        Alert.alert('Invalid File Type', 'Please select only MP3 or WAV files.');
+        Alert.alert('Invalid File Type', 'Please select an MP3 or WAV file.');
       }
+    } else {
+      Alert.alert('No File Selected', 'Please choose a valid file.');
     }
   };
 
