@@ -1,3 +1,7 @@
+// App.js
+import React from 'react';
+import { createStackNavigator } from '@react-navigation/stack';
+import { navigationRef } from './services/NavigationService';
 
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { NavigationContainer } from '@react-navigation/native'
@@ -25,7 +29,6 @@ import ListenerProfileScreen from './screens/ListenerProfileScreen';
 import FavoritesScreen from './screens/FavoritesScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import InboxScreen from './screens/InboxScreen';
-import WelcomeScreen from './screens/WelcomeScreen';
 import ArtistProfileScreen from './screens/ArtistProfileScreen'
 import AlbumUploadScreen from './screens/AlbumUploadScreen'
 import TrackUploadScreen from './screens/TrackUploadScreen'
@@ -54,9 +57,8 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
-          <Stack.Navigator initialRouteName="Welcome">
-           <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
+      <NavigationContainer ref={navigationRef}>
+          <Stack.Navigator initialRouteName="SignIn">
            <Stack.Screen name="SignUp" component={SignUpScreen} />
            <Stack.Screen name="ConfirmSignUp" component={ConfirmSignUpScreen} />
            <Stack.Screen name="SignIn" component={SignInScreen} />
