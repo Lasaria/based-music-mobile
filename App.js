@@ -2,6 +2,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { navigationRef } from './services/NavigationService';
 
 import SignUpScreen from './screens/SignUpScreen';
 import ConfirmSignUpScreen from './screens/ConfirmSignUpScreen';
@@ -14,7 +15,7 @@ const Stack = createStackNavigator();
 
 const App = () => {
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator initialRouteName="SignIn">
         <Stack.Screen name="SignUp" component={SignUpScreen} />
         <Stack.Screen name="ConfirmSignUp" component={ConfirmSignUpScreen} />
