@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "jsEngine": "jsc",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
@@ -42,7 +42,8 @@
     },
     "owner": "lasaria",
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-document-picker"
     ]
   }
 }
