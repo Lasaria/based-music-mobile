@@ -76,7 +76,7 @@ signUp: async (fullName, email, password) => {
   signIn: async (email, password) => {
     try {
         console.log("EMAIL: "+ email)
-        console.log("Code: " + password);
+        console.log("Password: " + password);
 
         const response = await axiosPost({
           url: `${serverURL}/signin`,

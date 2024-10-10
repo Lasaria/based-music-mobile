@@ -55,6 +55,11 @@ const SignInScreen = () => {
       await AuthService.signIn(email, password);
       navigation.navigate("Home");
     } catch (err) {
+      if (err.message == "User is not confirmed.") {
+        await AuthService.resendConfirmationCode(email)
+        navigation.navigate("ConfirmSignUp", { email });
+        console.log("User not confirmed")
+      }
       Alert.alert(
         "Sign In Error",
         err.message || "An error occurred during sign-in."
