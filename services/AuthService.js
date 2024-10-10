@@ -194,6 +194,8 @@ signUp: async (fullName, email, password) => {
         console.log('User signed in successfully using Google:', response);
         await tokenManager.saveTokens(response.result.AuthenticationResult);
 
+        return response;
+
       } catch (err) {
         console.error('Error:', err.message);
         throw new Error(err.message);
