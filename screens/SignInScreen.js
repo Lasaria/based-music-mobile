@@ -57,7 +57,7 @@ const SignInScreen = () => {
     } catch (err) {
       if (err.message == "User is not confirmed.") {
         await AuthService.resendConfirmationCode(email)
-        navigation.navigate("ConfirmSignUp", { email });
+        navigation.navigate("ConfirmSignUp", { email, password });
         console.log("User not confirmed")
       }
       Alert.alert(
