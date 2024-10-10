@@ -69,8 +69,8 @@ export const tokenManager = {
   },
 
   IsAccessOrIdTokenExpired: async () => {
-    const hasAccessTokenExpired = await isAccessTokenExpired();
-    const hasIdTokenExpired  = await isIdTokenExpired();
+    const hasAccessTokenExpired = await tokenManager.isAccessTokenExpired();
+    const hasIdTokenExpired  = await tokenManager.isIdTokenExpired();
     return (hasAccessTokenExpired || hasIdTokenExpired);
   },
 

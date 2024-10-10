@@ -38,8 +38,13 @@ const SignInScreen = () => {
 
   const handleGoogleSignIn = useCallback(async (idToken) => {
     try {
-      await AuthService.googleSignIn(idToken);
-      navigation.navigate("Home");
+      const result = await AuthService.googleSignIn(idToken);
+      console.log(result);
+      if (result.userCreated) {
+        navigation.navigate("UserTypeChoice");
+      } else {
+        navigation.navigate("Home");
+      }
     } catch (error) {
       console.error('Google Sign-In Error:', error);
       Alert.alert(

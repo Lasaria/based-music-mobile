@@ -18,6 +18,7 @@ import ConfirmSignUpScreen from './screens/ConfirmSignUpScreen';
 import SignInScreen from './screens/SignInScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
+import UserTypeChoiceScreen from './screens/UserTypeChoiceScreen';
 
 import VenueProfileScreen from './screens/VenueProfileScreen';
 import VenueInfoScreen from './screens/VenueInfoScreen';
@@ -59,6 +60,7 @@ export default function App() {
            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
            <Stack.Screen name="Home" component={HomeScreen} />
+           <Stack.Screen name="UserTypeChoice" component={UserTypeChoiceScreen} />
 
            {/* Listener Profile Screens */}
            <Stack.Screen name='ListenerProfile' component={ListenerProfileScreen} options={{ headerTitle: 'Listener Profile' }} />
