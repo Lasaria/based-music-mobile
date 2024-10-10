@@ -3,10 +3,6 @@
 # dependencies
 node_modules/
 
-# To avoid ios and android files
-ios/
-android/
-
 # Expo
 .expo/
 dist/
@@ -34,6 +30,7 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
 
 # typescript
 *.tsbuildinfo

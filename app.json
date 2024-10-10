@@ -39,9 +39,6 @@
         "projectId": "974ced9c-baf2-4a96-b3cf-ecb8125b30a1"
       }
     },
-    "owner": "lasaria",
-    "plugins": [
-      "expo-font"
-    ]
+    "owner": "lasaria"
   }
 }

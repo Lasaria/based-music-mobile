@@ -66,45 +66,5 @@ export const tokenManager = {
     } catch (error) {
       console.error('Error deleting tokens:', error);
     }
-  },
-
-  IsAccessOrIdTokenExpired: async () => {
-    const hasAccessTokenExpired = await isAccessTokenExpired();
-    const hasIdTokenExpired  = await isIdTokenExpired();
-    return (hasAccessTokenExpired || hasIdTokenExpired);
-  },
-
-  isAccessTokenExpired: async () => {
-    try {
-      const accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
-      // Token doesn't exist, consider it expired
-      if (!accessToken) {
-        return true;
-      }
-      const decodedToken = jwtDecode(accessToken);
-      const currentTime = Math.floor(Date.now() / 1000);
-      return decodedToken.exp <= currentTime;
-    } catch (error) {
-      console.error('Error checking access token expiration:', error);
-      // In case of error, consider token expired
-      return true; 
-    }
-  },
-
-  isIdTokenExpired: async () => {
-    try {
-      const idToken = await SecureStore.getItemAsync(ID_TOKEN_KEY);
-      // Token doesn't exist, consider it expired
-      if (!idToken) {
-        return true; 
-      }
-      const decodedToken = jwtDecode(idToken);
-      const currentTime = Math.floor(Date.now() / 1000);
-      return decodedToken.exp <= currentTime;
-    } catch (error) {
-      console.error('Error checking ID token expiration:', error);
-      // In case of error, consider token expired
-      return true;
-    }
-  },
+  }
 };

@@ -1,68 +1,46 @@
 import axios from "axios";
 import { tokenManager } from "./tokenManager";
-import { AuthService } from "../services/AuthService"; // Import your AuthService
-import { navigate } from "../services/NavigationService";
 
-class ApiError extends Error {
-  constructor(message, status, data) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-    this.data = data;
-  }
+export const axiosPost = async ({ url, body, isAuthenticated = true }) => {
+
+    let accessToken;
+
+    if (isAuthenticated) {
+        accessToken = await tokenManager.getAccessToken();
+    }
+
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
+    };
+
+    const response = await axios(url, {
+        method: 'POST',
+        headers: headers,
+        data: body,
+      });
+
+    return response.data;
 }
 
-const createAxiosRequest = async ({ url, method, body, isAuthenticated = true }) => {
-  let accessToken;
+export const axiosGet = async ({ url, body, isAuthenticated = true }) => {
 
-  if (isAuthenticated) {
-    const isAnyTokenInvalid = await tokenManager.IsAccessOrIdTokenExpired();
-    if (isAnyTokenInvalid) {
-      try {
-        await AuthService.refreshTokens();
-      } catch (error) {
-        // Cause1: Expired Refresh Tokens
-        tokenManager.deleteTokens();
-        navigate('SignIn');
-        throw new ApiError('Failed to refresh tokens', null, error);
-      }
+    let accessToken;
+
+    if (isAuthenticated) {
+        accessToken = await tokenManager.getAccessToken();
     }
 
-    // Retrieve the (new) access token
-    try {
-      accessToken = await tokenManager.getAccessToken();
-    } catch (error) {
-      throw new ApiError('Failed to get access token', null, error);
-    }
-  }
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
+    };
 
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
-  };
+    const response = await axios(url, {
+        method: 'GET',
+        headers: headers,
+        data: body,
+      });
 
-  try {
-    const response = await axios({
-      url,
-      method,
-      headers,
-      data: body,
-    });
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new ApiError(
-        error.response.data.error || 'Server responded with an error',
-        error.response.status,
-        error.response.data
-      );
-    } else if (error.request) {
-      throw new ApiError('No response received from server', null, error.request);
-    } else {
-      throw new ApiError('Error setting up the request', null, error.message);
-    }
-  }
-};
-
-export const axiosPost = (config) => createAxiosRequest({ ...config, method: 'POST' });
-export const axiosGet = (config) => createAxiosRequest({ ...config, method: 'GET' });
+    return response;
+}

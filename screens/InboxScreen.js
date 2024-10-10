@@ -8,6 +8,7 @@ const InboxScreen = () => {
         </View>
     )
 }
+
 export default InboxScreen
 
 const styles = StyleSheet.create({
