@@ -1,80 +1,73 @@
 import { Image, SafeAreaView, StyleSheet, Text, View, Dimensions, TouchableOpacity } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState, useEffect} from 'react';
-import { Colors } from '../constants/Color';
-import ButtonComponent from '../components/ButtonComponent';
+import React, { useState, useEffect } from 'react';
 import * as Font from 'expo-font';
 
 const { width, height } = Dimensions.get('window');
 
 const WelcomeScreen = ({ navigation }) => {
     const [loadingFonts, setLoadingFonts] = useState(true);
-    // Handle Naivgation for Sign in
-    const handleSignInNavigation = () => {
-        navigation.navigate('SignIn')
-    }
-    // Handle Naivgation for Sign up
-    const handleSignUpNavigation = () => {
-        navigation.navigate('SignUp')
-    }
-
-    // Handle Naivgation for guest
-    const handleGuestNavigation = () => {
-        navigation.navigate('')
-    }
 
     const loadFonts = async () => {
         await Font.loadAsync({
-          'OpenSans-Regular': require('../assets/fonts/OpenSans-Regular.ttf'), // Adjust the path accordingly
-          'OpenSans-Bold': require('../assets/fonts/OpenSans-Bold.ttf'), // Adjust the path accordingly
+            'OpenSans-Regular': require('../assets/fonts/OpenSans-Regular.ttf'),
+            'OpenSans-Bold': require('../assets/fonts/OpenSans-Bold.ttf'),
         });
-        setLoadingFonts(false); // Set loading to false after fonts are loaded
-      };
-    
-      useEffect(() => {
-        loadFonts();
-      }, []);
+        setLoadingFonts(false);
+    };
 
-      if (loadingFonts) {
+    useEffect(() => {
+        loadFonts();
+    }, []);
+
+    if (loadingFonts) {
         return null; // or a loading spinner
-      }
+    }
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* Background Image */}
+            {/* Background Image Container */}
             <View style={styles.imageContainer}>
                 <Image
                     source={require('../assets/images/bg2.png')}
                     resizeMode='cover'
                     style={styles.backgroundImage}
                 />
-            </View>
-            {/* Gradient Overlay */}
-            <LinearGradient
-                colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,1)']}
-                style={styles.gradient}
-            >
-
-                 {/* Welcome Message */}
-                 <Text style={[styles.welcomeMsg, { fontFamily: 'OpenSans-Bold' }]}>Welcome to Based Music</Text>
-                 <Text style={[styles.subMessage, { fontFamily: 'OpenSans-Regular' }]}>Your Local Music Scene All in One, Anywhere.</Text>
-                {/* Text and Buttons Container */}
-                <View style={styles.content}>
-
-                    {/* Sign in Button */}
-                    <View style={styles.bottomContainer}>
-                        <TouchableOpacity style={styles.signInButton} onPress={handleSignInNavigation}>
-                            <Text style={[styles.buttonText, { fontFamily: 'OpenSans-Bold'}]}>Sign In</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.signUpButton} onPress={handleSignUpNavigation}>
-                            <Text style={[styles.buttonText, { fontFamily: 'OpenSans-Bold'}]}>Sign Up</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.guestButton}>
-                            <Text style={[styles.guestButtonText, { fontFamily: 'OpenSans-Bold'}]}>continue as a guest</Text>
-                        </TouchableOpacity>
-                    </View>
+                {/* Bottom darkening overlay occupying only 25% */}
+                <View style={styles.bottomOverlay}>
+                    {[...Array(25)].map((_, index) => (
+                        <View
+                            key={index}
+                            style={[
+                                styles.darkeningLayer,
+                                {
+                                    bottom: index * (height * 0.01),
+                                    opacity: 0.04 * index
+                                }
+                            ]}
+                        />
+                    ))}
                 </View>
-            </LinearGradient>
+            </View>
+
+            {/* Content Container */}
+            <View style={styles.contentContainer}>
+                {/* Welcome Message */}
+                <Text style={[styles.welcomeMsg, { fontFamily: 'OpenSans-Bold' }]}>Welcome to Based Music</Text>
+                <Text style={[styles.subMessage, { fontFamily: 'OpenSans-Regular' }]}>Your Local Music Scene All in One, Anywhere.</Text>
+
+                {/* Buttons Container */}
+                <View style={styles.bottomContainer}>
+                    <TouchableOpacity style={styles.signInButton} onPress={() => navigation.navigate('SignIn')}>
+                        <Text style={[styles.buttonText, { fontFamily: 'OpenSans-Bold' }]}>Sign In</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.signUpButton} onPress={() => navigation.navigate('SignUp')}>
+                        <Text style={[styles.buttonText, { fontFamily: 'OpenSans-Bold' }]}>Sign Up</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.guestButton}>
+                        <Text style={[styles.guestButtonText, { fontFamily: 'OpenSans-Bold' }]}>continue as a guest</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
         </SafeAreaView>
     );
 };
@@ -86,17 +79,45 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#000',
     },
+    imageContainer: {
+        width: '100%',
+        height: height,
+        position: 'absolute',
+    },
     backgroundImage: {
         width: width,
         height: height * 0.75,
         position: 'absolute',
-        marginTop: '-30%',
+        marginTop: '-20%',
     },
-    gradient: {
+    bottomOverlay: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '40%',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        shadowColor: 'black',
+        shadowRadius: 30,
+        shadowOpacity: 0.9,
+        shadowOffset: {
+            width: 10,
+            height: 10,
+        }
+    },
+    darkeningLayer: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: height * 0.36,
+        backgroundColor: 'rgba(0,0,0,0.04)',
+    },
+    contentContainer: {
         flex: 1,
         justifyContent: 'flex-end',
         paddingHorizontal: 20,
-        paddingBottom: 40,
+        paddingBottom: 30,
     },
     welcomeMsg: {
         color: '#FFF',
@@ -131,7 +152,7 @@ const styles = StyleSheet.create({
         top: -height * 0.03, // Fixed position for welcome message
     },
     guestButton: {
-        top: -height * 0.01, // Fixed position for welcome message
+        top: height * 0.001, // Fixed position for welcome message
     },
     guestButtonText: {
         textAlign: 'center',
