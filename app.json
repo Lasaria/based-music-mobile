@@ -42,8 +42,7 @@
     },
     "owner": "lasaria",
     "plugins": [
-      "expo-font",
-      "expo-document-picker"
+      "expo-font"
     ]
   }
 }
