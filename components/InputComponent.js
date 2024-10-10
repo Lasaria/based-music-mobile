@@ -79,4 +79,8 @@ const styles = StyleSheet.create({
         borderWidth: 1, // Full border
         borderColor: Colors.error,
     }
+<<<<<<< HEAD
 });
+=======
+});
+>>>>>>> a2cf52b (Ensure WelcomeScreen is rendered in App.js)

@@ -19,4 +19,8 @@ const styles = StyleSheet.create({
     button: {
         height: height * 0.07,
     },
+<<<<<<< HEAD
 });
+=======
+});
+>>>>>>> a2cf52b (Ensure WelcomeScreen is rendered in App.js)

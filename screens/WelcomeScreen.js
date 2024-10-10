@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     },
     backgroundImage: {
         width: width,
-        height: height * 0.75,
+        height: height * 0.66,
         position: 'absolute',
         marginTop: '-20%',
     },
@@ -95,16 +95,16 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        height: '40%',
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        shadowColor: 'black',
-        shadowRadius: 30,
-        shadowOpacity: 0.9,
+        height: '25%',
+        backgroundColor: 'rgba(0, 0, 0, 1)', // Semi-transparent black
         shadowOffset: {
             width: 10,
             height: 10,
-        }
+        },
+        shadowOpacity: 0.9,
+        shadowRadius: 20,
     },
+
     darkeningLayer: {
         position: 'absolute',
         left: 0,

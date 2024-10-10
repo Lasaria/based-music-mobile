@@ -4,4 +4,8 @@ export const Colors = {
     background: '#000000',
     white: '#FFFFFF',
     error: '#ff3333'
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> a2cf52b (Ensure WelcomeScreen is rendered in App.js)

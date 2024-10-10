@@ -1,9 +1,15 @@
 import React, { useState, useCallback } from "react";
+<<<<<<< HEAD
 import { View, Switch, Text, StyleSheet, Alert, SafeAreaView, Image, Dimensions } from "react-native";
+=======
+import { View, Text, StyleSheet, Alert, SafeAreaView, Image, Dimensions } from "react-native";
+>>>>>>> a2cf52b (Ensure WelcomeScreen is rendered in App.js)
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import { useNavigation } from "@react-navigation/native";
+import { Colors } from "../constants/Color";
 import { AuthService } from "../services/AuthService";
+<<<<<<< HEAD
 import { Colors } from '../constants/Color';
 import InputComponent from "../components/InputComponent";
 import ButtonComponent from "../components/ButtonComponent";
@@ -13,6 +19,19 @@ import RadioButtonGroup, { RadioButtonItem } from "expo-radio-button";
 
 WebBrowser.maybeCompleteAuthSession();
 const { width, height } = Dimensions.get('window');
+=======
+import { Ionicons, Feather, AntDesign, SimpleLineIcons } from '@expo/vector-icons';
+import { ActivityIndicator } from "react-native";
+import RadioButtonGroup, { RadioButtonItem } from "expo-radio-button";
+import InputComponent from "../components/InputComponent";
+import ButtonComponent from "../components/ButtonComponent";
+
+WebBrowser.maybeCompleteAuthSession();
+const { width, height } = Dimensions.get('window');
+// Replace with your actual Google Client ID
+const GOOGLE_CLIENT_ID =
+  "78783695276-rtd863qci0mdjj06kf3c4sp2k12trv7n.apps.googleusercontent.com";
+>>>>>>> a2cf52b (Ensure WelcomeScreen is rendered in App.js)
 
 const SignInScreen = () => {
   const [email, setEmail] = useState("");
@@ -26,7 +45,10 @@ const SignInScreen = () => {
   const [current, setCurrent] = useState(false);
   const navigation = useNavigation();
 
+<<<<<<< HEAD
   const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"; // Replace with your actual client ID
+=======
+>>>>>>> a2cf52b (Ensure WelcomeScreen is rendered in App.js)
   const [request, response, promptAsync] = Google.useAuthRequest({
     androidClientId: GOOGLE_CLIENT_ID,
     iosClientId: GOOGLE_CLIENT_ID,
@@ -185,12 +207,20 @@ const SignInScreen = () => {
               {current ? (
                 <RadioButtonItem
                   value={true}
+<<<<<<< HEAD
                   label={<Text style={styles.rememberMeText}>Remember Me</Text>} 
+=======
+                  label={<Text style={styles.rememberMeText}>Remember Me</Text>}
+>>>>>>> a2cf52b (Ensure WelcomeScreen is rendered in App.js)
                 />
               ) : (
                 <RadioButtonItem
                   value={false}
+<<<<<<< HEAD
                   label={<Text style={styles.rememberMeText}>Remember Me</Text>} 
+=======
+                  label={<Text style={styles.rememberMeText}>Remember Me</Text>}
+>>>>>>> a2cf52b (Ensure WelcomeScreen is rendered in App.js)
                 />
               )}
             </RadioButtonGroup>
