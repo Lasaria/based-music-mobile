@@ -11,11 +11,11 @@ const serverURL = 'http://localhost:3001'
 export const AuthService = {
  
 // Sign Up Function
-signUp: async (email, password) => {
+signUp: async (fullName, email, password) => {
     try {
       const response = await axiosPost({
         url: `${serverURL}/signup`,
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ fullName, email, password }),
         isAuthenticated : false
     });
   
@@ -23,8 +23,8 @@ signUp: async (email, password) => {
       console.log('User signed up successfully:', response);
 
     } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
     }
   },
   
@@ -45,8 +45,8 @@ signUp: async (email, password) => {
         console.log('User confirmed successfully:', response);
 
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
 
@@ -66,8 +66,8 @@ signUp: async (email, password) => {
         console.log('Confirmation code resent successfully:', response);
  
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
   
@@ -76,7 +76,7 @@ signUp: async (email, password) => {
   signIn: async (email, password) => {
     try {
         console.log("EMAIL: "+ email)
-        console.log("Code: " + password);
+        console.log("Password: " + password);
 
         const response = await axiosPost({
           url: `${serverURL}/signin`,
@@ -89,8 +89,8 @@ signUp: async (email, password) => {
         await tokenManager.saveTokens(response.result.AuthenticationResult);
 
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
 
@@ -110,8 +110,8 @@ signUp: async (email, password) => {
         console.log('Forgot password started successfully:', response);
 
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
 
@@ -130,8 +130,8 @@ signUp: async (email, password) => {
         console.log('Password reset successfully:', response);
 
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
   
@@ -154,8 +154,8 @@ signUp: async (email, password) => {
 
 
       } catch (err) {
-        console.error('Error:', err.response.data.error);
-        throw new Error(err.response.data.error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
 
@@ -164,26 +164,39 @@ signUp: async (email, password) => {
   refreshTokens: async () => {
     try {
         const refreshToken = await tokenManager.getRefreshToken();
-
-        // TODO: Needs logic to go to sign in page if this happens
         if (!refreshToken) {
           throw new Error('No refresh token available');
         }
-
-
         const response = await axiosPost({
           url: `${serverURL}/refresh-tokens`,
           body: { refreshToken },
           isAuthenticated : false
         });
-
         console.log('Tokens refreshed successfully:', response);
-
+        await tokenManager.saveTokens(response.result.AuthenticationResult);
 
       } catch (error) {
-        // TODO: Needs logic to go to sign in page if this happens
-        console.error('Error refreshing tokens:', error.response?.data?.error || error.message);
-        throw new Error(error);
+        console.error('Error:', err.message);
+        throw new Error(err.message);
+      }
+  },
+
+  // Google Sign in Function
+  googleSignIn: async (idToken) => {
+    try {
+
+        const response = await axiosPost({
+            url: `${serverURL}/google-auth`,
+            body: JSON.stringify({ idToken }),
+            isAuthenticated: false
+        });
+
+        console.log('User signed in successfully using Google:', response);
+        await tokenManager.saveTokens(response.result.AuthenticationResult);
+
+      } catch (err) {
+        console.error('Error:', err.message);
+        throw new Error(err.message);
       }
   },
 

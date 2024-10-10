@@ -5,7 +5,8 @@ import { View, TextInput, Button, Text, StyleSheet } from 'react-native';
 import { AuthService } from '../services/AuthService';
 
 const ConfirmSignUpScreen = ({ route, navigation }) => {
-  const { email } = route.params;
+  const { email, password } = route.params;
+  console.log(route.params)
   const [confirmationCode, setConfirmationCode] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -14,7 +15,10 @@ const ConfirmSignUpScreen = ({ route, navigation }) => {
     try {
       await AuthService.confirmSignUp(email, confirmationCode);
       console.log('Confirmation successful');
-      navigation.navigate('SignIn');
+      console.log("Password: " + password)
+      await AuthService.signIn(email, password)
+      console.log('Login successful');
+      navigation.navigate('Home');
     } catch (err) {
       console.error('Confirmation error:', err);
       setErrorMessage(err.message || 'An error occurred during confirmation.');
