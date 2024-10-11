@@ -18,10 +18,12 @@ const createAxiosRequest = async ({ url, method, body, isAuthenticated = true })
   if (isAuthenticated) {
     const isAnyTokenInvalid = await tokenManager.IsAccessOrIdTokenExpired();
     if (isAnyTokenInvalid) {
+        console.log("INVALID TOKENS")
       try {
         await AuthService.refreshTokens();
       } catch (error) {
         // Cause1: Expired Refresh Tokens
+        tokenManager.deleteTokens();
         navigate('SignIn');
         throw new ApiError('Failed to refresh tokens', null, error);
       }
