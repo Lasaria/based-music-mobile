@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import { jwtDecode } from 'jwt-decode';
 
 const ACCESS_TOKEN_KEY = 'userAccessToken';
 const ID_TOKEN_KEY = 'userIdToken';
@@ -68,43 +69,51 @@ export const tokenManager = {
     }
   },
 
-  IsAccessOrIdTokenExpired: async () => {
-    const hasAccessTokenExpired = await tokenManager.isAccessTokenExpired();
-    const hasIdTokenExpired  = await tokenManager.isIdTokenExpired();
-    return (hasAccessTokenExpired || hasIdTokenExpired);
-  },
-
-  isAccessTokenExpired: async () => {
+  isAccessTokenExpired: async function() {
     try {
       const accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
-      // Token doesn't exist, consider it expired
       if (!accessToken) {
         return true;
       }
       const decodedToken = jwtDecode(accessToken);
       const currentTime = Math.floor(Date.now() / 1000);
-      return decodedToken.exp <= currentTime;
+      if (decodedToken.exp <= currentTime) {
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('Error checking access token expiration:', error);
-      // In case of error, consider token expired
       return true; 
     }
   },
 
-  isIdTokenExpired: async () => {
+  isIdTokenExpired: async function() {
     try {
       const idToken = await SecureStore.getItemAsync(ID_TOKEN_KEY);
-      // Token doesn't exist, consider it expired
       if (!idToken) {
         return true; 
       }
       const decodedToken = jwtDecode(idToken);
       const currentTime = Math.floor(Date.now() / 1000);
-      return decodedToken.exp <= currentTime;
+      if (decodedToken.exp <= currentTime) {
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('Error checking ID token expiration:', error);
-      // In case of error, consider token expired
       return true;
     }
   },
+
+  IsAccessOrIdTokenExpired: async function() {
+    try {
+      const hasAccessTokenExpired = await this.isAccessTokenExpired();
+      const hasIdTokenExpired = await this.isIdTokenExpired();
+      return (hasAccessTokenExpired || hasIdTokenExpired);
+    } catch (error) {
+      console.error('Error checking Access/ID token expiry:', error);
+      return true;
+    }
+  },
+
 };
