@@ -76,7 +76,7 @@ signUp: async (fullName, email, password) => {
   signIn: async (email, password) => {
     try {
         console.log("EMAIL: "+ email)
-        console.log("Code: " + password);
+        console.log("Password: " + password);
 
         const response = await axiosPost({
           url: `${serverURL}/signin`,
@@ -173,6 +173,7 @@ signUp: async (fullName, email, password) => {
           isAuthenticated : false
         });
         console.log('Tokens refreshed successfully:', response);
+        await tokenManager.saveTokens(response.result.AuthenticationResult);
 
       } catch (error) {
         console.error('Error:', err.message);
@@ -192,6 +193,8 @@ signUp: async (fullName, email, password) => {
 
         console.log('User signed in successfully using Google:', response);
         await tokenManager.saveTokens(response.result.AuthenticationResult);
+
+        return response;
 
       } catch (err) {
         console.error('Error:', err.message);

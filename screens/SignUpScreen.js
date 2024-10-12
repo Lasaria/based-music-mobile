@@ -96,7 +96,8 @@ const SignUpScreen = ({ navigation }) => {
 
       await AuthService.signUp(fullName, email, password);
       console.log('Sign up successful');
-      navigation.navigate('ConfirmSignUp', { email });
+      console.log("Password" + password)
+      navigation.navigate('ConfirmSignUp', { email, password });
     } catch (err) {
       console.error('Sign up error:', err.message);
       //setErrorMessage(err.message || 'An error occurred during sign-up.');
