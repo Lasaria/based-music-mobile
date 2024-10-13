@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Slider, Button, Image, StyleSheet } from 'react-native';
+import { View, Text,  Button, Image, StyleSheet } from 'react-native';
 import { Audio } from 'expo-av';
 
 const StreamMusicScreen = () => {
@@ -116,12 +116,12 @@ const StreamMusicScreen = () => {
       </View>
 
       <View style={styles.progressBar}>
-        <Slider
+        {/* <Slider
           minimumValue={0}
           maximumValue={1}
           value={playbackDuration ? playbackPosition / playbackDuration : 0}
           onSlidingComplete={handleSeek}
-        />
+        /> */}
         <View style={styles.timeInfo}>
           <Text>{formatTime(playbackPosition)}</Text>
           <Text>{formatTime(playbackDuration)}</Text>
@@ -130,12 +130,12 @@ const StreamMusicScreen = () => {
 
       <View style={styles.volumeControl}>
         <Text>Volume</Text>
-        <Slider
+        {/* <Slider
           minimumValue={0}
           maximumValue={1}
           value={volume}
           onValueChange={handleVolumeChange}
-        />
+        /> */}
       </View>
     </View>
   );
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
   },
   albumArt: {
     width: 150,
