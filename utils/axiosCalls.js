@@ -38,7 +38,7 @@ const createAxiosRequest = async ({ url, method, body, isAuthenticated = true })
   }
 
   const headers = {
-    'Content-Type': 'application/json',
+    ...(method !== 'GET' && { 'Content-Type': 'application/json' }),
     ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
   };
 
@@ -47,7 +47,7 @@ const createAxiosRequest = async ({ url, method, body, isAuthenticated = true })
       url,
       method,
       headers,
-      data: body,
+      ...(method === 'GET' ? { } : { data: body }),
     });
     return response.data;
   } catch (error) {

@@ -1,5 +1,9 @@
 import * as SecureStore from 'expo-secure-store';
 import { jwtDecode } from 'jwt-decode';
+import { Buffer } from 'buffer';
+
+// Polyfill for atob
+global.atob = (input) => Buffer.from(input, 'base64').toString('binary');
 
 const ACCESS_TOKEN_KEY = 'userAccessToken';
 const ID_TOKEN_KEY = 'userIdToken';
