@@ -17,6 +17,10 @@ const HomeScreen = ({ navigation }) => {
     await AuthService.refreshTokens();
   };
 
+  const StreamMusic = async () => {
+    navigation.navigate('StreamMusicScreen');
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome to Based Music!</Text>
@@ -24,6 +28,7 @@ const HomeScreen = ({ navigation }) => {
       <Button title="Refresh Tokens" onPress={handleRefreshTokens} />
       {/* Listener Profile Button */}
       <Button title="Listener Profile" onPress={() => navigation.navigate('ListenerProfile')} />
+        <Button title='StreamMusicScreen' onPress={StreamMusic} />
     </View>
   );
 };
