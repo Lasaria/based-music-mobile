@@ -32,7 +32,6 @@ import SettingsScreen from './screens/SettingsScreen';
 import InboxScreen from './screens/InboxScreen';
 import WelcomeScreen from './screens/WelcomeScreen';
 import StreamMusicScreen from './screens/StreamMusicScreen';
-import StreamMusicScreen from './screens/StreamMusicScreen';
 
 const Tab = createBottomTabNavigator()
 const Stack = createNativeStackNavigator()
@@ -85,8 +84,8 @@ export default function App() {
 
           {/* Add other screens as needed */}
 
-          <Stack.Screen name='StreamMusicScreen' component={StreamMusicScreen} />
- 
+
+
           <Stack.Screen name="Tabs" children={() => <Tabs />} options={{ headerShown: false }} />
         </Stack.Navigator>
       </NavigationContainer>

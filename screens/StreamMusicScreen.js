@@ -1,142 +1,110 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text,  Button, Image, StyleSheet } from 'react-native';
+import { View, Text, Button, Image, StyleSheet} from 'react-native';
 import { Audio } from 'expo-av';
 
 const StreamMusicScreen = () => {
   const [sound, setSound] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackPosition, setPlaybackPosition] = useState(0);
-  const [playbackDuration, setPlaybackDuration] = useState(0);
-  const [volume, setVolume] = useState(1.0); // 1.0 is max volume
-  const [trackInfo, setTrackInfo] = useState({
-    title: 'Track Title',
-    artist: 'Artist Name',
-    albumArt: 'https://via.placeholder.com/150', // Placeholder for album art
-  });
-
-  const soundRef = useRef(null);
+  const [volume, setVolume] = useState(1.0);
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const soundRef = useRef();
 
   useEffect(() => {
-    // Load and play the audio file from the server or local asset
-    loadSound();
+    return sound
+      ? () => {
+          sound.unloadAsync(); // Cleanup on component unmount
+        }
+      : undefined;
+  }, [sound]);
 
-    return () => {
-      if (sound) {
-        sound.unloadAsync(); // Unload the sound when component unmounts
-      }
-    };
-  }, []);
-
-  const loadSound = async () => {
+  const loadAudio = async () => {
     const { sound } = await Audio.Sound.createAsync(
-      { uri: 'http://localhost:3000/stream/your-track-id' }, // Replace with your backend URL
-      { shouldPlay: true }
+      { uri: 'https://your-music-url.com/song.mp3' },
+      { shouldPlay: false, volume: 1.0 },
+      onPlaybackStatusUpdate
     );
     setSound(sound);
     soundRef.current = sound;
-
-    sound.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate);
   };
 
   const onPlaybackStatusUpdate = (status) => {
     if (status.isLoaded) {
-      setPlaybackPosition(status.positionMillis);
-      setPlaybackDuration(status.durationMillis);
-
-      if (status.didJustFinish) {
-        setIsPlaying(false); // Track finished playing
-      }
+      setDuration(status.durationMillis);
+      setPosition(status.positionMillis);
+      setIsPlaying(status.isPlaying);
     }
   };
 
   const handlePlayPause = async () => {
-    if (sound) {
-      if (isPlaying) {
-        await sound.pauseAsync();
-      } else {
-        await sound.playAsync();
-      }
-      setIsPlaying(!isPlaying);
+    if (isPlaying) {
+      await sound.pauseAsync();
+    } else {
+      await sound.playAsync();
     }
   };
 
   const handleSkipForward = async () => {
     if (sound) {
-      let newPosition = playbackPosition + 15000; // 15 seconds forward
-      if (newPosition > playbackDuration) {
-        newPosition = playbackDuration;
-      }
+      let newPosition = position + 10000; // Skip 10 seconds forward
       await sound.setPositionAsync(newPosition);
     }
   };
 
   const handleSkipBackward = async () => {
     if (sound) {
-      let newPosition = playbackPosition - 15000; // 15 seconds backward
-      if (newPosition < 0) {
-        newPosition = 0;
-      }
+      let newPosition = position - 10000; // Skip 10 seconds backward
       await sound.setPositionAsync(newPosition);
     }
   };
 
   const handleVolumeChange = async (newVolume) => {
     setVolume(newVolume);
-    if (sound) {
-      await sound.setVolumeAsync(newVolume);
-    }
+    await soundRef.current.setVolumeAsync(newVolume);
   };
 
-  const handleSeek = async (value) => {
-    if (sound) {
-      const newPosition = value * playbackDuration;
-      await sound.setPositionAsync(newPosition);
-    }
+  const handleSeek = async (newPosition) => {
+    await sound.setPositionAsync(newPosition);
   };
 
-  const formatTime = (millis) => {
-    const minutes = Math.floor(millis / 60000);
-    const seconds = ((millis % 60000) / 1000).toFixed(0);
-    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-  };
+  useEffect(() => {
+    loadAudio();
+  }, []);
 
   return (
     <View style={styles.container}>
-      <Image source={{ uri: trackInfo.albumArt }} style={styles.albumArt} />
+      {/* Track Information */}
+      <Image
+        source={{ uri: 'https://your-music-url.com/artwork.jpg' }}
+        style={styles.artwork}
+      />
+      <Text style={styles.trackInfo}>Track Title - Artist Name</Text>
 
-      <View style={styles.infoContainer}>
-        <Text style={styles.trackTitle}>{trackInfo.title}</Text>
-        <Text style={styles.trackArtist}>{trackInfo.artist}</Text>
-      </View>
-
+      {/* Controls */}
       <View style={styles.controls}>
-        <Button title="Skip Backward" onPress={handleSkipBackward} />
-        <Button title={isPlaying ? 'Pause' : 'Play'} onPress={handlePlayPause} />
-        <Button title="Skip Forward" onPress={handleSkipForward} />
+        <Button title="Back 10s" onPress={handleSkipBackward} />
+        <Button title={isPlaying ? "Pause" : "Play"} onPress={handlePlayPause} />
+        <Button title="Forward 10s" onPress={handleSkipForward} />
       </View>
 
-      <View style={styles.progressBar}>
-        {/* <Slider
-          minimumValue={0}
-          maximumValue={1}
-          value={playbackDuration ? playbackPosition / playbackDuration : 0}
-          onSlidingComplete={handleSeek}
-        /> */}
-        <View style={styles.timeInfo}>
-          <Text>{formatTime(playbackPosition)}</Text>
-          <Text>{formatTime(playbackDuration)}</Text>
-        </View>
-      </View>
+      {/* Progress Bar */}
+      {/* <Slider
+        style={styles.progress}
+        minimumValue={0}
+        maximumValue={duration}
+        value={position}
+        onSlidingComplete={handleSeek}
+      /> */}
 
-      <View style={styles.volumeControl}>
-        <Text>Volume</Text>
-        {/* <Slider
-          minimumValue={0}
-          maximumValue={1}
-          value={volume}
-          onValueChange={handleVolumeChange}
-        /> */}
-      </View>
+      {/* Volume Control */}
+      <Text>Volume</Text>
+      {/* <Slider
+        style={styles.volume}
+        minimumValue={0}
+        maximumValue={1}
+        value={volume}
+        onValueChange={handleVolumeChange}
+      /> */}
     </View>
   );
 };
@@ -144,45 +112,32 @@ const StreamMusicScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     justifyContent: 'center',
-    backgroundColor: 'white',
+    padding: 20,
   },
-  albumArt: {
-    width: 150,
-    height: 150,
+  artwork: {
+    width: 200,
+    height: 200,
     alignSelf: 'center',
     marginBottom: 20,
   },
-  infoContainer: {
-    alignItems: 'center',
+  trackInfo: {
+    textAlign: 'center',
+    fontSize: 16,
     marginBottom: 20,
-  },
-  trackTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  trackArtist: {
-    fontSize: 18,
-    color: 'gray',
   },
   controls: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: 20,
   },
-  progressBar: {
-    marginVertical: 10,
+  progress: {
+    width: '100%',
+    height: 40,
   },
-  timeInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  volumeControl: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 20,
+  volume: {
+    width: '100%',
+    height: 40,
   },
 });
 
