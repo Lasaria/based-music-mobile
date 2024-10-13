@@ -50,6 +50,7 @@ const SignInScreen = () => {
 
 
   const handleGoogleSignIn = useCallback(async (idToken) => {
+    console.log(idToken)
     try {
       const result = await AuthService.googleSignIn(idToken);
       console.log(result);
@@ -203,7 +204,7 @@ const SignInScreen = () => {
               title={<Feather name="facebook" size={24} color={Colors.white} />}
               buttonStyle={styles.socialButton} />
             <ButtonComponent
-              onPress={handleGoogleSignIn}
+              onPress={() => promptAsync()}
               title={<SimpleLineIcons name="social-google" size={24} color={Colors.white} />}
               buttonStyle={styles.socialButton} />
             <ButtonComponent
