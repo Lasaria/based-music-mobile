@@ -32,6 +32,7 @@ import SettingsScreen from './screens/SettingsScreen';
 import InboxScreen from './screens/InboxScreen';
 import WelcomeScreen from './screens/WelcomeScreen';
 import StreamMusicScreen from './screens/StreamMusicScreen';
+import StreamMusicScreen from './screens/StreamMusicScreen';
 
 const Tab = createBottomTabNavigator()
 const Stack = createNativeStackNavigator()
@@ -76,6 +77,12 @@ export default function App() {
           <Stack.Screen name="VenueInfo" component={VenueInfoScreen} />
           <Stack.Screen name="Events" component={VenueEventsScreen} />
           <Stack.Screen name="VenueBookings" component={VenueBookingsScreen} />
+
+
+          {/**streaming music screen  */}
+
+          <Stack.Screen name='StreamMusic' component={StreamMusicScreen} />
+
           {/* Add other screens as needed */}
 
           <Stack.Screen name='StreamMusicScreen' component={StreamMusicScreen} />
