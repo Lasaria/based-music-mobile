@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Tabs, Stack, Group } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function TabsLayout() {
@@ -79,5 +79,6 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+    
   );
 }

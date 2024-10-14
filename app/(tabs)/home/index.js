@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { View, Text, Button, StyleSheet } from 'react-native';
-import { AuthService } from '../../services/AuthService';
-import { axiosGet } from '../../utils/axiosCalls';
+import { AuthService } from '../../../services/AuthService';
+import { axiosGet } from '../../../utils/axiosCalls';
 import { router } from 'expo-router';
 
 const HomeScreen = ({  }) => {
@@ -31,7 +31,7 @@ const HomeScreen = ({  }) => {
       <Button title="Sign Out" onPress={handleSignOut} />
       <Button title="Refresh Tokens" onPress={handleRefreshTokens} />
       {/* Listener Profile Button */}
-      <Button title="Listener Profile" onPress={() => router.push("listenerProfile")} />
+      <Button title="Listener Profile" onPress={() => router.push("/listenerProfile")} />
       <Button title="Music" onPress={playMusic} />
     </View>
   );

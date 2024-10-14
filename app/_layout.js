@@ -4,6 +4,7 @@ import { usePathname } from 'expo-router';
 
 export default function RootLayout() {
   const pathname = usePathname();
+  console.log(pathname)
 
   // List of routes that should not have bottom tabs
   const routesWithoutTabs = [
@@ -19,10 +20,25 @@ export default function RootLayout() {
   // Check if the current route should have tabs
   const shouldShowTabs = !routesWithoutTabs.includes(pathname);
 
+  
+
+
   if (shouldShowTabs) {
     return (
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Tabs.Screen name="(tabs)" options={{ headerShown: false }} />
+        
+        
+        {/* Hide these screens from the tab bar */}
+        {/* <Stack.Screen name="index" options={{ href: null }} />
+        <Stack.Screen name="favorites" options={{ href: null }} />
+        <Stack.Screen name="inbox" options={{ href: null }} />
+        <Stack.Screen name="listenerProfile" options={{ href: null }} />
+        <Stack.Screen name="settings" options={{ href: null }} />
+        <Stack.Screen name="venueBookings" options={{ href: null }} />
+        <Stack.Screen name="venueEvents" options={{ href: null }} />
+        <Stack.Screen name="venueInfo" options={{ href: null }} />
+        <Stack.Screen name="venueProfile" options={{ href: null }} /> */}
       </Stack>
     );
   } else {

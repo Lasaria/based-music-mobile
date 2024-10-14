@@ -5,6 +5,6 @@ export default function Index() {
   if (!tokenManager.getAccessToken) {
   return <Redirect href="/welcome" />;
   } else {
-    return <Redirect href="(tabs)/home" />
+    return <Redirect href="/home" />
   }
 }
