@@ -4,8 +4,9 @@ import { View, TextInput, Text, StyleSheet, TouchableOpacity, Alert, StatusBar }
 import { AuthService } from '../services/AuthService';
 import { Ionicons } from '@expo/vector-icons';
 import * as Font from 'expo-font';
+import { router } from 'expo-router';
 
-const SignUpScreen = ({ navigation }) => {
+const SignUpScreen = ({ }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -97,7 +98,7 @@ const SignUpScreen = ({ navigation }) => {
       await AuthService.signUp(fullName, email, password);
       console.log('Sign up successful');
       console.log("Password" + password)
-      navigation.navigate('ConfirmSignUp', { email, password });
+      router.push({ pathname: 'confirmSignUp', params: { email: email, password: password } });
     } catch (err) {
       console.error('Sign up error:', err.message);
       //setErrorMessage(err.message || 'An error occurred during sign-up.');
@@ -119,7 +120,7 @@ const SignUpScreen = ({ navigation }) => {
       {/* Ensure the status bar is visible and set its style */}
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       {/* Back Arrow Button */}
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButtonContainer}>
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButtonContainer}>
         <View style={styles.backButton}>
           <Ionicons name="arrow-back" size={18} color="#fff" />
         </View>

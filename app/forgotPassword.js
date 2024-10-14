@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button, Text, StyleSheet } from 'react-native';
 import { AuthService } from '../services/AuthService';
+import { router } from 'expo-router';
 
-const ForgotPasswordScreen = ({ navigation }) => {
+const ForgotPasswordScreen = ({ }) => {
   const [email, setEmail] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -12,7 +13,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
       await AuthService.forgotPassword(email);
       setSuccessMessage('Password reset code sent. Check your email.');
       // Navigate to the ResetPasswordScreen and pass the email
-      navigation.navigate('ResetPassword', { email });
+      router.push({ pathname: 'resetPassword', params: { email: email } });
     } catch (err) {
       setErrorMessage(err.message || 'An error occurred during password reset request.');
     }

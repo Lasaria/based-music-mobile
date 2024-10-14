@@ -1,13 +1,13 @@
 import React from 'react'
 import { View, Text } from 'react-native'
-import Style from '../style'
+import Style from '../../style'
 
-function MusicScreen() {
+function MapScreen() {
   return (
     <View style={Style.container}>
-      <Text style={Style.text}>Music Screen</Text>
+      <Text style={Style.text}>Map Screen</Text>
     </View>
   )
 }
 
-export default MusicScreen
+export default MapScreen
