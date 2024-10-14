@@ -31,6 +31,7 @@ import FavoritesScreen from './screens/FavoritesScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import InboxScreen from './screens/InboxScreen';
 import WelcomeScreen from './screens/WelcomeScreen';
+import ResetCodeScreen from './screens/ResetCodeScreen';
 
 const Tab = createBottomTabNavigator()
 const Stack = createNativeStackNavigator()
@@ -61,8 +62,9 @@ export default function App() {
           <Stack.Screen name="SignIn" component={SignInScreen} />
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+          <Stack.Screen name="ResetCode" component={ResetCodeScreen} />
           <Stack.Screen name="Home" component={HomeScreen} />
-           <Stack.Screen name="UserTypeChoice" component={UserTypeChoiceScreen} />
+          <Stack.Screen name="UserTypeChoice" component={UserTypeChoiceScreen} />
 
           {/* Listener Profile Screens */}
           <Stack.Screen name='ListenerProfile' component={ListenerProfileScreen} options={{ headerTitle: 'Listener Profile' }} />
