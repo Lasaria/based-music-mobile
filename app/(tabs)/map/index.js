@@ -7,7 +7,7 @@ function MapScreen() {
   return (
     <View style={Style.container}>
       <Text style={Style.text}>Map Screen</Text>
-      <Button title="Listener Profile" onPress={() => router.push("/listenerProfile")} />
+      {/* <Button title="Listener Profile" onPress={() => router.push("/listenerProfile")} /> */}
     </View>
   )
 }
