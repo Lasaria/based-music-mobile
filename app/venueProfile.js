@@ -1,28 +1,31 @@
 import { Button, StyleSheet, Text, View } from 'react-native'
 import React from 'react'
-const VenueProfileScreen = ({ navigation }) => {
+import { router } from 'expo-router';
+
+
+const VenueProfileScreen = ({ }) => {
     return (
         <View style={styles.container}>
             <Text>Venue Profile</Text>
             {/* Venue Info Button */}
             <Button
                 title="Venue Info"
-                onPress={() => navigation.navigate('VenueInfo')}
+                onPress={() => router.push('VenueInfo')}
             />
             {/* Events Button */}
             <Button
                 title="Events"
-                onPress={() => navigation.navigate('Events')}
+                onPress={() => router.push('Events')}
             />
             {/* Bookings Button */}
             <Button
                 title="Bookings"
-                onPress={() => navigation.navigate('VenueBookings')}
+                onPress={() => router.push('VenueBookings')}
             />
             {/* Inbox Screen Button */}
             <Button
                 title="Inbox"
-                onPress={() => navigation.navigate('Inbox')}
+                onPress={() => router.push('Inbox')}
             />
         </View>
     )

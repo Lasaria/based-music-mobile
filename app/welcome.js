@@ -1,6 +1,7 @@
 import { Image, SafeAreaView, StyleSheet, Text, View, Dimensions, TouchableOpacity } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import * as Font from 'expo-font';
+import { router } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
 
@@ -57,13 +58,13 @@ const WelcomeScreen = ({ navigation }) => {
 
                 {/* Buttons Container */}
                 <View style={styles.bottomContainer}>
-                    <TouchableOpacity style={styles.signInButton} onPress={() => navigation.navigate('SignIn')}>
+                    <TouchableOpacity style={styles.signInButton} onPress={() => router.push('/signIn')}>
                         <Text style={[styles.buttonText, { fontFamily: 'OpenSans-Bold' }]}>Sign In</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.signUpButton} onPress={() => navigation.navigate('SignUp')}>
+                    <TouchableOpacity style={styles.signUpButton} onPress={() => router.push('/signUp')}>
                         <Text style={[styles.buttonText, { fontFamily: 'OpenSans-Bold' }]}>Sign Up</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.guestButton}>
+                    <TouchableOpacity style={styles.guestButton} onPress={() => router.replace('(tabs)/home')}>
                         <Text style={[styles.guestButtonText, { fontFamily: 'OpenSans-Bold' }]}>continue as a guest</Text>
                     </TouchableOpacity>
                 </View>

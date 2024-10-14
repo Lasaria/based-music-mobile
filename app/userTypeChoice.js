@@ -1,14 +1,15 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { UserService } from "../services/UserService"
+import { router } from 'expo-router';
 
-const UserTypeChoiceScreen = ({ navigation }) => {
+const UserTypeChoiceScreen = ({ }) => {
   const handleUserTypeSelection = async (userType) => {
     console.log(userType)
     // Here you would typically save the user type to your app's state or backend
     await UserService.setUserType(userType)
     // For now, we'll just navigate to a hypothetical 'Main' screen
-    navigation.navigate('Home', { userType });
+    router.push({ pathname: 'home', params: { userType: userType } })
   };
 
   return (

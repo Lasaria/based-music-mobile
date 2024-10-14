@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button, Text, StyleSheet } from 'react-native';
 import { AuthService } from '../services/AuthService';
+import { router, useLocalSearchParams } from 'expo-router';
 
-const ResetPasswordScreen = ({ route, navigation }) => {
-  const { email } = route.params;
+const ResetPasswordScreen = ({ }) => {
+  //const { email } = route.params;
+  const { email } = useLocalSearchParams();
   const [confirmationCode, setConfirmationCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -14,7 +16,7 @@ const ResetPasswordScreen = ({ route, navigation }) => {
       await AuthService.confirmForgotPassword(email, confirmationCode, newPassword);
       setSuccessMessage('Password has been reset. You can now log in.');
       // Optionally, navigate to the login screen
-      navigation.navigate('SignIn');
+      router.replace('signIn')
     } catch (err) {
       setErrorMessage(err.message || 'An error occurred during password reset confirmation.');
     }

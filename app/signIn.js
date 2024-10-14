@@ -10,6 +10,7 @@ import InputComponent from "../components/InputComponent";
 import { Ionicons, Feather, AntDesign, SimpleLineIcons } from '@expo/vector-icons';
 import RadioButtonGroup, { RadioButtonItem } from "expo-radio-button";
 import ButtonComponent from "../components/ButtonComponents";
+import { router } from 'expo-router';
 
 
 WebBrowser.maybeCompleteAuthSession();
@@ -55,9 +56,9 @@ const SignInScreen = () => {
       const result = await AuthService.googleSignIn(idToken);
       console.log(result);
       if (result.userCreated) {
-        navigation.navigate("UserTypeChoice");
+        router.push("userTypeChoice");
       } else {
-        navigation.navigate("Home");
+        router.replace("(tabs)/home");
       }
     } catch (error) {
       console.error('Google Sign-In Error:', error);
@@ -99,7 +100,7 @@ const SignInScreen = () => {
 
     try {
       await AuthService.signIn(email, password);
-      navigation.navigate("Home");
+      router.replace("(tabs)/home");
       // Reset EMAIL and PASSWORD input fields
       setEmail('');
       setPassword('');
@@ -191,7 +192,7 @@ const SignInScreen = () => {
               )}
             </RadioButtonGroup>
           </View>
-          <Text onPress={() => navigation.navigate("ForgotPassword")} style={styles.forgotPasswordText}>Forgot password?</Text>
+          <Text onPress={() => router.push("forgotPassword")} style={styles.forgotPasswordText}>Forgot password?</Text>
         </View>
 
         <ButtonComponent onPress={handleEmailPasswordSignIn} title={'Sign In'} buttonStyle={styles.signInButton} textStyle={styles.signInButtonText} />
@@ -216,7 +217,7 @@ const SignInScreen = () => {
         </View>
 
         <Text style={styles.noAccountText}>Don't have an account?
-          <Text style={styles.boldSignUpText} onPress={() => navigation.navigate("SignUp")}> Sign Up</Text>
+          <Text style={styles.boldSignUpText} onPress={() => router.push("signUp")}> Sign Up</Text>
         </Text>
       </View>
     </SafeAreaView>

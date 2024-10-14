@@ -2,6 +2,7 @@ import axios from "axios";
 import { tokenManager } from "./tokenManager";
 import { AuthService } from "../services/AuthService"; // Import your AuthService
 import { navigate } from "../services/NavigationService";
+import { router } from 'expo-router';
 
 class ApiError extends Error {
   constructor(message, status, data) {
@@ -24,7 +25,7 @@ const createAxiosRequest = async ({ url, method, body, isAuthenticated = true })
       } catch (error) {
         // Cause1: Expired Refresh Tokens
         tokenManager.deleteTokens();
-        navigate('SignIn');
+        router.replace('signIn')
         throw new ApiError('Failed to refresh tokens', null, error);
       }
     }
