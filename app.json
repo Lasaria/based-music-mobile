@@ -42,7 +42,7 @@
     "owner": "lasaria",
     "plugins": [
       "expo-font",
-      "expo-router"
+      "expo-router",
       "react-native-email-link"
     ]
   }

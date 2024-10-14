@@ -4,17 +4,11 @@ import { Colors } from '../constants/Color';
 import InputComponent from '../components/InputComponent';
 import ButtonComponent from '../components/ButtonComponents';
 import { FontAwesome6 } from "react-native-vector-icons";
-import { View, TextInput, Button, Text, StyleSheet } from 'react-native';
-import { AuthService } from '../services/AuthService';
 import { router, useLocalSearchParams } from 'expo-router';
 
+
 const ResetPasswordScreen = ({ route, navigation }) => {
-  const { email } = route.params; // Get the email passed from ForgotPasswordScreen
-const ResetPasswordScreen = ({ }) => {
-  //const { email } = route.params;
-  const { email } = useLocalSearchParams();
-  const [confirmationCode, setConfirmationCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
+  const { email } = useLocalSearchParams(); // Get the email passed from ForgotPasswordScreen
   const [errorMessage, setErrorMessage] = useState('');
 
   // New Password States
@@ -33,20 +27,14 @@ const ResetPasswordScreen = ({ }) => {
       setErrorMessage('Please fill both fields');
     } else {
       // Pass email and newPassword to ResetCodeScreen
-      navigation.navigate('resetCode', { email, newPassword });
-  const handleResetPassword = async () => {
-    try {
-      await AuthService.confirmForgotPassword(email, confirmationCode, newPassword);
-      setSuccessMessage('Password has been reset. You can now log in.');
-      // Optionally, navigate to the login screen
-      router.replace('signIn')
-    } catch (err) {
-      setErrorMessage(err.message || 'An error occurred during password reset confirmation.');
+      //navigation.navigate('ResetCode', { email, newPassword });
+      router.push({ pathname: 'resetCode', params: { email: email, newPassword: newPassword } });
     }
   };
 
   const handleNavigateBack = () => {
-    navigation.navigate('ForgotPassword');
+    // navigation.navigate('ForgotPassword');
+    router.back();
   }
 
   // Handle New Password Error Message

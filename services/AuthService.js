@@ -139,7 +139,8 @@ signUp: async (fullName, email, password) => {
   // Sign Out Function
   signOut: async () => {
 
-    const accessToken = await tokenManager.getAccessToken();
+    const accessToken = await tokenManager?.getAccessToken();
+    if (accessToken){
 
     try {
         const response = await axiosPost({ 
@@ -157,6 +158,9 @@ signUp: async (fullName, email, password) => {
         console.error('Error:', err.message);
         throw new Error(err.message);
       }
+    } else {
+        return;
+    }
   },
 
 

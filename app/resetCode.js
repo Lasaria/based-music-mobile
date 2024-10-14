@@ -5,10 +5,11 @@ import { Colors } from '../constants/Color';
 import ButtonComponent from '../components/ButtonComponents';
 import { FontAwesome6 } from "react-native-vector-icons";
 import { openInbox } from 'react-native-email-link';
+import { router, useLocalSearchParams } from 'expo-router';
 
 
-const ResetCodeScreen = ({ route, navigation }) => {
-    const { email, newPassword } = route.params; // Get email and newPassword passed from ResetPasswordScreen
+const ResetCodeScreen = ({ }) => {
+    const { email, newPassword } = useLocalSearchParams(); // Get email and newPassword passed from ResetPasswordScreen
     const [confirmationCode, setConfirmationCode] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
@@ -43,7 +44,7 @@ const ResetCodeScreen = ({ route, navigation }) => {
             await AuthService.confirmForgotPassword(email, enteredCode, newPassword);
 
             setSuccessMessage('Password reset successful! You can now log in.');
-            navigation.navigate('SignIn');
+            router.replace('signIn')
         } catch (err) {
             setErrorMessage(err.message);
         }
@@ -64,7 +65,8 @@ const ResetCodeScreen = ({ route, navigation }) => {
 
     // Navigation to return to Forgot-Password Screen
     const handleNavigateBack = () => {
-        navigation.navigate('ForgotPassword');
+        //navigation.navigate('ForgotPassword');
+        router.back()
     };
 
     const handleCloseModal = () => {
