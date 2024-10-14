@@ -6,20 +6,15 @@ const ListenerProfileScreen = ({ }) => {
     return (
         <View style={styles.container}>
             <Text>Listener Profile</Text>
-            {/* Favorites Screen Button */}
-            <Button
-                title="Favorites"
-                onPress={() => router.push("favorites")}
-            />
             {/* Settings Screen Button */}
             <Button
                 title="Settings"
-                onPress={() => router.push("settings")}
+                onPress={() => router.push("profile/settings")}
             />
             {/* Inbox Screen Button */}
             <Button
                 title="Inbox"
-                onPress={() => router.push("inbox")}
+                onPress={() => router.push("profile/inbox")}
             />
         </View>
     )
