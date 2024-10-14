@@ -56,14 +56,16 @@ export default InputComponent;
 
 const styles = StyleSheet.create({
     inputContainer: {
-        marginHorizontal: width * 0.05,
         marginVertical: height * 0.001,
         borderWidth: 1, // Full border
         borderColor: Colors.secondary,
-        borderRadius: 10,
+        borderRadius: 14,
         position: 'relative',
         paddingTop: height * 0.02,
         paddingBottom: height * 0.02,
+        display: 'flex',
+        width: 343,
+        flexDirection: 'column',
     },
     input: {
         height: height * 0.03,
