@@ -20,7 +20,10 @@ const ConfirmSignUpScreen = ({ }) => {
       console.log("Password: " + password)
       await AuthService.signIn(email, password)
       console.log('Login successful');
-      router.push('userTypeChoice')
+      router.back();
+      router.back();
+      router.back();
+      router.replace('userTypeChoice');
     } catch (err) {
       console.error('Confirmation error:', err);
       setErrorMessage(err.message || 'An error occurred during confirmation.');

@@ -7,7 +7,7 @@ function MusicScreen() {
   return (
     <View style={Style.container}>
       <Text style={Style.text}>Music Screen</Text>
-      <Button title="Favorites" onPress={() => router.push("/favorites")} />
+      <Button title="Favorites" onPress={() => router.push("music/favorites")} />
     </View>
   )
 }
