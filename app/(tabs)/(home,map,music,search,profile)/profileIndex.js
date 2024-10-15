@@ -3,13 +3,13 @@ import { View, Text, Button } from 'react-native'
 import Style from '../../../style'
 import { router } from 'expo-router';
 
-function MusicScreen() {
+function ProfileScreen() {
   return (
     <View style={Style.container}>
-      <Text style={Style.text}>Music Screen</Text>
-      <Button title="Favorites" onPress={() => router.push("music/favorites")} />
+      <Text style={Style.text}>Profile Screen</Text>
+      <Button title="Listener Profile" onPress={() => router.push("/listenerProfile")} />
     </View>
   )
 }
 
-export default MusicScreen
+export default ProfileScreen

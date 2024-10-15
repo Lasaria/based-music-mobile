@@ -11,19 +11,19 @@ export default function TabsLayout() {
 
           // Assign icon names based on the route name and focus state
           switch (route.name) {
-            case 'home':
+            case '(home)':
               iconName = focused ? 'home' : 'home-outline';
               break;
-            case 'map':
+            case '(map)':
               iconName = focused ? 'map' : 'map-outline';
               break;
-            case 'music':
+            case '(music)':
               iconName = focused ? 'musical-note' : 'musical-note-outline';
               break;
-            case 'profile':
+            case '(profile)':
               iconName = focused ? 'person' : 'person-outline';
               break;
-            case 'search':
+            case '(search)':
               iconName = focused ? 'search' : 'search-outline';
               break;
             default:
@@ -39,7 +39,7 @@ export default function TabsLayout() {
       })}
     >
       <Tabs.Screen 
-        name="home"
+        name="(home)"
         options={{
           title: 'Home',
           tabBarLabel: 'Home',
@@ -47,7 +47,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen 
-        name="map"
+        name="(map)"
         options={{
           title: 'Map',
           tabBarLabel: 'Map',
@@ -55,7 +55,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen 
-        name="music"
+        name="(music)"
         options={{
           title: 'Music',
           tabBarLabel: 'Music',
@@ -63,7 +63,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen 
-        name="search"
+        name="(search)"
         options={{
           title: 'Search',
           tabBarLabel: 'Search',
@@ -71,7 +71,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen 
-        name="profile"
+        name="(profile)"
         options={{
           title: 'Profile',
           tabBarLabel: 'Profile',

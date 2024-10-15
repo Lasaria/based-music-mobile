@@ -59,7 +59,7 @@ const SignInScreen = () => {
         router.push("userTypeChoice");
       } else {
         router.back()
-        router.replace("(tabs)/home");
+        router.replace("/homeIndex");
         // router.setParams({ index: 0 })
       }
     } catch (error) {
@@ -103,7 +103,7 @@ const SignInScreen = () => {
     try {
       await AuthService.signIn(email, password);
       router.back()
-      router.replace("(tabs)/home");
+      router.replace("/homeIndex");
       // Reset EMAIL and PASSWORD input fields
       setEmail('');
       setPassword('');

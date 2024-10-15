@@ -64,7 +64,7 @@ const WelcomeScreen = ({ navigation }) => {
                     <TouchableOpacity style={styles.signUpButton} onPress={() => router.push('/signUp')}>
                         <Text style={[styles.buttonText, { fontFamily: 'OpenSans-Bold' }]}>Sign Up</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.guestButton} onPress={() => router.replace('(tabs)/home')}>
+                    <TouchableOpacity style={styles.guestButton} onPress={() => router.replace('/homeIndex')}>
                         <Text style={[styles.guestButtonText, { fontFamily: 'OpenSans-Bold' }]}>continue as a guest</Text>
                     </TouchableOpacity>
                 </View>

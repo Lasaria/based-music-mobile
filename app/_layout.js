@@ -21,6 +21,7 @@ export default function RootLayout() {
   const shouldShowTabs = !routesWithoutTabs.includes(pathname);
 
 
+
   if (shouldShowTabs) {
     return (
       <Stack screenOptions={{ headerShown: false }}>
