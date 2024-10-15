@@ -80,11 +80,11 @@ export default function App() {
        
 
            {/** Artist Profile Screen */}
-           <Stack.Screen name='ArtistProfile' component={ArtistProfileScreen} options={{ headerTitle: 'Artist Profile' }} />
+           <Stack.Screen name='ArtistProfile' component={ArtistProfileScreen} options={{ headerTitle: '' }} />
            <Stack.Screen name='AlbumUpload' component={AlbumUploadScreen} options={{ headerTitle: 'Album Upload' }} />
            <Stack.Screen name='TrackUpload' component={TrackUploadScreen} options={{ headerTitle: 'Track Upload' }} />
            <Stack.Screen name='ArtistSettings' component={ArtistSettingScreen} options={{ headerTitle: 'Settings' }} />
-           <Stack.Screen name='ArtistInbox' component={ArtistInboxScreen} options={{ headerTitle: 'Inbox' }} />
+           <Stack.Screen name='ArtistInbox' component={ArtistInboxScreen} options={{ headerShown:false }} />
            <Stack.Screen name='ArtistAbout' component={ArtistAboutScreen} options={{ headerTitle: 'About' }} />
 
            <Stack.Screen name="Tabs" children={() => <Tabs />} options={{ headerShown: false }} />
