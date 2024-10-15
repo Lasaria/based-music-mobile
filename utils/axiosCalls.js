@@ -1,7 +1,6 @@
 import axios from "axios";
 import { tokenManager } from "./tokenManager";
 import { AuthService } from "../services/AuthService"; // Import your AuthService
-import { navigate } from "../services/NavigationService";
 import { router } from 'expo-router';
 
 class ApiError extends Error {
