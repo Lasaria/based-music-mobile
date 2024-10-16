@@ -43,7 +43,13 @@
     "plugins": [
       "expo-font",
       "expo-router",
-      "react-native-email-link"
+      "react-native-email-link",
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": "sk.eyJ1IjoibGFzYXJpYSIsImEiOiJjbTJheXlodWswbnpuMmptd2xvM3VxbGhvIn0.Sgl_rqyoKzpW2UdH7lZHkA"
+        }
+      ]
     ]
   }
 }
