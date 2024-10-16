@@ -5,7 +5,7 @@ import { View, Text, Button, StyleSheet } from "react-native";
 import { AuthService } from "../../../services/AuthService";
 import { axiosGet, ApiError } from "../../../utils/axiosCalls";
 import { router } from "expo-router";
-w
+
 const HomeScreen = ({}) => {
   const handleSignOut = async () => {
     await AuthService.signOut();
