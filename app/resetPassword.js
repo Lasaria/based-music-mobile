@@ -3,7 +3,7 @@ import { View, Pressable, Text, StyleSheet, Image } from 'react-native';
 import { Colors } from '../constants/Color';
 import InputComponent from '../components/InputComponent';
 import ButtonComponent from '../components/ButtonComponents';
-import { FontAwesome6 } from "react-native-vector-icons";
+import { FontAwesome6, Ionicons } from "react-native-vector-icons";
 import { router, useLocalSearchParams } from 'expo-router';
 
 
@@ -15,11 +15,14 @@ const ResetPasswordScreen = ({ route, navigation }) => {
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordErrorMessage, setNewPasswordErrorMessage] = useState('');
   const [newPasswordCheckIcon, setNewPasswordCheckIcon] = useState(false);
+  const [showNewPassword, setShownewPassword] = useState(false);
+
 
   // Confirm New Password States
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [confirmPasswordErrorMessage, setConfirmNewPasswordErrorMessage] = useState('')
   const [confirmPasswordCheckIcon, setConfirmNewPasswordCheckIcon] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
 
   const handlePasswordSubmit = () => {
@@ -115,7 +118,7 @@ const ResetPasswordScreen = ({ route, navigation }) => {
           onChangeText={handleNewPassword}
           keyboardType="default"
           autoCapitalize="none"
-          secureTextEntry={true}
+          secureTextEntry={showNewPassword ? false : true}
           emailError={errorMessage}
         />
         {newPassword && newPasswordErrorMessage && (
@@ -135,6 +138,17 @@ const ResetPasswordScreen = ({ route, navigation }) => {
 
         )}
 
+        {/* Show Password Show Icon for new password */}
+        {newPassword && (
+          <Pressable
+            style={styles.newPasswordEyeIcon}
+            onPress={() => {
+              setShownewPassword(!showNewPassword);
+            }}>
+            <Ionicons name={showNewPassword ? 'eye-off-outline' : 'eye-outline'} size={14} color={errorMessage ? Colors.error : 'white'} style={styles.crossIcon} />
+          </Pressable>
+        )}
+
         {/* Confirm New Password Input */}
         {newPasswordCheckIcon && (
           <InputComponent
@@ -144,7 +158,7 @@ const ResetPasswordScreen = ({ route, navigation }) => {
             onChangeText={handleConfirmPassword}
             keyboardType="default"
             autoCapitalize="none"
-            secureTextEntry={true}
+            secureTextEntry={showConfirmNewPassword ? false : true}
             emailError={errorMessage}
           />
         )}
@@ -163,6 +177,17 @@ const ResetPasswordScreen = ({ route, navigation }) => {
             <FontAwesome6 name="check" size={12} color={'#00FD61'} style={styles.crossIcon} />
           </Pressable>
 
+        )}
+
+        {/* Show Password Show Icon for confirm password */}
+        {confirmNewPassword && (
+          <Pressable
+            style={styles.confirmPasswordEyeIcon}
+            onPress={() => {
+              setShowConfirmNewPassword(!showConfirmNewPassword);
+            }}>
+            <Ionicons name={showConfirmNewPassword ? 'eye-off-outline' : 'eye-outline'} size={14} color={errorMessage ? Colors.error : 'white'} style={styles.crossIcon} />
+          </Pressable>
         )}
 
         <View style={styles.errorContainer}>
@@ -272,6 +297,18 @@ const styles = StyleSheet.create({
     top: 20,
     right: 30,
   },
+  newPasswordEyeIcon: {
+    borderColor: Colors.white,
+    height: 24,
+    width: 24,
+    borderWidth: 1,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    top: 20,
+    right: 65,
+  },
   newPasswordCheckIcon: {
     height: 24,
     width: 24,
@@ -293,6 +330,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 110,
     right: 30,
+  },
+  confirmPasswordEyeIcon: {
+    borderColor: Colors.white,
+    height: 24,
+    width: 24,
+    borderWidth: 1,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    top: 110,
+    right: 65,
   },
   confirmNewPasswordCheckIcon: {
     height: 24,
