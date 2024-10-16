@@ -28,7 +28,8 @@ const ForgotPasswordScreen = ({ }) => {
 
   // Navigation to return to Sign-In Screen
   const handleNavigateBack = () => {
-    navigation.navigate('SignIn')
+    // navigation.navigate('SignIn')
+    router.back()
   }
 
   // Email validation regex
@@ -52,7 +53,8 @@ const ForgotPasswordScreen = ({ }) => {
 
   // Navigation to return to Sign-Up Screen after entering wrong email
   const handleNavigateSignUp = () => {
-    navigation.navigate('SignUp')
+    // navigation.navigate('SignUp')
+    router.replace('/signUp')
   }
 
   // Check submit validation
