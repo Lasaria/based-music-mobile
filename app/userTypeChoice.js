@@ -9,7 +9,7 @@ const UserTypeChoiceScreen = ({ }) => {
     // Here you would typically save the user type to your app's state or backend
     await UserService.setUserType(userType)
     // For now, we'll just navigate to a hypothetical 'Main' screen
-    router.push({ pathname: 'home', params: { userType: userType } })
+    router.push({ pathname: '/homeIndex', params: { userType: userType } })
   };
 
   return (

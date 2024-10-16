@@ -1,154 +1,170 @@
 
 import { axiosPost } from '../utils/axiosCalls';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { tokenManager } from '../utils/tokenManager';
-import * as BackgroundFetch from 'expo-background-fetch';
-import * as TaskManager from 'expo-task-manager';
-import * as Updates from 'expo-updates';
 
 const serverURL = 'http://localhost:3001'
 
 export const AuthService = {
- 
-// Sign Up Function
-signUp: async (fullName, email, password) => {
+
+  // Sign Up Function
+  signUp: async (fullName, email, password) => {
     try {
       const response = await axiosPost({
         url: `${serverURL}/signup`,
         body: JSON.stringify({ fullName, email, password }),
-        isAuthenticated : false
-    });
-  
+        isAuthenticated: false
+      });
+
 
       console.log('User signed up successfully:', response);
 
     } catch (err) {
-        console.error('Error:', err.message);
-        throw new Error(err.message);
+      console.error('Error:', err.message);
+      throw new Error(err.message);
     }
   },
-  
-  
+
+
   // Confirm Sign Up Function
   confirmSignUp: async (email, confirmationCode) => {
     try {
-        console.log("EMAIL: "+ email)
-        console.log("Code: " + confirmationCode);
+      console.log("EMAIL: " + email)
+      console.log("Code: " + confirmationCode);
 
-        const response = await axiosPost({
-          url: `${serverURL}/confirm-signup`,
-          body: JSON.stringify({ email, confirmationCode }),
-          isAuthenticated : false
-        });
+      const response = await axiosPost({
+        url: `${serverURL}/confirm-signup`,
+        body: JSON.stringify({ email, confirmationCode }),
+        isAuthenticated: false
+      });
 
 
-        console.log('User confirmed successfully:', response);
+      console.log('User confirmed successfully:', response);
 
-      } catch (err) {
-        console.error('Error:', err.message);
-        throw new Error(err.message);
-      }
+    } catch (err) {
+      console.error('Error:', err.message);
+      throw new Error(err.message);
+    }
   },
 
 
   // Resend Confirmation Code Function
   resendConfirmationCode: async (email) => {
     try {
-        console.log("EMAIL: "+ email)
-        
-        const response = await axiosPost({
-          url: `${serverURL}/resend-confirmation-code`,
-          body: JSON.stringify({ email }),
-          isAuthenticated : false
-        });
+      console.log("EMAIL: " + email)
+
+      const response = await axiosPost({
+        url: `${serverURL}/resend-confirmation-code`,
+        body: JSON.stringify({ email }),
+        isAuthenticated: false
+      });
 
 
-        console.log('Confirmation code resent successfully:', response);
- 
-      } catch (err) {
-        console.error('Error:', err.message);
-        throw new Error(err.message);
-      }
+      console.log('Confirmation code resent successfully:', response);
+
+    } catch (err) {
+      console.error('Error:', err.message);
+      throw new Error(err.message);
+    }
   },
-  
+
 
   // Sign In Function
   signIn: async (email, password) => {
     try {
-        console.log("EMAIL: "+ email)
-        console.log("Password: " + password);
+      console.log("EMAIL: " + email)
+      console.log("Password: " + password);
 
-        const response = await axiosPost({
-          url: `${serverURL}/signin`,
-          body: { email, password },
-          isAuthenticated : false
-        });
+      const response = await axiosPost({
+        url: `${serverURL}/signin`,
+        body: { email, password },
+        isAuthenticated: false
+      });
 
 
-        console.log('User signed in successfully:', response);
-        await tokenManager.saveTokens(response.result.AuthenticationResult);
+      console.log('User signed in successfully:', response);
+      await tokenManager.saveTokens(response.result.AuthenticationResult);
 
-      } catch (err) {
-        console.error('Error:', err.message);
-        throw new Error(err.message);
-      }
+    } catch (err) {
+      console.error('Error:', err.message);
+      throw new Error(err.message);
+    }
   },
 
 
   // Forgot Password Function
   forgotPassword: async (email) => {
     try {
-        console.log("EMAIL: "+ email)
+      console.log("EMAIL: " + email)
 
-        const response = await axiosPost({
-          url : `${serverURL}/forgot-password`,
-          body: JSON.stringify({ email }),
-          isAuthenticated : false
-        });
+      const response = await axiosPost({
+        url: `${serverURL}/forgot-password`,
+        body: JSON.stringify({ email }),
+        isAuthenticated: false
+      });
 
 
-        console.log('Forgot password started successfully:', response);
+      console.log('Forgot password started successfully:', response);
 
-      } catch (err) {
-        console.error('Error:', err.message);
-        throw new Error(err.message);
-      }
+    } catch (err) {
+      console.error('Error:', err.message);
+      throw new Error(err.message);
+    }
   },
 
 
-   // Confirm Password Reset Function
-   confirmForgotPassword: async (email, confirmationCode, newPassword) => {
+  // Confirm Password Reset Function
+  confirmForgotPassword: async (email, confirmationCode, newPassword) => {
     try {
-        console.log("EMAIL: "+ email)
-        const response = await axiosPost({
-          url: `${serverURL}/confirm-forgot-password`,
-          body: JSON.stringify({ email, confirmationCode, newPassword }),
-          isAuthenticated : false
-        });
+      console.log("EMAIL: " + email)
+      const response = await axiosPost({
+        url: `${serverURL}/confirm-forgot-password`,
+        body: JSON.stringify({ email, confirmationCode, newPassword }),
+        isAuthenticated: false
+      });
 
 
-        console.log('Password reset successfully:', response);
+      console.log('Password reset successfully:', response);
 
-      } catch (err) {
-        console.error('Error:', err.message);
-        throw new Error(err.message);
-      }
+    } catch (err) {
+      console.error('Error:', err.message);
+      throw new Error(err.message);
+    }
   },
-  
+
+
+  // Resend Forgot Password Code
+  resendForgotPasswordCode: async (email) => {
+    try {
+      console.log("EMAIL: " + email);
+
+      const response = await axiosPost({
+        url: `${serverURL}/resend-forgot-password-code`,
+        body: JSON.stringify({ email }),
+        isAuthenticated: false, // No token needed
+      });
+
+      console.log('Forgot password code resent successfully:', response);
+      return response;
+    } catch (err) {
+      console.error('Error:', err.message);
+      throw new Error(err.message);
+    }
+  },
+
 
   // Sign Out Function
   signOut: async () => {
 
     const accessToken = await tokenManager?.getAccessToken();
-    if (accessToken){
+    if (accessToken) {
 
-    try {
-        const response = await axiosPost({ 
+      try {
+        const response = await axiosPost({
           url: `${serverURL}/signout`,
           body: JSON.stringify({ accessToken }),
-          isAuthenticated : false
+          isAuthenticated: false
         });
-        
+
 
         console.log('User Signed Out successfully:', response);
         await tokenManager.deleteTokens();
@@ -159,7 +175,7 @@ signUp: async (fullName, email, password) => {
         throw new Error(err.message);
       }
     } else {
-        return;
+      return;
     }
   },
 
@@ -167,43 +183,43 @@ signUp: async (fullName, email, password) => {
   // Refresh Tokens Function
   refreshTokens: async () => {
     try {
-        const refreshToken = await tokenManager.getRefreshToken();
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
-        const response = await axiosPost({
-          url: `${serverURL}/refresh-tokens`,
-          body: { refreshToken },
-          isAuthenticated : false
-        });
-        console.log('Tokens refreshed successfully:', response);
-        await tokenManager.saveTokens(response.result.AuthenticationResult);
-
-      } catch (error) {
-        console.error('Error:', err.message);
-        throw new Error(err.message);
+      const refreshToken = await tokenManager.getRefreshToken();
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
       }
+      const response = await axiosPost({
+        url: `${serverURL}/refresh-tokens`,
+        body: { refreshToken },
+        isAuthenticated: false
+      });
+      console.log('Tokens refreshed successfully:', response);
+      await tokenManager.saveTokens(response.result.AuthenticationResult);
+
+    } catch (error) {
+      console.error('Error:', err.message);
+      throw new Error(err.message);
+    }
   },
 
   // Google Sign in Function
   googleSignIn: async (idToken) => {
     try {
 
-        const response = await axiosPost({
-            url: `${serverURL}/google-auth`,
-            body: JSON.stringify({ idToken }),
-            isAuthenticated: false
-        });
+      const response = await axiosPost({
+        url: `${serverURL}/google-auth`,
+        body: JSON.stringify({ idToken }),
+        isAuthenticated: false
+      });
 
-        console.log('User signed in successfully using Google:', response);
-        await tokenManager.saveTokens(response.result.AuthenticationResult);
+      console.log('User signed in successfully using Google:', response);
+      await tokenManager.saveTokens(response.result.AuthenticationResult);
 
-        return response;
+      return response;
 
-      } catch (err) {
-        console.error('Error:', err.message);
-        throw new Error(err.message);
-      }
+    } catch (err) {
+      console.error('Error:', err.message);
+      throw new Error(err.message);
+    }
   },
 
   isAuthenticated: async () => {
@@ -227,9 +243,9 @@ signUp: async (fullName, email, password) => {
 
 };
 
-  
-  
-  // Check Authentication State
+
+
+// Check Authentication State
 //   export const checkAuthState = async () => {
 //     const cognitoUser = userPool.getCurrentUser();
 //     if (cognitoUser) {
@@ -254,5 +270,4 @@ signUp: async (fullName, email, password) => {
 //       return false;
 //     }
 //   };
-  
-  
+

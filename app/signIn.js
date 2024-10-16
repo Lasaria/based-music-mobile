@@ -58,7 +58,9 @@ const SignInScreen = () => {
       if (result.userCreated) {
         router.push("userTypeChoice");
       } else {
-        router.replace("(tabs)/home");
+        router.back()
+        router.replace("/homeIndex");
+        // router.setParams({ index: 0 })
       }
     } catch (error) {
       console.error('Google Sign-In Error:', error);
@@ -100,7 +102,8 @@ const SignInScreen = () => {
 
     try {
       await AuthService.signIn(email, password);
-      router.replace("(tabs)/home");
+      router.back()
+      router.replace("/homeIndex");
       // Reset EMAIL and PASSWORD input fields
       setEmail('');
       setPassword('');

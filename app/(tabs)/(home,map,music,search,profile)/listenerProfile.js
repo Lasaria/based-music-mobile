@@ -9,12 +9,12 @@ const ListenerProfileScreen = ({ }) => {
             {/* Settings Screen Button */}
             <Button
                 title="Settings"
-                onPress={() => router.push("profile/settings")}
+                onPress={() => router.push("/settings")}
             />
             {/* Inbox Screen Button */}
             <Button
                 title="Inbox"
-                onPress={() => router.push("profile/inbox")}
+                onPress={() => router.push("/inbox")}
             />
         </View>
     )
