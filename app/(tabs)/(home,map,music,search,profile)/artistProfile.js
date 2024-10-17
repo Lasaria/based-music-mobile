@@ -85,7 +85,7 @@ const ArtistProfileScreen = () => {
       artist: "Artist",
       price: "$32.00",
       popular: true,
-      imageUri: require("../../../assets/images/profile4.jpg"),
+      imageUri: require("../../../assets/images/beats1.png"),
     },
     {
       id: "2",
@@ -93,7 +93,7 @@ const ArtistProfileScreen = () => {
       artist: "Artist",
       price: "$0.00",
       free: true,
-      imageUri: require("../../../assets/images/profile3.jpg"),
+      imageUri: require("../../../assets/images/beats2.png"),
     },
     {
       id: "3",
@@ -265,16 +265,9 @@ const ArtistProfileScreen = () => {
                         source={beat.imageUri}
                         style={styles.beatImage} 
                       />
-                         <Text style={styles.beatArtist}>{beat.price}</Text>
+                         <Text style={styles.beatPrice}>{beat.price}</Text>
                       <Text style={styles.beatTitle}>{beat.title}</Text>
                       <Text style={styles.beatArtist}>{beat.artist}</Text>
-                      <Text style={styles.beatPrice}>
-                        {beat.popular
-                          ? "Popular"
-                          : beat.free
-                          ? "Free"
-                          : beat.price}
-                      </Text>
                     </View>
                   ))}
                 </ScrollView>
@@ -493,7 +486,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   beatImage: {
-    width: 70,
+    width: 80,
     height: 70,
     borderRadius: 10,
     marginBottom: 5,
@@ -504,6 +497,10 @@ const styles = StyleSheet.create({
   },
   beatArtist: {
     color: "#bbb",
+    fontSize: 12,
+  },
+  beatPrice: {
+    color: "blue",
     fontSize: 12,
   },
 });

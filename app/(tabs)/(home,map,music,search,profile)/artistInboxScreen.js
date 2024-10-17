@@ -61,6 +61,26 @@ const recentContacts = [
     name: "Simon",
    profileImage: require("../../../assets/images/profile3.jpg"),
   },
+  {
+    id: 5,
+    name: "Drake",
+   profileImage: require("../../../assets/images/profile2.jpg"),
+  },
+  {
+    id: 6,
+    name: "Kendrick",
+   profileImage: require("../../../assets/images/profile4.jpg"),
+  },
+  {
+    id: 7,
+    name: "Jonas",
+   profileImage: require("../../../assets/images/profile5.jpg"),
+  },
+  {
+    id: 8,
+    name: "Taylor",
+   profileImage: require("../../../assets/images/profile8.jpg"),
+  },
 ];
 
 const ArtistInboxScreen = () => {
@@ -162,6 +182,7 @@ const styles = StyleSheet.create({
   recentContactsContainer: {
     paddingBottom: 5, 
     marginBottom: -20, 
+    height:80,
   },
   searchInput: {
     backgroundColor: "#1e1e1e",
@@ -188,7 +209,7 @@ const styles = StyleSheet.create({
   recentText: {
     color: 'white',
     fontSize: 20,
-    marginTop: -260,
+    marginTop: '-50%',
     marginBottom: 10, 
   },
   messagesContainer: {
