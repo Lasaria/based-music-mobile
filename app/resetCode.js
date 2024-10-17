@@ -18,9 +18,10 @@ const ResetCodeScreen = ({ }) => {
     const [focusedIndex, setFocusedIndex] = useState(0); // Track the focused input index
     const [code, setCode] = useState(['', '', '', '', '', '']); // Holds the values of the code inputs
     const inputRefs = useRef([]); // Create a ref array to hold the input references
-    const [time, setTime] = useState(59); // Set initial time in seconds
+    const [time, setTime] = useState(30); // Set initial time in seconds
     const [isVerifyClicked, setIsVerifyClicked] = useState(false);
     const timerRef = useRef(null); // Use a ref to keep track of the timer
+    const [isResending, setIsResending] = useState(false); // State for handling resend code
 
     const handleCodeSubmit = async () => {
         // Reset error and success messages
@@ -44,19 +45,49 @@ const ResetCodeScreen = ({ }) => {
             await AuthService.confirmForgotPassword(email, enteredCode, newPassword);
 
             setSuccessMessage('Password reset successful! You can now log in.');
-            router.replace('signIn')
+            router.back();
+            router.back();
+            router.back();
+            router.back();
+            router.replace('signIn');
         } catch (err) {
             setErrorMessage(err.message);
         }
     };
 
+    // Resend Code Functionality
+    const handleResendCode = async () => {
+        setIsResending(true); // Show loading state when resending
+        try {
+            await AuthService.resendForgotPasswordCode(email); // API call to resend code
+            setSuccessMessage('Confirmation code resent successfully. Check your email.');
+            startTimer(); // Restart the timer if needed
+            setTimeout(() => {
+                setSuccessMessage('');
+            }, 3000);
+        } catch (err) {
+            setErrorMessage('Error resending confirmation code. Please try again.');
+        } finally {
+            setIsResending(false); // Reset resend state after completion
+        }
+    };
+
     const startTimer = () => {
+        setTime(30); // Reset the timer to 30 seconds
+        setIsVerifyClicked(true); // Indicate that the timer has started
+        setErrorMessage(''); // Clear any existing error messages
+        if (timerRef.current) {
+            clearInterval(timerRef.current); // Clear any existing timer before starting a new one
+        }
         timerRef.current = setInterval(() => {
             setTime((prevTime) => {
                 if (prevTime <= 1) {
                     clearInterval(timerRef.current); // Clear interval when time is up
                     setIsVerifyClicked(false);
                     return 0; // Stop at 0
+                }
+                if (prevTime >= 1 && prevTime <= 10) {
+                    return `0${prevTime - 1}`;
                 }
                 return prevTime - 1; // Decrease time
             });
@@ -202,7 +233,6 @@ const ResetCodeScreen = ({ }) => {
                     disabled={!isCodeFilled} // Disable if not all inputs are filled
                     onPress={() => {
                         handleCodeSubmit();
-                        startTimer();
                     }}
                 />
             </View>
@@ -210,11 +240,20 @@ const ResetCodeScreen = ({ }) => {
             {successMessage !== '' && <Text style={styles.successText}>{successMessage}</Text>}
             <Text style={styles.codeMsg}>
                 Don't have a code?{" "}
-                <Text style={[styles.resendNowMsg, { color: isVerifyClicked && 'white', opacity: isVerifyClicked ? 0.7 : null }]} disabled={isVerifyClicked}>Resend now</Text>
-                {isVerifyClicked && (
-                    <Text style={styles.timer}> {Math.floor(time / 60)}:{(time % 60).toString().padStart(2, '0')}</Text>
+                <Text
+                    style={[styles.resendNowMsg, { color: isVerifyClicked && 'white', opacity: isVerifyClicked ? 0.7 : null }]}
+                    disabled={isVerifyClicked}
+                    onPress={handleResendCode}
+                >
+                    Resend now
+                </Text>
+                {time >= 1 && (
+                    <Text style={styles.timer}>
+                        {" "} {`0:${time}`}
+                    </Text>
                 )}
             </Text>
+
         </View>
     );
 };
@@ -331,6 +370,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         lineHeight: 20,
+        marginLeft: 10, // Add space between "Resend now" and the timer
     },
     errorText: {
         color: 'red',
