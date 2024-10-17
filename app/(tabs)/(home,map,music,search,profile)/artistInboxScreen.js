@@ -117,7 +117,7 @@ const ArtistInboxScreen = () => {
     <View style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push("/artistProfile")}>
+        <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backButton}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Messages</Text>
