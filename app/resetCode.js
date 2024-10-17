@@ -45,7 +45,11 @@ const ResetCodeScreen = ({ }) => {
             await AuthService.confirmForgotPassword(email, enteredCode, newPassword);
 
             setSuccessMessage('Password reset successful! You can now log in.');
-            router.replace('signIn')
+            router.back();
+            router.back();
+            router.back();
+            router.back();
+            router.replace('signIn');
         } catch (err) {
             setErrorMessage(err.message);
         }
