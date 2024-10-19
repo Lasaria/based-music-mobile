@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const uploadScreen = () => {
   const router = useRouter();
@@ -21,6 +22,19 @@ const uploadScreen = () => {
           </Text>
           <Text style={styles.textContainer}>your talent!</Text>
         </View>
+
+        <TouchableOpacity style={styles.uploadTrackConatiner} onPress={() => router.push("/uploadTrackScreen")}>
+          <View style={styles.trackView}>
+            <MaterialIcons name="done-outline" color="white" size="18" />
+            <Text style={styles.trackText}>Upload Track</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.uploadAlbumConatiner} onPress={() => router.push("/uploadAlbumScreen")}>
+          <View style={styles.trackView}>
+            <MaterialIcons name="done-outline" size="18" color="white"/>
+            <Text style={styles.trackText}> Upload Album</Text>
+          </View>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -42,25 +56,62 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 20,
   },
-  container: { 
+  container: {
     justifyContent: "center",
-     flex: 1,
-      marginTop: "-70%"
-     },
+    flex: 1,
+    //marginTop: "-70%",
+    alignItems:'center'
+  },
   uploadText: {
     color: "white",
     textAlign: "center",
     fontSize: 20,
     fontWeight: "bold",
   },
-  additionalTextContainer: { 
-    marginTop: 10, 
-    alignItems: "center" 
+  additionalTextContainer: {
+    marginTop: 10,
+    alignItems: "center",
+    marginBottom:60,
   },
   textContainer: {
     color: "grey",
     fontSize: 14,
     margin: 2,
+    textAlign: "center",
+  },
+  uploadTrackConatiner: {
+    borderRadius: 10,
+    borderWidth: 1,
+    backgroundColor: "#6F2CFF",
+    alignItems: "center",
+    width: 180,
+    height: 50,
+    margin: 5,
+    marginBottom:20,
+    justifyContent: "center",
+  },
+  uploadAlbumConatiner: {
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom:"50%",
+    backgroundColor: "#6F2CFF",
+    alignItems: "center",
+    width: 180,
+    height: 50,
+    margin: 5,
+    justifyContent: "center",
+  },
+  trackView: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    textAlign:'center'
+  },
+  trackText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "white",
+    marginLeft: 5,
     textAlign: "center",
   },
 });
