@@ -167,7 +167,7 @@ const ArtistProfileScreen = () => {
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.uploadButton}>
+            <TouchableOpacity style={styles.uploadButton} onPress={() => router.push('/uploadScreen')}>
               <View style={{ flexDirection: "row" }}>
                 <Icon name="upload" color="white" />
                 <Text style={styles.buttonText}>Upload</Text>

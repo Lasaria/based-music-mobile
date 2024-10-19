@@ -64,6 +64,7 @@ const HomeScreen = ({}) => {
         onPress={() => router.push("/listenerProfile")}
       />
       <Button title="Music" onPress={playMusic} />
+      <Button title="upload" onPress={() => router.push("/uploadScreen")}/>
     </View>
   );
 };

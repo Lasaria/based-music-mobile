@@ -11,7 +11,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { router } from "expo-router";
-import ArtistProfileScreen from "./artistProfile";
+
 
 const messagesData = [
   {
