@@ -1,11 +1,12 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import React from "react";
 import { StatusBar } from "expo-status-bar";
-import { useRouter } from "expo-router";
+import { router } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 
 const uploadScreen = () => {
-  const router = useRouter();
+
+
   return (
     <View style={styles.view}>
       <StatusBar style="light" />
@@ -46,8 +47,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   backArrow: {
-    paddingTop: 55,
-    paddingLeft: 30,
+    paddingTop: 65,
+    paddingLeft: 40,
     position: "absolute",
     left: 0,
     top: 0,
@@ -59,7 +60,6 @@ const styles = StyleSheet.create({
   container: {
     justifyContent: "center",
     flex: 1,
-    //marginTop: "-70%",
     alignItems:'center'
   },
   uploadText: {
