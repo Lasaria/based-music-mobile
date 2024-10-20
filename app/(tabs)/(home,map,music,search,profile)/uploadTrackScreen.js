@@ -16,19 +16,18 @@ const uploadTrackScreen = () => {
   const [genre, setGenre] = useState();
   const [track, setTrack] = useState(null);
 
+  //   const pickDocument = async () => {
+  //     let result = await DocumentPicker.getDocumentAsync({
+  //       type: "audio/*",
+  //       copyToCacheDirectory: false,
+  //       multiple: false,
+  //     });
 
-//   const pickDocument = async () => {
-//     let result = await DocumentPicker.getDocumentAsync({
-//       type: "audio/*",
-//       copyToCacheDirectory: false,
-//       multiple: false,
-//     });
-
-//     if (result.type === "success") {
-//       setTrack(result);
-//       console.log(result.uri);
-//     }
-//   };
+  //     if (result.type === "success") {
+  //       setTrack(result);
+  //       console.log(result.uri);
+  //     }
+  //   };
 
   return (
     <View style={styles.outerView}>
@@ -56,7 +55,7 @@ const uploadTrackScreen = () => {
               paddingHorizontal: 10,
               textAlign: "center",
               textAlign: "left",
-              color:'white'
+              color: "white",
             }}
             value={title}
             onChangeText={setTitile}
@@ -74,7 +73,7 @@ const uploadTrackScreen = () => {
               paddingHorizontal: 10,
               textAlign: "center",
               textAlign: "left",
-              color:'white'
+              color: "white",
             }}
             value={genre}
             onChangeText={setGenre}
@@ -92,41 +91,70 @@ const uploadTrackScreen = () => {
               paddingHorizontal: 10,
               textAlign: "center",
               textAlign: "left",
-              color:'white'
+              color: "white",
             }}
             value={isrc}
             onChangeText={setIsrc}
             placeholder="Enter your track's ISRC Code"
             placeholderTextColor="white"
           />
-              
         </View>
-        <View style={{alignItems:'center'}}>
+        <View style={{ alignItems: "center" }}>
+          <Text style={styles.uploadText}>Upload song</Text>
+          {/* File picker for audio */}
+          <View style={styles.filePickerContainer}>
+            <Text style={styles.filePickerTitle}>
+              Choose an audio file to upload
+            </Text>
+            <Text style={styles.fileFormatText}>WAV, MP3 or MPEG format</Text>
 
-       
-        <Text style={styles.uploadText}>Upload song</Text>
-         {/* File picker for audio */}
-         <View style={styles.filePickerContainer}>
-          <Text style={styles.filePickerTitle}>
-            Choose an audio file to upload
-          </Text>
-          <Text style={styles.fileFormatText}>WAV, MP3 or MPEG format</Text>
+            <TouchableOpacity style={styles.browseButton}>
+              <Text style={styles.browseButtonText}>Browse File</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.browseButton} >
-            <Text style={styles.browseButtonText}>Browse File</Text>
-          </TouchableOpacity>
-
-          {/* Display selected file info */}
-          {/* {selectedFile && (
+            {/* Display selected file info */}
+            {/* {selectedFile && (
             <Text style={styles.selectedFileText}>
               Selected file: {selectedFile.name}
             </Text>
           )} */}
+          </View>
         </View>
-        </View>
-        <Text style={styles.selectedFileText}>
-              Selected file: {track}
+        <Text style={styles.selectedFileText}>Selected file: {track}</Text>
+
+        <View style={{ alignItems: "center" }}>
+          {/* File picker for lyrics */}
+          <Text style={styles.uploadText}>Upload lyrics</Text>
+
+          <View style={styles.filePickerContainer}>
+            <Text style={styles.filePickerTitle}>
+              Choose an lyrics file to upload
             </Text>
+            <Text style={styles.fileFormatText}>TXT format</Text>
+
+            <TouchableOpacity style={styles.browseButton}>
+              <Text style={styles.browseButtonText}>Browse File</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <Text style={styles.selectedFileText}>Selected file: {track}</Text>
+
+        <View style={{ alignItems: "center" }}>
+          {/* File picker for image */}
+          <Text style={styles.uploadText}>Upload Artwork</Text>
+
+          <View style={styles.filePickerContainer}>
+            <Text style={styles.filePickerTitle}>
+              Choose an image file to upload
+            </Text>
+            <Text style={styles.fileFormatText}>PNG, JPEG or JPG format</Text>
+
+            <TouchableOpacity style={styles.browseButton}>
+              <Text style={styles.browseButtonText}>Browse File</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <Text style={styles.selectedFileText}>Selected file: {track}</Text>
       </ScrollView>
     </View>
   );
@@ -223,15 +251,16 @@ const styles = StyleSheet.create({
     color: "white",
     marginTop: 10,
     textAlign: "center",
+    marginBottom:40,
   },
-  uploadText:{
-    color:'white', 
-    fontSize:20, 
-    fontWeight:'bold',
+  uploadText: {
+    color: "white",
+    fontSize: 20,
+    fontWeight: "bold",
     paddingTop: 20,
-     textAlign:'left',  
-     alignSelf:'flex-start'
-    }
+    textAlign: "left",
+    alignSelf: "flex-start",
+  },
 });
 
 export default uploadTrackScreen;

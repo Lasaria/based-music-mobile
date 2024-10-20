@@ -106,6 +106,41 @@ const uploadTrackScreen = () => {
           </View>
         </View>
         <Text style={styles.selectedFileText}>Selected file: {tracks}</Text>
+
+        <View style={{ alignItems: "center" }}>
+          {/* File picker for lyrics */}
+          <Text style={styles.uploadText}>Upload lyrics</Text>
+
+          <View style={styles.filePickerContainer}>
+            <Text style={styles.filePickerTitle}>
+              Choose an lyrics file to upload
+            </Text>
+            <Text style={styles.fileFormatText}>TXT format</Text>
+
+            <TouchableOpacity style={styles.browseButton}>
+              <Text style={styles.browseButtonText}>Browse File</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <Text style={styles.selectedFileText}>Selected file: {tracks}</Text>
+
+        <View style={{ alignItems: "center" }}>
+          {/* File picker for image */}
+          <Text style={styles.uploadText}>Upload Artwork</Text>
+
+          <View style={styles.filePickerContainer}>
+            <Text style={styles.filePickerTitle}>
+              Choose an image file to upload
+            </Text>
+            <Text style={styles.fileFormatText}>PNG, JPEG or JPG format</Text>
+
+            <TouchableOpacity style={styles.browseButton}>
+              <Text style={styles.browseButtonText}>Browse File</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <Text style={styles.selectedFileText}>Selected file: {tracks}</Text>
+        
       </ScrollView>
     </View>
   );
@@ -202,6 +237,7 @@ const styles = StyleSheet.create({
     color: "white",
     marginTop: 10,
     textAlign: "center",
+    marginBottom:30,
   },
   uploadText:{
     color:'white', 
