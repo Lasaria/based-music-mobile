@@ -162,7 +162,7 @@ export const AuthService = {
         const response = await axiosPost({
           url: `${serverURL}/signout`,
           body: JSON.stringify({ accessToken }),
-          isAuthenticated: false
+          isAuthenticated: true
         });
 
 

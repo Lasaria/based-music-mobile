@@ -7,7 +7,7 @@ export const UserService = {
     setUserType: async (userType) => {
         try {
             const response = await axiosPost({
-              url: `${serverURL}/set-user-type`,
+              url: `${serverURL}/users/set-user-type`,
               body: JSON.stringify({ userType: userType }),
           });
 
