@@ -155,40 +155,42 @@ export const AuthService = {
 
   // Sign Out Function
   // Deleting the tokens on the device from which logout performed.
-  // Routing to the Sign out page if token deletion successful.
+  // Routing to the welcome page if token deletion successful.
   signOut: async () => {
-
     try {
       await tokenManager.deleteTokens();
-      // Routing being handled wherever signOut called.
+      router.replace("/welcome");
     } catch(err) {
-      console.log(err, "Error deleting token while signing out");
+      console.log(err, "Error deleting token and routing while signing out");
     }
-
-    // const accessToken = await tokenManager?.getAccessToken();
-    // if (accessToken) {
-
-    //   try {
-    //     const response = await axiosPost({
-    //       url: `${serverURL}/signout`,
-    //       body: JSON.stringify({ accessToken }),
-    //       isAuthenticated: false
-    //     });
-
-
-    //     console.log('User Signed Out successfully:', response);
-    //     await tokenManager.deleteTokens();
-
-
-    //   } catch (err) {
-    //     console.error('Error:', err.message);
-    //     throw new Error(err.message);
-    //   }
-    // } else {
-    //   return;
-    // }
   },
 
+  // This invalidates cognito tokens, effectively signing out of all devices.
+  // Could be used in critical security cases.
+  globalSignOut: async() => {
+     const accessToken = await tokenManager?.getAccessToken();
+    if (accessToken) {
+
+      try {
+        const response = await axiosPost({
+          url: `${serverURL}/signout`,
+          body: JSON.stringify({ accessToken }),
+          isAuthenticated: false
+        });
+
+
+        console.log('User Signed Out successfully:', response);
+        await tokenManager.deleteTokens();
+
+
+      } catch (err) {
+        console.error('Error:', err.message);
+        throw new Error(err.message);
+      }
+    } else {
+      return;
+    }
+  }
 
   // Refresh Tokens Function
   refreshTokens: async () => {
