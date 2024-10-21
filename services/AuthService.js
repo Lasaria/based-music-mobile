@@ -190,7 +190,7 @@ export const AuthService = {
     } else {
       return;
     }
-  }
+  },
 
   // Refresh Tokens Function
   refreshTokens: async () => {
