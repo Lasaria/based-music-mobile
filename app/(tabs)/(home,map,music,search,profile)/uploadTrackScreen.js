@@ -18,9 +18,16 @@ const uploadTrackScreen = () => {
   const [track, setTrack] = useState();
   const [size, setSize] = useState();
   const [name, setName] = useState("");
+  const [lyrics, setLyrics] = useState();
+  const [lyricsName, setLyricsName] = useState();
   const [uploadProgress, setUploadProgress] = useState();
   const [uploadStatus, setUploadStatus] = useState("idle");
   const [error, setError] = useState(null);
+  const [lyricsError, setLyricsError] = useState();
+  const [lyricsUploadStatus, setLyricsUploadStatus] = useState("idle");
+  const [lyricsUploadProgress, setLyricsUploadProgress] = useState();
+  const [lyricsSize, setLyricsSize] = useState();
+  
 
   const pickDocument = async () => {
 
@@ -64,6 +71,45 @@ const uploadTrackScreen = () => {
     }
   };
 
+
+  {/** selects the lyrics from device */}
+  const pickLyrics = async () => {
+
+    let result = await DocumentPicker.getDocumentAsync({
+      type: "text/plain",
+      copyToCacheDirectory: false,
+      multiple: false,
+    })
+    console.log(result);
+
+    if(result.assets && result.assets.length > 0){
+
+      let file = result.assets[0];
+      let fileSize = file.size / (1024 * 1024);
+      let fileType = file.mimeType
+      const allowedTypes = ["text/plain"];
+
+      if(!allowedTypes.includes(fileType)){
+        setLyricsName(file.name);
+        setLyricsUploadStatus("Error");
+        setLyricsError("Invalid file type. Only text/plain is allowed.")
+      }else if(fileSize > 10){
+        setLyricsName(file.name);
+        setLyricsUploadStatus("Error");
+        setLyricsError("File is too large. Must be under 10MB.")
+      }else{
+        setLyricsName(file.name);
+        fileSize = fileSize.toFixed(2);
+        setLyricsSize(fileSize);
+        setLyrics(file.uri);
+        setLyricsUploadStatus("Uploading")
+        startLyricsUpload(file.uri);
+      }
+    }
+    
+
+  }
+
   const startUpload = (track) => {
     console.log(track);
 
@@ -75,6 +121,21 @@ const uploadTrackScreen = () => {
       if (progress >= 100) {
         clearInterval(interval);
         setUploadStatus("uploaded");
+      }
+    }, 500);
+  };
+
+  const startLyricsUpload = (track) => {
+    console.log(track);
+
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 10;
+      setUploadProgress(progress);
+
+      if (progress >= 100) {
+        clearInterval(interval);
+        setLyricsUploadStatus("uploaded");
       }
     }, 500);
   };
@@ -254,11 +315,74 @@ const uploadTrackScreen = () => {
             </Text>
             <Text style={styles.fileFormatText}>TXT format</Text>
 
-            <TouchableOpacity style={styles.browseButton}>
+            <TouchableOpacity style={styles.browseButton} onPress={pickLyrics}>
               <Text style={styles.browseButtonText}>Browse File</Text>
             </TouchableOpacity>
           </View>
         </View>
+
+
+        {/** Display progress bar and upload lyrics info */}
+
+        {(lyrics|| lyricsError) && (
+          <View>
+            <View style={styles.uploadContainer}>
+              {error ? (
+                <View style={{flexDirection:'row'}}>
+
+                <Text style={styles.uploadInfo1}>{lyricsName}</Text>
+                <Text style={styles.uploadInfo2}>{lyricsUploadStatus}</Text>
+                </ View>
+              ) : (
+                <Text style={styles.uploadInfo}>
+                  {lyricsName} •{" "}
+                  {lyricsUploadStatus == "uploading"
+                    ? "uploading"
+                    : "upload Successful"}
+                </Text>
+              )}
+
+              { !lyricsError &&  lyricsUploadProgress < 100 && (
+                <Text style={styles.uploadPercentage}>{lyricsUploadProgress}%</Text>
+              )}
+
+              <TouchableOpacity
+                onPress={lyricsUploadStatus === "uploading" ? cancelUpload : deleteTrack}
+              >
+                <Ionicons
+                  name={
+                    lyricsUploadStatus === "uploading"
+                      ? "close-circle-outline"
+                      : "trash-outline"
+                  }
+                  size={20}
+                  color="red"
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Custom Progress bar */}
+            {lyricsError ? (
+              <Text style={styles.uploadError}>{lyricsError}</Text>
+            ) : (
+              lyricsUploadProgress < 100 && (
+                <View style={styles.progressBar}>
+                  <View
+                    style={{
+                      ...styles.progressFill,
+                      width: `${lyricsUploadProgress}%`,
+                    }}
+                  />
+                </View>
+              )
+            )}
+
+            {/** display the size of the track if upload is successful */}
+            {lyricsUploadProgress>= 100 && (
+              <Text style={styles.trackSize}>{lyricsSize}MB</Text>
+            )}
+          </View>
+        )}
 
         <View style={{ alignItems: "center" }}>
           {/* File picker for image */}
