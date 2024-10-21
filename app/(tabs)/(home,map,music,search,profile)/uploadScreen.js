@@ -26,13 +26,13 @@ const uploadScreen = () => {
 
         <TouchableOpacity style={styles.uploadTrackConatiner} onPress={() => router.push("/uploadTrackScreen")}>
           <View style={styles.trackView}>
-            <MaterialIcons name="done-outline" color="white" size="18" />
+            <MaterialIcons name="done-outline" color="white"  />
             <Text style={styles.trackText}>Upload Track</Text>
           </View>
         </TouchableOpacity>
         <TouchableOpacity style={styles.uploadAlbumConatiner} onPress={() => router.push("/uploadAlbumScreen")}>
           <View style={styles.trackView}>
-            <MaterialIcons name="done-outline" size="18" color="white"/>
+            <MaterialIcons name="done-outline"  color="white"/>
             <Text style={styles.trackText}> Upload Album</Text>
           </View>
         </TouchableOpacity>
@@ -50,8 +50,8 @@ const styles = StyleSheet.create({
     paddingTop: 65,
     paddingLeft: 40,
     position: "absolute",
-    left: 0,
-    top: 0,
+    left: 5,
+    top: 5,
   },
   arrowText: {
     color: "white",

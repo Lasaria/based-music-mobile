@@ -8,26 +8,91 @@ import {
 } from "react-native";
 import React, { useState } from "react";
 import { router } from "expo-router";
-//import * as DocumentPicker from "expo-document-picker";
+import * as DocumentPicker from "expo-document-picker";
+import { Ionicons } from "@expo/vector-icons";
 
 const uploadTrackScreen = () => {
   const [title, setTitile] = useState("");
   const [isrc, setIsrc] = useState();
   const [genre, setGenre] = useState();
-  const [track, setTrack] = useState(null);
+  const [track, setTrack] = useState();
+  const [size, setSize] = useState();
+  const [name, setName] = useState("");
+  const [uploadProgress, setUploadProgress] = useState();
+  const [uploadStatus, setUploadStatus] = useState("idle");
+  const [error, setError] = useState(null);
 
-  //   const pickDocument = async () => {
-  //     let result = await DocumentPicker.getDocumentAsync({
-  //       type: "audio/*",
-  //       copyToCacheDirectory: false,
-  //       multiple: false,
-  //     });
+  const pickDocument = async () => {
 
-  //     if (result.type === "success") {
-  //       setTrack(result);
-  //       console.log(result.uri);
-  //     }
-  //   };
+    setError(null);
+    setTrack(null);
+    setSize(null);
+    setUploadProgress(0);
+    setUploadStatus("idle");
+    setName("");
+    let result = await DocumentPicker.getDocumentAsync({
+      type: "audio/*",
+      copyToCacheDirectory: false,
+      multiple: false,
+    });
+
+    console.log("songs is: ", result);
+
+    if (result.assets && result.assets.length > 0) {
+      const file = result.assets[0];
+      let trackSize = file.size / (1024 * 1024);
+      const allowedTypes = ["audio/mpeg", "audio/mp3", "audio/wav"];
+
+      //validate track type and size
+
+      if (!allowedTypes.includes(file.mimeType)) {
+        setName(file.name);
+        setUploadStatus("Error");
+        setError("Invalid file type. Only mp3, mpeg, or wav are allowed.");
+      } else if (trackSize > 10) {
+        setName(file.name);
+        setUploadStatus("Error");
+        setError("File is too large. Must be under 10MB.");
+      } else {
+        setName(file.name);
+        trackSize = trackSize.toFixed(2);
+        setSize(trackSize);
+        setTrack(file.uri);
+        setUploadStatus("uploading");
+        startUpload(file.uri);
+      }
+    }
+  };
+
+  const startUpload = (track) => {
+    console.log(track);
+
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 10;
+      setUploadProgress(progress);
+
+      if (progress >= 100) {
+        clearInterval(interval);
+        setUploadStatus("uploaded");
+      }
+    }, 500);
+  };
+
+   const deleteTrack = () => {
+
+    setTrack(null);
+    setSize(null);
+    setName("");
+    setUploadStatus("idle");
+    setUploadProgress(null);
+    setError(null);
+   }
+  const cancelUpload = () => {
+    setUploadStatus("idle");
+    setTrack(null);
+    setUploadProgress(0);
+  };
 
   return (
     <View style={styles.outerView}>
@@ -108,19 +173,76 @@ const uploadTrackScreen = () => {
             </Text>
             <Text style={styles.fileFormatText}>WAV, MP3 or MPEG format</Text>
 
-            <TouchableOpacity style={styles.browseButton}>
+            <TouchableOpacity
+              style={styles.browseButton}
+              onPress={pickDocument}
+            >
               <Text style={styles.browseButtonText}>Browse File</Text>
             </TouchableOpacity>
-
-            {/* Display selected file info */}
-            {/* {selectedFile && (
-            <Text style={styles.selectedFileText}>
-              Selected file: {selectedFile.name}
-            </Text>
-          )} */}
           </View>
         </View>
-        <Text style={styles.selectedFileText}>Selected file: {track}</Text>
+
+        {/** Display progress bar and upload track info */}
+
+        {(track || error) && (
+          <View>
+            <View style={styles.uploadContainer}>
+              {error ? (
+                <View style={{flexDirection:'row'}}>
+
+                <Text style={styles.uploadInfo1}>{name}</Text>
+                <Text style={styles.uploadInfo2}>{uploadStatus}</Text>
+                </ View>
+              ) : (
+                <Text style={styles.uploadInfo}>
+                  {name} •{" "}
+                  {uploadStatus == "uploading"
+                    ? "uploading"
+                    : "upload Successful"}
+                </Text>
+              )}
+
+              { !error &&  uploadProgress < 100 && (
+                <Text style={styles.uploadPercentage}>{uploadProgress}%</Text>
+              )}
+
+              <TouchableOpacity
+                onPress={uploadStatus === "uploading" ? cancelUpload : deleteTrack}
+              >
+                <Ionicons
+                  name={
+                    uploadStatus === "uploading"
+                      ? "close-circle-outline"
+                      : "trash-outline"
+                  }
+                  size={20}
+                  color="red"
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Custom Progress bar */}
+            {error ? (
+              <Text style={styles.uploadError}>{error}</Text>
+            ) : (
+              uploadProgress < 100 && (
+                <View style={styles.progressBar}>
+                  <View
+                    style={{
+                      ...styles.progressFill,
+                      width: `${uploadProgress}%`,
+                    }}
+                  />
+                </View>
+              )
+            )}
+
+            {/** display the size of the track if upload is successful */}
+            {uploadProgress >= 100 && (
+              <Text style={styles.trackSize}>{size}MB</Text>
+            )}
+          </View>
+        )}
 
         <View style={{ alignItems: "center" }}>
           {/* File picker for lyrics */}
@@ -137,7 +259,6 @@ const uploadTrackScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-        <Text style={styles.selectedFileText}>Selected file: {track}</Text>
 
         <View style={{ alignItems: "center" }}>
           {/* File picker for image */}
@@ -154,7 +275,10 @@ const uploadTrackScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-        <Text style={styles.selectedFileText}>Selected file: {track}</Text>
+
+        <TouchableOpacity style={styles.saveButton}>
+          <Text style={styles.saveText}>Save</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -171,6 +295,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
     alignItems: "center",
     paddingTop: 100,
+    paddingBottom: 30,
   },
   trackText: {
     color: "white",
@@ -251,7 +376,7 @@ const styles = StyleSheet.create({
     color: "white",
     marginTop: 10,
     textAlign: "center",
-    marginBottom:40,
+    marginBottom: 40,
   },
   uploadText: {
     color: "white",
@@ -260,6 +385,66 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     textAlign: "left",
     alignSelf: "flex-start",
+  },
+  saveButton: {
+    borderRadius: 14,
+    borderWidth: 1,
+    backgroundColor: "#6F2CFF",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    alignItems: "center",
+  },
+  saveText: {
+    fontSize: 16,
+    color: "white",
+    textAlign: "center",
+    fontWeight: "bold",
+  },
+  uploadContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 10,
+    marginTop: 20,
+    width: 320,
+  },
+  uploadInfo: {
+    color: "white",
+    fontSize: 12,
+  },
+  uploadInfo1: {
+    color: "white",
+    fontSize: 16,
+    marginRight:4,
+  },
+  uploadInfo2: {
+    color: "red",
+    fontSize: 16,
+  },
+  uploadPercentage: {
+    color: "white",
+    fontSize: 12,
+  },
+  uploadError: {
+    color: "red",
+    fontSize: 12,
+  },
+  trackSize: {
+    color: "grey",
+    fontSize: 12,
+    marginLeft: 10,
+  },
+  progressBar: {
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#E0E0E0",
+    marginLeft: 10,
+    marginRight: 10,
+  },
+  progressFill: {
+    height: 10,
+    backgroundColor: "#6F2CFF",
+    borderRadius: 5,
   },
 });
 
