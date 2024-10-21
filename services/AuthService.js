@@ -1,4 +1,5 @@
 
+import { router } from 'expo-router';
 import { axiosPost } from '../utils/axiosCalls';
 import { tokenManager } from '../utils/tokenManager';
 
@@ -153,30 +154,39 @@ export const AuthService = {
 
 
   // Sign Out Function
+  // Deleting the tokens on the device from which logout performed.
+  // Routing to the Sign out page if token deletion successful.
   signOut: async () => {
 
-    const accessToken = await tokenManager?.getAccessToken();
-    if (accessToken) {
-
-      try {
-        const response = await axiosPost({
-          url: `${serverURL}/signout`,
-          body: JSON.stringify({ accessToken }),
-          isAuthenticated: false
-        });
-
-
-        console.log('User Signed Out successfully:', response);
-        await tokenManager.deleteTokens();
-
-
-      } catch (err) {
-        console.error('Error:', err.message);
-        throw new Error(err.message);
-      }
-    } else {
-      return;
+    try {
+      await tokenManager.deleteTokens();
+      // Routing being handled wherever signOut called.
+    } catch(err) {
+      console.log(err, "Error deleting token while signing out");
     }
+
+    // const accessToken = await tokenManager?.getAccessToken();
+    // if (accessToken) {
+
+    //   try {
+    //     const response = await axiosPost({
+    //       url: `${serverURL}/signout`,
+    //       body: JSON.stringify({ accessToken }),
+    //       isAuthenticated: false
+    //     });
+
+
+    //     console.log('User Signed Out successfully:', response);
+    //     await tokenManager.deleteTokens();
+
+
+    //   } catch (err) {
+    //     console.error('Error:', err.message);
+    //     throw new Error(err.message);
+    //   }
+    // } else {
+    //   return;
+    // }
   },
 
 
