@@ -7,9 +7,18 @@ const UserTypeChoiceScreen = ({ }) => {
   const handleUserTypeSelection = async (userType) => {
     console.log(userType)
     // Here you would typically save the user type to your app's state or backend
-    await UserService.setUserType(userType)
-    // For now, we'll just navigate to a hypothetical 'Main' screen
-    router.push({ pathname: '/homeIndex', params: { userType: userType } })
+    try{
+      await UserService.setUserType(userType)
+      if(userType == 'artist') {
+        router.push("artistProfileForm");
+        return;
+      }
+      // For now, we'll just navigate to a hypothetical 'Main' screen
+      router.push({ pathname: '/homeIndex', params: { userType: userType } })
+    } catch {
+      console.log("Error while setting user type")
+    }
+    
   };
 
   return (
