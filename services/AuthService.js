@@ -1,4 +1,5 @@
 
+import { router } from 'expo-router';
 import { axiosPost } from '../utils/axiosCalls';
 import { tokenManager } from '../utils/tokenManager';
 
@@ -153,9 +154,21 @@ export const AuthService = {
 
 
   // Sign Out Function
+  // Deleting the tokens on the device from which logout performed.
+  // Routing to the welcome page if token deletion successful.
   signOut: async () => {
+    try {
+      await tokenManager.deleteTokens();
+      router.replace("/welcome");
+    } catch(err) {
+      console.log(err, "Error deleting token and routing while signing out");
+    }
+  },
 
-    const accessToken = await tokenManager?.getAccessToken();
+  // This invalidates cognito tokens, effectively signing out of all devices.
+  // Could be used in critical security cases.
+  globalSignOut: async() => {
+     const accessToken = await tokenManager?.getAccessToken();
     if (accessToken) {
 
       try {
@@ -178,7 +191,6 @@ export const AuthService = {
       return;
     }
   },
-
 
   // Refresh Tokens Function
   refreshTokens: async () => {
