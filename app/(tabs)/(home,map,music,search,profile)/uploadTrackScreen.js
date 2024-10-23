@@ -5,21 +5,26 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
+  Alert,
 } from "react-native";
-import React, { useState } from "react";
+import React, { use, useState } from "react";
 import { router } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { Ionicons } from "@expo/vector-icons";
+import { tokenManager } from "../../../utils/tokenManager";
+import { axiosPost } from "../../../utils/axiosCalls";
 
 const uploadTrackScreen = () => {
   const [title, setTitile] = useState("");
-  const [isrc, setIsrc] = useState();
-  const [genre, setGenre] = useState();
+  const [isrc, setIsrc] = useState("");
+  const [genre, setGenre] = useState("");
   const [track, setTrack] = useState();
+  const [trackType, setTrackType] = useState();
   const [size, setSize] = useState();
   const [name, setName] = useState("");
   const [lyrics, setLyrics] = useState();
   const [lyricsName, setLyricsName] = useState();
+  const [lyricsType, setLyricsType] = useState();
   const [uploadProgress, setUploadProgress] = useState();
   const [uploadStatus, setUploadStatus] = useState("idle");
   const [error, setError] = useState(null);
@@ -27,9 +32,18 @@ const uploadTrackScreen = () => {
   const [lyricsUploadStatus, setLyricsUploadStatus] = useState("idle");
   const [lyricsUploadProgress, setLyricsUploadProgress] = useState();
   const [lyricsSize, setLyricsSize] = useState();
-  
+  const [cover, setCover] = useState();
+  const [coverName, setCoverName] = useState();
+  const [coverError, setCoverError] = useState();
+  const [coverUploadStatus, setCoverUploadStatus] = useState("idle");
+  const [coverUploadProgress, setCoverUploadProgress] = useState();
+  const [coverSize, setCoverSize] = useState();
+  const [coverType, setCoverType] = useState();
+
+  const artistId = tokenManager.getIdToken();
 
   const pickDocument = async () => {
+
 
     setError(null);
     setTrack(null);
@@ -61,6 +75,7 @@ const uploadTrackScreen = () => {
         setUploadStatus("Error");
         setError("File is too large. Must be under 10MB.");
       } else {
+        setTrackType(file.mimeType);
         setName(file.name);
         trackSize = trackSize.toFixed(2);
         setSize(trackSize);
@@ -71,44 +86,97 @@ const uploadTrackScreen = () => {
     }
   };
 
-
-  {/** selects the lyrics from device */}
+  {
+    /** selects the lyrics from device */
+  }
   const pickLyrics = async () => {
+    setLyricsError(null);
+    setLyrics(null);
+    setLyricsSize(null);
+    setLyricsUploadProgress(0);
+    setLyricsUploadStatus("idle");
+    setLyricsName("");
 
     let result = await DocumentPicker.getDocumentAsync({
       type: "text/plain",
       copyToCacheDirectory: false,
       multiple: false,
-    })
+    });
     console.log(result);
 
-    if(result.assets && result.assets.length > 0){
-
+    if (result.assets && result.assets.length > 0) {
       let file = result.assets[0];
-      let fileSize = file.size / (1024 * 1024);
-      let fileType = file.mimeType
+      let fileSize = file.size;
+      let fileType = file.mimeType;
       const allowedTypes = ["text/plain"];
 
-      if(!allowedTypes.includes(fileType)){
+      if (!allowedTypes.includes(fileType)) {
         setLyricsName(file.name);
         setLyricsUploadStatus("Error");
-        setLyricsError("Invalid file type. Only text/plain is allowed.")
-      }else if(fileSize > 10){
+        setLyricsError("Invalid file type. Only text/plain is allowed.");
+      } else if (fileSize > 10 * 1024 * 1024) {
         setLyricsName(file.name);
         setLyricsUploadStatus("Error");
-        setLyricsError("File is too large. Must be under 10MB.")
-      }else{
+        setLyricsError("File is too large. Must be under 10MB.");
+      } else {
         setLyricsName(file.name);
+        setLyricsType(file.mimeType);
         fileSize = fileSize.toFixed(2);
         setLyricsSize(fileSize);
         setLyrics(file.uri);
-        setLyricsUploadStatus("Uploading")
+        setLyricsUploadStatus("Uploading");
         startLyricsUpload(file.uri);
       }
     }
-    
+  };
 
-  }
+  const pickCover = async () => {
+    setCoverError(null);
+    setCover(null);
+    setCoverSize(null);
+    setCoverUploadProgress(0);
+    setCoverUploadStatus("idle");
+    setCoverName("");
+
+    let result = await DocumentPicker.getDocumentAsync({
+      type: ["image/png", "image/jpeg", "image/heic", "image/jpg"],
+      copyToCacheDirectory: false,
+      multiple: false,
+    });
+
+    console.log("cover is : ", result);
+
+    if (result.assets && result.assets.length > 0) {
+      const file = result.assets[0];
+      let coverSize = file.size;
+      const allowedTypes = [
+        "image/png",
+        "image/jpeg",
+        "image/heic",
+        "image/jpg",
+      ];
+
+      //validate track type and size
+
+      if (!allowedTypes.includes(file.mimeType)) {
+        setCoverName(file.name);
+        setCoverUploadStatus("Error");
+        setCoverError("Invalid file type. Only mp3, mpeg, or wav are allowed.");
+      } else if (coverSize > 10 * 1024 * 1024) {
+        setCoverName(file.name);
+        setCoverUploadStatus("Error");
+        setCoverError("File is too large. Must be under 10MB.");
+      } else {
+        setCoverName(file.name);
+        setCoverType(file.mimeType);
+        coverSize = coverSize.toFixed(2);
+        setCoverSize(coverSize);
+        setCover(file.uri);
+        setCoverUploadStatus("uploading");
+        startCoverUpload(file.uri);
+      }
+    }
+  };
 
   const startUpload = (track) => {
     console.log(track);
@@ -131,7 +199,7 @@ const uploadTrackScreen = () => {
     let progress = 0;
     const interval = setInterval(() => {
       progress += 10;
-      setUploadProgress(progress);
+      setLyricsUploadProgress(progress);
 
       if (progress >= 100) {
         clearInterval(interval);
@@ -140,20 +208,134 @@ const uploadTrackScreen = () => {
     }, 500);
   };
 
-   const deleteTrack = () => {
+  const startCoverUpload = (track) => {
+    console.log(track);
 
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 10;
+      setCoverUploadProgress(progress);
+
+      if (progress >= 100) {
+        clearInterval(interval);
+        setCoverUploadStatus("uploaded");
+      }
+    }, 500);
+  };
+
+  const deleteTrack = () => {
     setTrack(null);
     setSize(null);
     setName("");
     setUploadStatus("idle");
     setUploadProgress(null);
     setError(null);
-   }
+  };
   const cancelUpload = () => {
     setUploadStatus("idle");
     setTrack(null);
     setUploadProgress(0);
   };
+
+  const deleteLyric = () => {
+    setLyricsName(null);
+    setLyrics(null);
+    setLyricsSize(null);
+    setLyricsUploadProgress(null);
+    setLyricsUploadStatus("idle");
+    setLyricsError(null);
+  };
+  const cancelLyric = () => {
+    setLyricsUploadStatus("idle");
+    setLyrics(null);
+    setLyricsError(null);
+    setLyricsUploadProgress(0);
+    setLyricsName(null);
+    setLyricsSize(null);
+  };
+
+  const deleteCover = () => {
+    setCoverName(null);
+    setCover(null);
+    setCoverSize(null);
+    setCoverUploadProgress(null);
+    setCoverUploadStatus("idle");
+    setCoverError(null);
+  };
+
+  const saveTrack = async () => {
+
+    console.log("token: ", token);
+
+    let token;
+    try {
+      token = await tokenManager.getAccessToken(); 
+      console.log("token: ", token);
+    } catch (error) {
+      Alert.alert("Error", "Failed to retrieve token.");
+      return;
+    }
+
+    // Ensure token is valid
+    // if (!token) {
+    //   Alert.alert("Error", "Authorization token is invalid.");
+    //   return;
+    // }
+
+    // Ensure all required fields are filled before proceeding
+    if (!title || !isrc || !genre || !track || !cover) {
+      Alert.alert("Error", "Please fill in all required fields.");
+      return;
+    }
+
+    // Create a FormData object
+    const formData = new FormData();
+
+    // Append the required fields
+    formData.append("artistId", artistId);
+    formData.append("title", title);
+    formData.append("isrc", isrc);
+    formData.append("releaseDate", new Date().toISOString());
+    formData.append("genre", genre);
+
+    // Append the files (track, cover, lyrics)
+    formData.append("track", {
+      uri: track,
+      name: name,
+      type: trackType,
+    });
+
+    if (cover) {
+      formData.append("cover", {
+        uri: cover,
+        name: coverName,
+        type: coverType,
+      });
+    }
+
+    if (lyrics) {
+      formData.append("lyrics", {
+        uri: lyrics,
+        name: lyricsName,
+        type: lyricsType,
+      });
+    }
+
+    try {
+      const result = await axiosPost({
+        url: "http://10.0.0.235:3000/tracks",
+        body: formData,
+        isAuthenticated: true, 
+      });
+
+      Alert.alert("Success", "Uploaded successfully");
+      console.log("Track uploaded successfully:", result);
+    } catch (error) {
+      Alert.alert("Error", error.message || "Failed to upload the track.");
+      console.error(error);
+    }
+  };
+
 
   return (
     <View style={styles.outerView}>
@@ -249,11 +431,10 @@ const uploadTrackScreen = () => {
           <View>
             <View style={styles.uploadContainer}>
               {error ? (
-                <View style={{flexDirection:'row'}}>
-
-                <Text style={styles.uploadInfo1}>{name}</Text>
-                <Text style={styles.uploadInfo2}>{uploadStatus}</Text>
-                </ View>
+                <View style={{ flexDirection: "row" }}>
+                  <Text style={styles.uploadInfo1}>{name}</Text>
+                  <Text style={styles.uploadInfo2}>{uploadStatus}</Text>
+                </View>
               ) : (
                 <Text style={styles.uploadInfo}>
                   {name} •{" "}
@@ -263,12 +444,14 @@ const uploadTrackScreen = () => {
                 </Text>
               )}
 
-              { !error &&  uploadProgress < 100 && (
+              {!error && uploadProgress < 100 && (
                 <Text style={styles.uploadPercentage}>{uploadProgress}%</Text>
               )}
 
               <TouchableOpacity
-                onPress={uploadStatus === "uploading" ? cancelUpload : deleteTrack}
+                onPress={
+                  uploadStatus === "uploading" ? cancelUpload : deleteTrack
+                }
               >
                 <Ionicons
                   name={
@@ -321,18 +504,16 @@ const uploadTrackScreen = () => {
           </View>
         </View>
 
-
         {/** Display progress bar and upload lyrics info */}
 
-        {(lyrics|| lyricsError) && (
+        {(lyrics || lyricsError) && (
           <View>
             <View style={styles.uploadContainer}>
-              {error ? (
-                <View style={{flexDirection:'row'}}>
-
-                <Text style={styles.uploadInfo1}>{lyricsName}</Text>
-                <Text style={styles.uploadInfo2}>{lyricsUploadStatus}</Text>
-                </ View>
+              {lyricsError ? (
+                <View style={{ flexDirection: "row" }}>
+                  <Text style={styles.uploadInfo1}>{lyricsName}</Text>
+                  <Text style={styles.uploadInfo2}>{lyricsUploadStatus}</Text>
+                </View>
               ) : (
                 <Text style={styles.uploadInfo}>
                   {lyricsName} •{" "}
@@ -342,12 +523,16 @@ const uploadTrackScreen = () => {
                 </Text>
               )}
 
-              { !lyricsError &&  lyricsUploadProgress < 100 && (
-                <Text style={styles.uploadPercentage}>{lyricsUploadProgress}%</Text>
+              {!lyricsError && lyricsUploadProgress < 100 && (
+                <Text style={styles.uploadPercentage}>
+                  {lyricsUploadProgress}%
+                </Text>
               )}
 
               <TouchableOpacity
-                onPress={lyricsUploadStatus === "uploading" ? cancelUpload : deleteTrack}
+                onPress={
+                  lyricsUploadStatus === "uploading" ? cancelLyric : deleteLyric
+                }
               >
                 <Ionicons
                   name={
@@ -378,8 +563,8 @@ const uploadTrackScreen = () => {
             )}
 
             {/** display the size of the track if upload is successful */}
-            {lyricsUploadProgress>= 100 && (
-              <Text style={styles.trackSize}>{lyricsSize}MB</Text>
+            {lyricsUploadProgress >= 100 && (
+              <Text style={styles.trackSize}>{lyricsSize}B</Text>
             )}
           </View>
         )}
@@ -392,15 +577,82 @@ const uploadTrackScreen = () => {
             <Text style={styles.filePickerTitle}>
               Choose an image file to upload
             </Text>
-            <Text style={styles.fileFormatText}>PNG, JPEG or JPG format</Text>
+            <Text style={styles.fileFormatText}>
+              PNG, JPEG, HEIC or JPG format
+            </Text>
 
-            <TouchableOpacity style={styles.browseButton}>
+            <TouchableOpacity style={styles.browseButton} onPress={pickCover}>
               <Text style={styles.browseButtonText}>Browse File</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <TouchableOpacity style={styles.saveButton}>
+        {/** Display progress bar and upload cover info */}
+
+        {(cover || coverError) && (
+          <View>
+            <View style={styles.uploadContainer}>
+              {coverError ? (
+                <View style={{ flexDirection: "row" }}>
+                  <Text style={styles.uploadInfo1}>{coverName}</Text>
+                  <Text style={styles.uploadInfo2}>{coverUploadStatus}</Text>
+                </View>
+              ) : (
+                <Text style={styles.uploadInfo}>
+                  {coverName} •{" "}
+                  {coverUploadProgress == "uploading"
+                    ? "uploading"
+                    : "upload Successful"}
+                </Text>
+              )}
+
+              {!coverError && coverUploadProgress < 100 && (
+                <Text style={styles.uploadPercentage}>
+                  {coverUploadProgress}%
+                </Text>
+              )}
+
+              <TouchableOpacity
+                onPress={
+                  coverUploadStatus === "uploading" ? deleteCover : deleteCover
+                }
+              >
+                <Ionicons
+                  name={
+                    coverUploadProgress === "uploading"
+                      ? "close-circle-outline"
+                      : "trash-outline"
+                  }
+                  size={20}
+                  color="red"
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Custom Progress bar */}
+            {coverError ? (
+              <Text style={styles.uploadError}>{coverError}</Text>
+            ) : (
+              coverUploadProgress < 100 && (
+                <View style={styles.progressBar}>
+                  <View
+                    style={{
+                      ...styles.progressFill,
+                      width: `${coverUploadProgress}%`,
+                    }}
+                  />
+                </View>
+              )
+            )}
+
+            {/** display the size of the track if upload is successful */}
+            {coverUploadProgress >= 100 && (
+              <Text style={styles.trackSize}>{coverSize}B</Text>
+            )}
+          </View>
+        )}
+
+        <TouchableOpacity style={styles.saveButton} onPress={saveTrack}>
           <Text style={styles.saveText}>Save</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -539,7 +791,7 @@ const styles = StyleSheet.create({
   uploadInfo1: {
     color: "white",
     fontSize: 16,
-    marginRight:4,
+    marginRight: 4,
   },
   uploadInfo2: {
     color: "red",
