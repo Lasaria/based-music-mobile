@@ -16,10 +16,10 @@ function MapScreen() {
     return (
         <View style={Style.container}>
             {/* Render Mapbox map */}
-            <MapboxGL.MapView style={styles.map}>
+            <MapboxGL.MapView style={styles.map} styleURL="mapbox://styles/lasaria/cm2kucgfu008g01qhd4f9hvhh">
                 <MapboxGL.Camera
                     zoomLevel={10}
-                    centerCoordinate={[-73.970895, 40.723279]} // Example: New York City coordinates
+                    centerCoordinate={[-77.0364, 38.8951 ]} // Example: New York City coordinates
                 />
                 {/* Add more Mapbox components, such as markers, later */}
             </MapboxGL.MapView>
