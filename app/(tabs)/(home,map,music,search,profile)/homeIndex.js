@@ -8,8 +8,11 @@ import { router } from "expo-router";
 
 const HomeScreen = ({}) => {
   const handleSignOut = async () => {
-    await AuthService.signOut();
-    router.replace("/welcome");
+    try{
+      await AuthService.signOut();
+    } catch(err) {
+      console.log("Error while signing out", err)
+    }
   };
 
   const handleRefreshTokens = async () => {
