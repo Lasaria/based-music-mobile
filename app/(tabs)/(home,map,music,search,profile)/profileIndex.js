@@ -11,6 +11,7 @@ function ProfileScreen() {
       <Text style={Style.text}>Profile Screen</Text>
       <Button title="Listener Profile" onPress={() => router.push("/listenerProfile")} />
       <Button title="Artist Profile" onPress={() => router.push("/artistProfile")} />
+      <Button title="Venue Profile" onPress={() => router.push("/venueProfile")} />
     </View>
   )
 }

@@ -15,7 +15,7 @@ const VenueProfileScreen = ({ }) => {
             {/* Events Button */}
             <Button
                 title="Events"
-                onPress={() => router.push('Events')}
+                onPress={() => router.push('venueEvents')}
             />
             {/* Bookings Button */}
             <Button

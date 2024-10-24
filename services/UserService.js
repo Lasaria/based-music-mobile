@@ -1,13 +1,13 @@
 import { axiosPost } from '../utils/axiosCalls';
 
-const serverURL = 'http://localhost:3000'
+const serverURL = 'http://10.3.65.223:3000'
 
 export const UserService = {
 
     setUserType: async (userType) => {
         try {
             const response = await axiosPost({
-              url: `${serverURL}/set-user-type`,
+              url: `${serverURL}/users/set-user-type`,
               body: JSON.stringify({ userType: userType }),
           });
 
