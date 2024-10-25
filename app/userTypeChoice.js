@@ -10,7 +10,7 @@ const UserTypeChoiceScreen = ({ }) => {
     try{
       await UserService.setUserType(userType)
       if(userType == 'artist') {
-        router.push("artistProfileForm");
+        router.push("./artistSignUp/artistProfileForm");
         return;
       }
       // For now, we'll just navigate to a hypothetical 'Main' screen
