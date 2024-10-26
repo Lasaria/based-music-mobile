@@ -12,6 +12,7 @@ import {
 import React, { use, useState } from "react";
 import { router } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from "@expo/vector-icons";
 import { tokenManager } from "../../../utils/tokenManager";
 import { axiosPost } from "../../../utils/axiosCalls";
@@ -140,10 +141,16 @@ const uploadTrackScreen = () => {
     setCoverUploadStatus("idle");
     setCoverName("");
 
-    let result = await DocumentPicker.getDocumentAsync({
-      type: ["image/png", "image/jpeg", "image/heic", "image/jpg"],
-      copyToCacheDirectory: false,
-      multiple: false,
+    // let result = await DocumentPicker.getDocumentAsync({
+    //   type: ["image/png", "image/jpeg", "image/heic", "image/jpg"],
+    //   copyToCacheDirectory: false,
+    //   multiple: false,
+    // });
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, // restricts to image types
+      allowsEditing: true,
+      // aspect: [4, 3], // optional, aspect ratio
+      // quality: 1, // quality of the image, range 0-1
     });
 
     console.log("cover is : ", result);
@@ -171,7 +178,7 @@ const uploadTrackScreen = () => {
       } else {
         setCoverName(file.name);
         setCoverType(file.mimeType);
-        coverSize = coverSize.toFixed(2);
+        coverSize = coverSize;
         setCoverSize(coverSize);
         setCover(file.uri);
         setCoverUploadStatus("uploading");
@@ -300,20 +307,12 @@ const uploadTrackScreen = () => {
     const token = await tokenManager.getAccessToken();
     
 
-    // Append the required fields
-    // const body = {
-    //   "artist": artistId,
-    //   "title": title,
-    //   "isrc": isrc,
-    //   "releaseDate": new Date().toISOString(),
-    //   "genre": genre
-    // }
+  
     formData.append("artistId", artistId);
     formData.append("title", title);
     formData.append("isrc", isrc);
     formData.append("releaseDate", new Date().toISOString());
     formData.append("genre", genre);
-    //formData.append("body", JSON.stringify(body));
 
     // Append the files (track, cover, lyrics)
     formData.append("track", {
