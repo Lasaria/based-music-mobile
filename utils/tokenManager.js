@@ -1,13 +1,13 @@
-import * as SecureStore from 'expo-secure-store';
-import { jwtDecode } from 'jwt-decode';
-import { Buffer } from 'buffer';
+import * as SecureStore from "expo-secure-store";
+import { jwtDecode } from "jwt-decode";
+import { Buffer } from "buffer";
 
 // Polyfill for atob
-global.atob = (input) => Buffer.from(input, 'base64').toString('binary');
+global.atob = (input) => Buffer.from(input, "base64").toString("binary");
 
-const ACCESS_TOKEN_KEY = 'userAccessToken';
-const ID_TOKEN_KEY = 'userIdToken';
-const REFRESH_TOKEN_KEY = 'userRefreshToken';
+const ACCESS_TOKEN_KEY = "userAccessToken";
+const ID_TOKEN_KEY = "userIdToken";
+const REFRESH_TOKEN_KEY = "userRefreshToken";
 
 export const tokenManager = {
   saveTokens: async (tokens) => {
@@ -16,31 +16,30 @@ export const tokenManager = {
       await SecureStore.setItemAsync(ID_TOKEN_KEY, tokens.IdToken);
 
       // Needed since refresh tokens call doesn't return RefreshToken
-      if (tokens?.RefreshToken){
-        await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, tokens.RefreshToken );
+      if (tokens?.RefreshToken) {
+        await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, tokens.RefreshToken);
       }
 
       const accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
       const idToken = await SecureStore.getItemAsync(ID_TOKEN_KEY);
       const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
 
-      console.log("accessToken: "+ accessToken);
+      console.log("accessToken: " + accessToken);
       console.log("idToken: " + idToken);
       console.log("refreshToken: " + refreshToken);
-
     } catch (error) {
-      console.error('Error saving tokens:', error);
+      console.error("Error saving tokens:", error);
     }
   },
 
   getAccessToken: async () => {
     try {
       const accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
-      console.log("accessToken: "+ accessToken);
+      console.log(" [tokenManager.js] accessToken: " + accessToken);
 
       return await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
     } catch (error) {
-      console.error('Error getting access token:', error);
+      console.error("Error getting access token:", error);
       return null;
     }
   },
@@ -49,7 +48,7 @@ export const tokenManager = {
     try {
       return await SecureStore.getItemAsync(ID_TOKEN_KEY);
     } catch (error) {
-      console.error('Error getting ID token:', error);
+      console.error("Error getting ID token:", error);
       return null;
     }
   },
@@ -58,7 +57,7 @@ export const tokenManager = {
     try {
       return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
     } catch (error) {
-      console.error('Error getting refresh token:', error);
+      console.error("Error getting refresh token:", error);
       return null;
     }
   },
@@ -66,14 +65,19 @@ export const tokenManager = {
   deleteTokens: async () => {
     try {
       await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
+      console.log("Access Token deleted");
+
       await SecureStore.deleteItemAsync(ID_TOKEN_KEY);
+      console.log("ID Token deleted");
+
       await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+      console.log("Refresh Token deleted");
     } catch (error) {
-      console.error('Error deleting tokens:', error);
+      console.error("Error deleting tokens:", error);
     }
   },
 
-  isAccessTokenExpired: async function() {
+  isAccessTokenExpired: async function () {
     try {
       const accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
       if (!accessToken) {
@@ -86,16 +90,16 @@ export const tokenManager = {
       }
       return false;
     } catch (error) {
-      console.error('Error checking access token expiration:', error);
-      return true; 
+      console.error("Error checking access token expiration:", error);
+      return true;
     }
   },
 
-  isIdTokenExpired: async function() {
+  isIdTokenExpired: async function () {
     try {
       const idToken = await SecureStore.getItemAsync(ID_TOKEN_KEY);
       if (!idToken) {
-        return true; 
+        return true;
       }
       const decodedToken = jwtDecode(idToken);
       const currentTime = Math.floor(Date.now() / 1000);
@@ -104,20 +108,19 @@ export const tokenManager = {
       }
       return false;
     } catch (error) {
-      console.error('Error checking ID token expiration:', error);
+      console.error("Error checking ID token expiration:", error);
       return true;
     }
   },
 
-  IsAccessOrIdTokenExpired: async function() {
+  IsAccessOrIdTokenExpired: async function () {
     try {
       const hasAccessTokenExpired = await this.isAccessTokenExpired();
       const hasIdTokenExpired = await this.isIdTokenExpired();
-      return (hasAccessTokenExpired || hasIdTokenExpired);
+      return hasAccessTokenExpired || hasIdTokenExpired;
     } catch (error) {
-      console.error('Error checking Access/ID token expiry:', error);
+      console.error("Error checking Access/ID token expiry:", error);
       return true;
     }
   },
-
 };
