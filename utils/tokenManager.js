@@ -16,15 +16,15 @@ export const tokenManager = {
       await SecureStore.setItemAsync(ID_TOKEN_KEY, tokens.IdToken);
 
       // Needed since refresh tokens call doesn't return RefreshToken
-      if (tokens?.RefreshToken){
-        await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, tokens.RefreshToken );
+      if (tokens?.RefreshToken) {
+        await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, tokens.RefreshToken);
       }
 
       const accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
       const idToken = await SecureStore.getItemAsync(ID_TOKEN_KEY);
       const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
 
-      console.log("accessToken: "+ accessToken);
+      console.log("accessToken: " + accessToken);
       console.log("idToken: " + idToken);
       console.log("refreshToken: " + refreshToken);
 
@@ -36,7 +36,7 @@ export const tokenManager = {
   getAccessToken: async () => {
     try {
       const accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
-      console.log("accessToken: "+ accessToken);
+      console.log("accessToken: " + accessToken);
 
       return await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
     } catch (error) {
@@ -73,7 +73,7 @@ export const tokenManager = {
     }
   },
 
-  isAccessTokenExpired: async function() {
+  isAccessTokenExpired: async function () {
     try {
       const accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
       if (!accessToken) {
@@ -87,15 +87,15 @@ export const tokenManager = {
       return false;
     } catch (error) {
       console.error('Error checking access token expiration:', error);
-      return true; 
+      return true;
     }
   },
 
-  isIdTokenExpired: async function() {
+  isIdTokenExpired: async function () {
     try {
       const idToken = await SecureStore.getItemAsync(ID_TOKEN_KEY);
       if (!idToken) {
-        return true; 
+        return true;
       }
       const decodedToken = jwtDecode(idToken);
       const currentTime = Math.floor(Date.now() / 1000);
@@ -109,7 +109,7 @@ export const tokenManager = {
     }
   },
 
-  IsAccessOrIdTokenExpired: async function() {
+  IsAccessOrIdTokenExpired: async function () {
     try {
       const hasAccessTokenExpired = await this.isAccessTokenExpired();
       const hasIdTokenExpired = await this.isIdTokenExpired();
@@ -118,6 +118,15 @@ export const tokenManager = {
       console.error('Error checking Access/ID token expiry:', error);
       return true;
     }
+  },
+
+  getUserId: async () => {
+    const token = await tokenManager.getAccessToken(); // Retrieve access token
+    if (token) {
+      const decodedToken = jwtDecode(token); // Decode the JWT token
+      return decodedToken.sub || decodedToken.userId; // Assuming 'sub' or 'userId' contains the user ID
+    }
+    throw new Error("User not authenticated");
   },
 
 };

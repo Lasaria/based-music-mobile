@@ -4,7 +4,7 @@ import { AuthService } from "../services/AuthService"; // Import your AuthServic
 import { router } from 'expo-router';
 
 class ApiError extends Error {
-  constructor(message, status, data) {
+  constructor (message, status, data) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
@@ -18,7 +18,7 @@ const createAxiosRequest = async ({ url, method, body, isAuthenticated = true })
   if (isAuthenticated) {
     const isAnyTokenInvalid = await tokenManager.IsAccessOrIdTokenExpired();
     if (isAnyTokenInvalid) {
-        console.log("INVALID TOKENS")
+      console.log("INVALID TOKENS")
       try {
         await AuthService.refreshTokens();
       } catch (error) {
@@ -47,7 +47,7 @@ const createAxiosRequest = async ({ url, method, body, isAuthenticated = true })
       url,
       method,
       headers,
-      ...(method === 'GET' ? { } : { data: body }),
+      ...(method === 'GET' ? {} : { data: body }),
     });
     return response.data;
   } catch (error) {
@@ -67,3 +67,5 @@ const createAxiosRequest = async ({ url, method, body, isAuthenticated = true })
 
 export const axiosPost = (config) => createAxiosRequest({ ...config, method: 'POST' });
 export const axiosGet = (config) => createAxiosRequest({ ...config, method: 'GET' });
+export const axiosPatch = (config) => createAxiosRequest({ ...config, method: 'PATCH' });
+

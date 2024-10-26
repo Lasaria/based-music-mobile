@@ -1,17 +1,19 @@
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
 
-const SelectInformationPage = ({ navigation }) => {
+const SelectInformationPage = () => {
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
   const [genres, setGenres] = useState('');
+  const router = useRouter();
 
   const handleNextPress = () => {
     // Logic to handle the next button press
     console.log("Name:", name);
     console.log("Bio:", bio);
     console.log("Genres:", genres);
-    navigation.navigate('artistProfile'); // Replace with your next screen
+    router.replace('(profile)/artistProfile'); // Replace with your next screen
   };
 
   return (
