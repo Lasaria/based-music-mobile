@@ -44,7 +44,8 @@
       "expo-font",
       "expo-router",
       "react-native-email-link",
-      "expo-document-picker"
+      "expo-document-picker",
+      "expo-image-picker"
     ]
   }
 }
