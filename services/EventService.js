@@ -4,7 +4,7 @@ import { axiosPost } from '../utils/axiosCalls';
 const serverURL = 'http://10.3.65.223:3000';
 
 export const EventService = {
-  uploadImage: async (formData) => {
+  /*uploadImage: async (formData) => {
     const response = await fetch(`${serverURL}/events/upload-image`, {
       method: 'POST',
       headers: {
@@ -13,12 +13,12 @@ export const EventService = {
       body: formData
     });
     return response.json();
-  },
+  },*/
 
   createEvent: async (eventData) => {
     try {
       const response = await axiosPost({
-        url: `${serverURL}/events/events`,
+        url: `${serverURL}/events`,
         body: eventData,
       });
 
