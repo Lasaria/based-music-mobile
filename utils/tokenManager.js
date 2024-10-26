@@ -120,4 +120,15 @@ export const tokenManager = {
     }
   },
 
+  getUserId: async () => {
+    const token = await tokenManager.getAccessToken(); // Retrieve access token
+    console.log("TOKEN: ", token);
+    if (token) {
+      const decodedToken = jwtDecode(token); // Decode the JWT token
+      console.log("DECODED TOKEN: ", decodedToken.sub);
+      return decodedToken.sub || decodedToken.userId; // Assuming 'sub' or 'userId' contains the user ID
+    }
+    throw new Error("User not authenticated");
+  }
+
 };

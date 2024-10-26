@@ -44,7 +44,7 @@ const uploadTrackScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [newTrackName, setNewTrackName] = useState(name);
 
-  const artistId = tokenManager.getIdToken();
+ 
 
   const pickDocument = async () => {
     setError(null);
@@ -276,16 +276,18 @@ const uploadTrackScreen = () => {
   };
 
   const saveTrack = async () => {
-    console.log("token: ", token);
+    // console.log("token: ", token);
 
-    let token;
-    try {
-      token = await tokenManager.getAccessToken();
-      console.log("token: ", token);
-    } catch (error) {
-      Alert.alert("Error", "Failed to retrieve token.");
-      return;
-    }
+    // let token;
+    // try {
+    //   const token = await tokenManager.getAccessToken();
+    //   console.log("token: ", token);
+    // } catch (error) {
+    //   Alert.alert("Error", "Failed to retrieve token.");
+    //   return;
+    // }
+    const artistId = await tokenManager.getUserId();
+    console.log("artistID: ", artistId);
 
     // Ensure all required fields are filled before proceeding
     if (!title || !isrc || !genre || !track || !cover) {
@@ -295,13 +297,23 @@ const uploadTrackScreen = () => {
 
     // Create a FormData object
     const formData = new FormData();
+    const token = await tokenManager.getAccessToken();
+    
 
     // Append the required fields
+    // const body = {
+    //   "artist": artistId,
+    //   "title": title,
+    //   "isrc": isrc,
+    //   "releaseDate": new Date().toISOString(),
+    //   "genre": genre
+    // }
     formData.append("artistId", artistId);
     formData.append("title", title);
     formData.append("isrc", isrc);
     formData.append("releaseDate", new Date().toISOString());
     formData.append("genre", genre);
+    //formData.append("body", JSON.stringify(body));
 
     // Append the files (track, cover, lyrics)
     formData.append("track", {
@@ -327,12 +339,30 @@ const uploadTrackScreen = () => {
     }
 
     try {
-      // Use axiosPost to make the API request
-      const result = await axiosPost({
-        url: "http://localhost:3000/tracks",
-        body: formData,
-        isAuthenticated: true, 
+      // console.log(formData);
+      // // Use axiosPost to make the API request
+      // const result = await axiosPost({
+      //   url: "http://localhost:3000/tracks",
+      //   formData: formData,
+      // });
+      const response = await fetch("http://localhost:3000/tracks", {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          // Don't set Content-Type when sending FormData,
+          // browser will set it automatically with the correct boundary
+        },
+        body: formData
       });
+
+      if (!response.ok) {
+        // Try to parse error message from response
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
 
       Alert.alert("Success", "Uploaded successfully");
       console.log("Track uploaded successfully:", result);
