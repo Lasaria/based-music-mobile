@@ -1,14 +1,23 @@
-import React, { useEffect, useState } from "react";
-import { View, StyleSheet, Text } from "react-native";
+import React, { useEffect, useState, useRef } from "react";
+import {
+  View,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Text,
+  Platform,
+} from "react-native";
 import MapboxGL from "@rnmapbox/maps";
+import { Modalize } from "react-native-modalize";
+import * as turf from "@turf/turf";
 
 MapboxGL.setAccessToken(
   "pk.eyJ1IjoibGFzYXJpYSIsImEiOiJjbTJheXV0cjcwNG9zMmxwdnlxZWdoMjc5In0.NoBtaBj9cNvdemNp52pxGQ"
 );
 
 const MapScreen = () => {
-  const [venues, setVenues] = useState(null);
-
+  const [geojsonData, setGeojsonData] = useState(null);
+  const modalizeRef = useRef(null); // Ref for controlling the modal
   // Hardcoded venue data
   const venueData = [
     { name: "Ultra Bar DC", latitude: 38.8963, longitude: -77.0241 },
@@ -172,12 +181,13 @@ const MapScreen = () => {
   ];
 
   useEffect(() => {
-    const geojsonData = {
+    const geojson = {
       type: "FeatureCollection",
       features: venueData.map((venue) => ({
         type: "Feature",
         properties: {
           name: venue.name,
+          address: venue.address, // Include address for display in modal
         },
         geometry: {
           type: "Point",
@@ -186,11 +196,57 @@ const MapScreen = () => {
       })),
     };
 
-    setVenues(geojsonData);
+    setGeojsonData(geojson); // Set the GeoJSON data to state
   }, []);
+  //   const hasLineString = geojsonData.features.some(
+  //     (feature) => feature.geometry.type === "LineString"
+  //   );
+
+  //   if (hasLineString) {
+  //     console.log("LineString exists in the data");
+  //   } else {
+  //     console.log("No LineString found in the data");
+  //   }
+  //   // Log the entire geojsonData to see the structure
+  //console.log(JSON.stringify(geojsonData, null, 2)); // This will log the full structure with indentation
+
+  // Function to open the modal
+  const openModal = () => {
+    modalizeRef.current?.open();
+  };
+
+  const renderModalContent = () => (
+    <View style={styles.modalContent}>
+      <Text style={styles.modalHeader}>Upcoming Events</Text>
+      {/* Add your event data here */}
+      <Text>Throwback Thursday at Kings Theater</Text>
+      <Text>Tomorrow at 8 PM</Text>
+      {/* More event data */}
+    </View>
+  );
 
   return (
     <View style={{ flex: 1 }}>
+      {/* Search Bar */}
+      <View style={styles.searchBarContainer}>
+        <TextInput placeholder="Search" style={styles.searchBar} />
+      </View>
+      {/* Filter Tabs */}
+      <View style={styles.filterContainer}>
+        <TouchableOpacity style={styles.filterTab}>
+          <Text style={styles.filterText}>Genre</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.filterTab}>
+          <Text style={styles.filterText}>Cost</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.filterTab}>
+          <Text style={styles.filterText}>Distance</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.filterTab}>
+          <Text style={styles.filterText}>Access</Text>
+        </TouchableOpacity>
+      </View>
+      {/* Map */}
       <MapboxGL.MapView
         style={styles.map}
         styleURL="mapbox://styles/lasaria/cm2kucgfu008g01qhd4f9hvhh"
@@ -203,10 +259,10 @@ const MapScreen = () => {
           centerCoordinate={[-77.0364, 38.8951]} // Washington DC area
         />
 
-        {venues && (
+        {geojsonData && (
           <MapboxGL.ShapeSource
             id="venueSource"
-            shape={venues}
+            shape={geojsonData} // Use the GeoJSON data here
             cluster={true} // Enable clustering
             clusterRadius={50} // Radius of clustering
             clusterMaxZoom={14} // Maximum zoom level for clustering
@@ -222,15 +278,15 @@ const MapScreen = () => {
               }}
             />
 
-            {/* Symbol Layer to show Cluster Count (the number inside the circle) */}
+            {/* Symbol Layer to show Cluster Count */}
             <MapboxGL.SymbolLayer
               id="clusterCount"
               filter={["has", "point_count"]}
               style={{
                 textField: "{point_count}",
                 textSize: 12,
-                textColor: "#fff", // White text for cluster count
-                textHaloColor: "#000", // Black halo around numbers
+                textColor: "#fff",
+                textHaloColor: "#000",
                 textHaloWidth: 1,
               }}
             />
@@ -238,7 +294,7 @@ const MapScreen = () => {
             {/* Circle Layer for Individual Points */}
             <MapboxGL.CircleLayer
               id="venueCircle"
-              filter={["!", ["has", "point_count"]]} // Only individual points
+              filter={["!", ["has", "point_count"]]}
               style={{
                 circleColor: "blue",
                 circleRadius: 10,
@@ -246,15 +302,15 @@ const MapScreen = () => {
               }}
             />
 
-            {/* Symbol Layer for Venue Names (only when zoomed in) */}
+            {/* Symbol Layer for Venue Names */}
             <MapboxGL.SymbolLayer
               id="venueName"
-              filter={["!", ["has", "point_count"]]} // Only individual points
+              filter={["!", ["has", "point_count"]]}
               style={{
                 textField: ["get", "name"],
                 textSize: 12,
-                textColor: "#fff", // White text for venue names
-                textHaloColor: "blue", // Blue halo around text
+                textColor: "#fff",
+                textHaloColor: "blue",
                 textHaloWidth: 1,
                 textOffset: [0, 1.5],
                 textAnchor: "top",
@@ -262,7 +318,86 @@ const MapScreen = () => {
             />
           </MapboxGL.ShapeSource>
         )}
+
+        {/* DMV Boundary Layer - Visible when zoomed out */}
+        <MapboxGL.FillLayer
+          id="dmv-boundary-full"
+          sourceLayer="dmv-boundary-full" // Replace with your source
+          minZoomLevel={0} // Visible from the lowest zoom level
+          maxZoomLevel={10} // Hidden at zoom level 10 and above
+          style={{
+            fillOpacity: 0.5,
+          }}
+        />
+        <MapboxGL.LineLayer
+          id="dmv-boundary-line"
+          sourceLayer="dmv-boundary-full" // Replace with your source
+          minZoomLevel={0}
+          maxZoomLevel={10}
+          style={{
+            lineColor: "purple", // Color of the boundary line
+            lineWidth: 10, // Thickness of the boundary line
+          }}
+        />
+        {/* DC Layer - Visible when zoomed in closer */}
+        <MapboxGL.FillLayer
+          id="dc-full"
+          sourceLayer="dc-full" // Replace with your source
+          minZoomLevel={10} // Visible from zoom level 10
+          maxZoomLevel={22} // Visible at any higher zoom level
+          style={{
+            fillOpacity: 0.5,
+          }}
+        />
+
+        {/* Maryland Layer - Visible when zoomed in closer */}
+        <MapboxGL.FillLayer
+          id="maryland-full"
+          sourceLayer="maryland-full" // Replace with your source
+          minZoomLevel={10} // Visible from zoom level 10
+          maxZoomLevel={22} // Visible at any higher zoom level
+          style={{
+            fillOpacity: 0.5,
+          }}
+        />
+
+        {/* Northern Virginia Layer - Visible when zoomed in closer */}
+        <MapboxGL.FillLayer
+          id="northern-virginia-full"
+          sourceLayer="northern-virginia-full" // Replace with your source
+          minZoomLevel={10} // Visible from zoom level 10
+          maxZoomLevel={22} // Visible at any higher zoom level
+          style={{
+            fillOpacity: 0.5,
+          }}
+        />
       </MapboxGL.MapView>
+
+      {/* Modal for upcoming events */}
+      <Modalize ref={modalizeRef} snapPoint={300}>
+        <View style={{ padding: 20 }}>
+          {venueData && venueData.length > 0 ? (
+            venueData.map((venue, index) => (
+              <View key={index} style={{ marginBottom: 20 }}>
+                <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+                  {venue.name}
+                </Text>
+                <Text style={{ fontSize: 14 }}>{venue.address}</Text>
+                <Text style={{ fontSize: 14, color: "gray" }}>
+                  Lat: {venue.latitude}, Lon: {venue.longitude}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <Text>No venues available</Text>
+          )}
+        </View>
+      </Modalize>
+
+      {/* Button to open modal */}
+      <TouchableOpacity style={styles.button} onPress={openModal}>
+        <Text style={styles.buttonText}>View Upcoming Events</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -272,6 +407,59 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     height: "100%",
+  },
+  searchBarContainer: {
+    position: "absolute",
+    top: Platform.OS === "ios" ? 60 : 40, // Adjust padding for iOS vs Android
+    left: 10,
+    right: 10,
+    zIndex: 10, // Ensure it's above the map
+  },
+  searchBar: {
+    height: 40,
+    backgroundColor: "#fff",
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    fontSize: 16,
+  },
+  filterContainer: {
+    position: "absolute",
+    top: Platform.OS === "ios" ? 110 : 130,
+    left: 10,
+    right: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    zIndex: 10,
+  },
+
+  filterTab: {
+    backgroundColor: "#333",
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+  },
+  filterText: {
+    color: "#fff",
+    fontSize: 14,
+  },
+  button: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+    backgroundColor: "blue",
+    padding: 10,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  modalContent: {
+    padding: 20,
+  },
+  modalHeader: {
+    fontSize: 18,
+    fontWeight: "bold",
   },
 });
 
