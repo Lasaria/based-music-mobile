@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Button,
+  Modal,
 } from "react-native";
 import React, { use, useState } from "react";
 import { router } from "expo-router";
@@ -39,12 +41,12 @@ const uploadTrackScreen = () => {
   const [coverUploadProgress, setCoverUploadProgress] = useState();
   const [coverSize, setCoverSize] = useState();
   const [coverType, setCoverType] = useState();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newTrackName, setNewTrackName] = useState(name);
 
   const artistId = tokenManager.getIdToken();
 
   const pickDocument = async () => {
-
-
     setError(null);
     setTrack(null);
     setSize(null);
@@ -161,7 +163,7 @@ const uploadTrackScreen = () => {
       if (!allowedTypes.includes(file.mimeType)) {
         setCoverName(file.name);
         setCoverUploadStatus("Error");
-        setCoverError("Invalid file type. Only mp3, mpeg, or wav are allowed.");
+        setCoverError("Invalid file type. Only png, jpeg, heic or jpg are allowed.");
       } else if (coverSize > 10 * 1024 * 1024) {
         setCoverName(file.name);
         setCoverUploadStatus("Error");
@@ -263,24 +265,27 @@ const uploadTrackScreen = () => {
     setCoverError(null);
   };
 
-  const saveTrack = async () => {
+  const openRenameModal = () => {
+    setNewTrackName(name);
+    setModalVisible(true);
+  };
 
+  const saveNewTrackName = () => {
+    setName(newTrackName);
+    setModalVisible(false);
+  };
+
+  const saveTrack = async () => {
     console.log("token: ", token);
 
     let token;
     try {
-      token = await tokenManager.getAccessToken(); 
+      token = await tokenManager.getAccessToken();
       console.log("token: ", token);
     } catch (error) {
       Alert.alert("Error", "Failed to retrieve token.");
       return;
     }
-
-    // Ensure token is valid
-    // if (!token) {
-    //   Alert.alert("Error", "Authorization token is invalid.");
-    //   return;
-    // }
 
     // Ensure all required fields are filled before proceeding
     if (!title || !isrc || !genre || !track || !cover) {
@@ -322,20 +327,22 @@ const uploadTrackScreen = () => {
     }
 
     try {
+      // Use axiosPost to make the API request
       const result = await axiosPost({
-        url: "http://10.0.0.235:3000/tracks",
+        url: "http://110.0.0.235:3001/tracks",
         body: formData,
-        isAuthenticated: true, 
+        isAuthenticated: true, // This ensures the access token is used
       });
 
       Alert.alert("Success", "Uploaded successfully");
       console.log("Track uploaded successfully:", result);
     } catch (error) {
-      Alert.alert("Error", error.message || "Failed to upload the track.");
-      console.error(error);
+      const errorMessage =
+        error.data?.error || error.message || "Failed to upload the track.";
+      Alert.alert("Error", errorMessage);
+      console.error("Upload error:", error);
     }
   };
-
 
   return (
     <View style={styles.outerView}>
@@ -483,10 +490,43 @@ const uploadTrackScreen = () => {
 
             {/** display the size of the track if upload is successful */}
             {uploadProgress >= 100 && (
-              <Text style={styles.trackSize}>{size}MB</Text>
+              <View >
+                <Text style={styles.trackSize}>{size}MB</Text>
+                <TouchableOpacity onPress={openRenameModal}>
+                  <Text style={styles.renameText}>Rename</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         )}
+
+        {/* Modal for renaming track */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Rename Track</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Enter new track name"
+                value={newTrackName}
+                onChangeText={setNewTrackName}
+              />
+              <View style={styles.modalButtons}>
+                <Button
+                  title="Cancel"
+                  onPress={() => setModalVisible(false)}
+                  color="red"
+                />
+                 <Button title="Save" onPress={saveNewTrackName} />
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         <View style={{ alignItems: "center" }}>
           {/* File picker for lyrics */}
@@ -769,6 +809,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     alignItems: "center",
+    marginTop:25,
+    marginBottom:60,
   },
   saveText: {
     fontSize: 16,
@@ -821,6 +863,42 @@ const styles = StyleSheet.create({
     height: 10,
     backgroundColor: "#6F2CFF",
     borderRadius: 5,
+  },
+  renameText: {
+    color: "grey",
+    fontSize: 12,
+    marginTop: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    backgroundColor: "white",
+    borderRadius: 10,
+    padding: 20,
+    width: 300,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  modalInput: {
+    borderColor: "gray",
+    borderWidth: 1,
+    width: "100%",
+    padding: 10,
+    marginBottom: 20,
+    borderRadius: 5,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
   },
 });
 
