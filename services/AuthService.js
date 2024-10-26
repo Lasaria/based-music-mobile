@@ -5,6 +5,7 @@ import { tokenManager } from "../utils/tokenManager";
 
 const serverURL = "http://localhost:3001";
 
+
 export const AuthService = {
   // Sign Up Function
   signUp: async (fullName, email, password) => {
