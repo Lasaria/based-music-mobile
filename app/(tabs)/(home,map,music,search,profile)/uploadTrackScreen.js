@@ -329,9 +329,9 @@ const uploadTrackScreen = () => {
     try {
       // Use axiosPost to make the API request
       const result = await axiosPost({
-        url: "http://110.0.0.235:3001/tracks",
+        url: "http://localhost:3000/tracks",
         body: formData,
-        isAuthenticated: true, // This ensures the access token is used
+        isAuthenticated: true, 
       });
 
       Alert.alert("Success", "Uploaded successfully");
@@ -340,7 +340,7 @@ const uploadTrackScreen = () => {
       const errorMessage =
         error.data?.error || error.message || "Failed to upload the track.";
       Alert.alert("Error", errorMessage);
-      console.error("Upload error:", error);
+      console.error("Upload err:", error);
     }
   };
 
