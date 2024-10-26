@@ -43,7 +43,8 @@
     "plugins": [
       "expo-font",
       "expo-router",
-      "react-native-email-link"
+      "react-native-email-link",
+      "expo-document-picker"
     ]
   }
 }
