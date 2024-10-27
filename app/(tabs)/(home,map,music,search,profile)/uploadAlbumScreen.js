@@ -386,7 +386,19 @@ const deleteArtwork = () => {
 
 const nextScreen = () => {
 
-   router.push('/editAlbumScreen');
+   router.push({
+    pathname: '/editAlbumScreen',
+    params: {
+      title,
+      isrc,
+      genre,
+      tracks:JSON.stringify(tracks),
+      lyrics: JSON.stringify(lyrics),
+      artwork:JSON.stringify(artwork),
+      lyricsMapping: JSON.stringify(lyricsMapping),
+      nameMapping:  JSON.stringify(nameMapping),
+    }
+   });
 }
 
 const saveAlbum = async () => {
