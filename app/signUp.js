@@ -92,18 +92,18 @@ const SignUpScreen = ({ }) => {
   }, [fullName, email, password, termsChecked]);
 
   const handleSignUp = async () => {
-    router.push('genreSelectionForm')
-    // try {
-    //   const formattedPhoneNumber = phoneNumber ? `+1${phoneNumber.replace(/\D/g, '')}` : null;
 
-    //   await AuthService.signUp(fullName, email, password);
-    //   console.log('Sign up successful');
-    //   console.log("Password" + password)
-    //   router.push({ pathname: 'confirmSignUp', params: { email: email, password: password } });
-    // } catch (err) {
-    //   console.error('Sign up error:', err.message);
-    //   //setErrorMessage(err.message || 'An error occurred during sign-up.');
-    // }
+    try {
+      const formattedPhoneNumber = phoneNumber ? `+1${phoneNumber.replace(/\D/g, '')}` : null;
+
+      await AuthService.signUp(fullName, email, password);
+      console.log('Sign up successful');
+      console.log("Password" + password)
+      router.push({ pathname: 'confirmSignUp', params: { email: email, password: password } });
+    } catch (err) {
+      console.error('Sign up error:', err.message);
+      //setErrorMessage(err.message || 'An error occurred during sign-up.');
+    }
   };
 
   // Function to open terms and conditions link

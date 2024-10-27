@@ -14,12 +14,13 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialIcons } from '@expo/vector-icons';
+import { UserService } from '../services/UserService';
 
 const MAX_PHOTOS = 3;
 
 const AdditionalPhotosScreen = ({ route, navigation }) => {
   const { profileData, selectedGenres, profileImage, coverImage } = useLocalSearchParams();
-  const [photos, setPhotos] = useState([]);
+  const [photos, setPhotos] = useState(Array(MAX_PHOTOS).fill(null));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const requestPermissions = async () => {
@@ -51,7 +52,7 @@ const AdditionalPhotosScreen = ({ route, navigation }) => {
         quality: 0.8,
       });
 
-      if (!result.canceled) {
+      if (!result.canceled && result.assets[0]?.uri) {
         addPhotoAtIndex(result.assets[0].uri, index);
       }
     } catch (error) {
@@ -60,6 +61,8 @@ const AdditionalPhotosScreen = ({ route, navigation }) => {
   };
 
   const addPhotoAtIndex = (uri, index) => {
+    if (!uri) return; // Don't add if uri is null or undefined
+    
     const newPhotos = [...photos];
     newPhotos[index] = uri;
     setPhotos(newPhotos);
@@ -67,30 +70,34 @@ const AdditionalPhotosScreen = ({ route, navigation }) => {
 
   const removePhoto = (index) => {
     const newPhotos = [...photos];
-    newPhotos[index] = null;
+    newPhotos[index] = null;  // Use null consistently
     setPhotos(newPhotos);
   };
 
   const handleSubmit = async () => {
-    const filteredPhotos = photos.filter(photo => photo !== null);
+    // Filter out null values and ensure we have a clean array
+    const filteredPhotos = photos.filter(photo => photo !== null && photo !== undefined);
     setIsSubmitting(true);
   
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const completeProfile = {
-        ...profileData,
+      const userData = {
+        profileData: typeof profileData === 'string' ? JSON.parse(profileData) : profileData,
         selectedGenres,
         profileImage,
         coverImage,
-        additionalPhotos: filteredPhotos,
+        additionalPhotos: filteredPhotos, // This will now always be a clean array
       };
+      
+      console.log('Submitting user data:', userData);
+      
+      await UserService.setupUserProfile(userData);
   
       router.replace({ 
         pathname: 'profileCreationSuccess',
-        params: { profile: completeProfile }
+        params: { profile: userData }
       });
     } catch (error) {
+      console.error('Profile creation error:', error);
       Alert.alert('Error', 'Failed to create profile. Please try again.');
     } finally {
       setIsSubmitting(false);

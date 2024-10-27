@@ -15,6 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 const ProfileImageScreen = ({ route, navigation }) => {
   const { profileData, selectedGenres } = useLocalSearchParams();
+  const parsedProfileData = JSON.parse(profileData);
   const [image, setImage] = useState(null);
 
   const requestPermissions = async () => {
@@ -75,6 +76,8 @@ const ProfileImageScreen = ({ route, navigation }) => {
     }
   };
 
+  console.log("selectedGenres: ", selectedGenres)
+  console.log("profileData", parsedProfileData['username'])
   const navigateNext = () => {
     router.push({ 
       pathname: 'coverImageSelectionForm',

@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 
 const ProfileSetupScreen = ({ route, navigation }) => {
-  const { selectedGenres } = useLocalSearchParams();
+  const { genreNames } = useLocalSearchParams();
+  const selectedGenres = genreNames;
   const [formData, setFormData] = useState({
     username: '',
     displayName: '',
@@ -54,10 +55,12 @@ const ProfileSetupScreen = ({ route, navigation }) => {
   const handleNext = () => {
     if (validateForm()) {
       // Navigate to next screen with both genres and profile data
+      console.log("selectedGenres: ", selectedGenres)
+      console.log("form data", formData)
       router.push({ 
         pathname: 'profileImageSelectionForm', 
         params: {
-          profileData: formData,
+          profileData: JSON.stringify(formData),
           selectedGenres,
         }
       });

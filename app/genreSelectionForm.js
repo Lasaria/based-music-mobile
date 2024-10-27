@@ -63,10 +63,12 @@ const GenreSelectionScreen = ({ navigation }) => {
       );
       return;
     }
+    const genreNames = selectedGenres.map(genre => genre.name);
+    console.log("selectedGenres right after selection", genreNames)
     // You can pass the selected genres to the next screen
     router.push({ 
         pathname: 'userBasicInfoForm', 
-        params: { selectedGenres }
+        params: { genreNames }
       });
   };
 

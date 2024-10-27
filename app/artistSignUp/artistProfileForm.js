@@ -5,7 +5,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { Colors } from '../../constants/Color.js'
 import { Ionicons } from 'react-native-vector-icons'
 import InputComponent from '../../components/InputComponent.js';
-import { ArtistService } from '../../services/artistService.js';
+// import { ArtistService } from '../../services/artistService.js';
 
 
 const SelectInformationPage = () => {
@@ -20,7 +20,7 @@ const SelectInformationPage = () => {
     console.log("Bio:", bio);
     console.log("Genre:", genre);
     try{
-        await ArtistService.setArtistBasicInfo({name, bio, genre});
+        // await ArtistService.setArtistBasicInfo({name, bio, genre});
         router.push("./artistImageUpload");
         // For now, even if the above fails, we re route to the artist profile page
         // router.replace('(profile)/artistProfile'); // Replace with your next screen

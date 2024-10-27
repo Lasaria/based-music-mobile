@@ -12,7 +12,8 @@ class ApiError extends Error {
   }
 }
 
-const createAxiosRequest = async ({ url, method, body, isAuthenticated = true }) => {
+// Introduced content type, in order to be able to send form data while sending images, or other non-json data.
+const createAxiosRequest = async ({ url, method, body, isAuthenticated = true, contentType="application/json" }) => {
   let accessToken;
 
   if (isAuthenticated) {
@@ -38,11 +39,17 @@ const createAxiosRequest = async ({ url, method, body, isAuthenticated = true })
   }
 
   const headers = {
-    ...(method !== 'GET' && { 'Content-Type': 'application/json' }),
+    ...(method !== 'GET' && { 'Content-Type': contentType }),
     ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
   };
 
   try {
+    console.log("request:", {
+      url,
+      method,
+      headers,
+      ...(method === 'GET' ? { } : { data: body }),
+    })
     const response = await axios({
       url,
       method,
