@@ -30,6 +30,8 @@ const uploadTrackScreen = () => {
   const [artwork, setArtwork] = useState(null);
   const [modalVisibleArtwork, setModalVisibleArtwork] = useState(false);
   const [newArtworkName, setNewArtworkName] = useState("");
+  const [nameMapping, setNameMapping] = useState({});
+  const [lyricsMapping, setLyricsMapping] = useState({});
 
 
   const artistId = tokenManager.getIdToken();
@@ -45,13 +47,14 @@ const uploadTrackScreen = () => {
         copyToCacheDirectory: false,
       });
 
-      if (result && !result.canceled) {
+      if (result && !result.canceled && result.assets?.length > 0) {
         console.log("pick track 1");
 
         const file = result.assets[0];
         let trackSize = (file.size / (1024 * 1024)).toFixed(2);
-        const allowedTypes = ["audio/mpeg", "audio/mp3", "audio/wav"];
-
+        const allowedTypes = ["audio/mpeg", "audio/mp3", "audio/wav"];    
+        const simplifiedName = file.name.replace(/\.[^/.]+$/, "");
+       
         if (!allowedTypes.includes(file.mimeType)) {
           setTracks((prevTrack) => [
             ...prevTrack,
@@ -69,6 +72,15 @@ const uploadTrackScreen = () => {
             },
           ]);
         } else {
+
+          //mapping each track.
+
+          setNameMapping((prev) => ({
+            ...prev,
+            [file.name] : simplifiedName,
+          }))
+
+          
           // Add the new track and start upload
           const newTrack = {
             uri: file.uri,
@@ -146,6 +158,12 @@ const uploadTrackScreen = () => {
 
   {/** selects the lyrics from device */}
   const pickLyrics = async () => {
+
+    if (tracks.length === 0) {
+      Alert.alert("Error", "Please select a track first before adding lyrics.");
+      return;
+    }
+
     try {
       console.log("pick lyrics");
 
@@ -154,12 +172,18 @@ const uploadTrackScreen = () => {
         copyToCacheDirectory: false,
       });
 
+      console.log(result);
+      
+
       if (result && !result.canceled) {
         console.log("pick lyrics 1");
 
         const file = result.assets[0];
         let lyricsSize = file.size;
-        const allowedTypes = ["text/plain"];
+        const allowedTypes = ["text/plain"]; 
+        const selectedTrack = tracks[tracks.length - 1];
+
+  
          
         {/** check if the choosen file if of allowed type or not */}
         if (!allowedTypes.includes(file.mimeType)) {
@@ -179,6 +203,12 @@ const uploadTrackScreen = () => {
             },
           ]);
         } else {
+         
+          //mapping each track to it's lyrics
+          setLyricsMapping((prev) => ({
+            ...prev,
+            [selectedTrack.name]: file.name,
+          }))
 
           // Add the new lyrics and start upload
           const newLyrics = {
@@ -354,28 +384,88 @@ const deleteArtwork = () => {
   
 }
 
-const saveAlbum = async() => {
+const nextScreen = () => {
 
-  console.log("token: ", token);
+   router.push('/editAlbumScreen');
+}
 
-  let token;
-  try {
-    token = await tokenManager.getAccessToken();
-    console.log("token: ", token);
-  } catch (error) {
-    Alert.alert("Error", "Failed to retrieve token.");
-    return;
-  }
+const saveAlbum = async () => {
+
+  const artistId = await tokenManager.getUserId();
+  console.log("artistID: ", artistId);
 
   // Ensure all required fields are filled before proceeding
-  if (!title || !isrc || !genre || !tracks || !artworks) {
+  if (!title || !isrc || !genre || !tracks) {
     Alert.alert("Error", "Please fill in all required fields.");
     return;
   }
 
- 
+  // Create a FormData object
+  const formData = new FormData();
+  const token = await tokenManager.getAccessToken();
+  
 
-}
+
+  formData.append("artistId", artistId);
+  formData.append("title", title);
+  formData.append("isrc", isrc);
+  formData.append("releaseDate", new Date().toISOString());
+  formData.append("genre", genre);
+  formData.append("nameMapping", nameMapping);
+  formData.append("lyricsMapping", lyricsMapping);
+
+  // Append the files (track, cover, lyrics)
+  formData.append("track", {
+    uri: tracks,
+   // name: name,
+    type: trackType,
+  });
+
+  if (cover) {
+    formData.append("cover", {
+      uri: cover,
+      name: coverName,
+      type: coverType,
+    });
+  }
+
+  if (lyrics) {
+    formData.append("lyrics", {
+      uri: lyrics,
+      //name: lyricsName,
+      type: lyricsType,
+    });
+  }
+
+  try {
+    const response = await fetch("http://localhost:3000/tracks", {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      // Try to parse error message from response
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    Alert.alert("Success", "Uploaded successfully");
+    console.log("Track uploaded successfully:", result);
+  } catch (error) {
+    const errorMessage =
+      error.data?.error || error.message || "Failed to upload the album.";
+    Alert.alert("Error", errorMessage);
+    console.error("Upload err:", error);
+  }
+};
+
+
   return (
     <View style={styles.outerView}>
       <ScrollView contentContainerStyle={styles.scrollView}>
@@ -732,10 +822,9 @@ const saveAlbum = async() => {
               </View>
             </View>
           )}
-        </View>
-
-        <TouchableOpacity style={styles.saveButton} onPress={saveAlbum}>
-          <Text style={styles.saveText}>Save</Text>
+        </View>   
+        <TouchableOpacity style={styles.saveButton} onPress={nextScreen}>
+          <Text style={styles.saveText}>Next</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
