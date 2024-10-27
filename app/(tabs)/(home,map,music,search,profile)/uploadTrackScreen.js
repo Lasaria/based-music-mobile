@@ -107,7 +107,7 @@ const uploadTrackScreen = () => {
     });
     console.log(result);
 
-    if (result.assets && result.assets.length > 0) {
+    if (result.assets && !result.canceled && result.assets?.length > 0) {
       let file = result.assets[0];
       let fileSize = file.size;
       let fileType = file.mimeType;
