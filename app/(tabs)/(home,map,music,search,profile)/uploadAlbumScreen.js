@@ -13,6 +13,7 @@ import React, { useState } from "react";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { tokenManager } from "../../../utils/tokenManager";
+import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 
 const uploadTrackScreen = () => {
@@ -294,13 +295,15 @@ const uploadTrackScreen = () => {
   try {
     console.log("pick artwork");
 
-    const result = await DocumentPicker.getDocumentAsync({
-      type: ["image/jpg", "image/png", "image/jpeg", "image/heic"],
-      copyToCacheDirectory: false,
-      multiple:false,
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, 
+      allowsEditing: true,
     });
 
-    if (result && !result.canceled) {
+    console.log(result);
+    
+
+    if (result && result.assets.length > 0) {
       console.log("pick artwork 1");
 
       const file = result.assets[0];
@@ -401,81 +404,7 @@ const nextScreen = () => {
    });
 }
 
-const saveAlbum = async () => {
 
-  const artistId = await tokenManager.getUserId();
-  console.log("artistID: ", artistId);
-
-  // Ensure all required fields are filled before proceeding
-  if (!title || !isrc || !genre || !tracks) {
-    Alert.alert("Error", "Please fill in all required fields.");
-    return;
-  }
-
-  // Create a FormData object
-  const formData = new FormData();
-  const token = await tokenManager.getAccessToken();
-  
-
-
-  formData.append("artistId", artistId);
-  formData.append("title", title);
-  formData.append("isrc", isrc);
-  formData.append("releaseDate", new Date().toISOString());
-  formData.append("genre", genre);
-  formData.append("nameMapping", nameMapping);
-  formData.append("lyricsMapping", lyricsMapping);
-
-  // Append the files (track, cover, lyrics)
-  formData.append("track", {
-    uri: tracks,
-   // name: name,
-    type: trackType,
-  });
-
-  if (cover) {
-    formData.append("cover", {
-      uri: cover,
-      name: coverName,
-      type: coverType,
-    });
-  }
-
-  if (lyrics) {
-    formData.append("lyrics", {
-      uri: lyrics,
-      //name: lyricsName,
-      type: lyricsType,
-    });
-  }
-
-  try {
-    const response = await fetch("http://localhost:3000/tracks", {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData
-    });
-
-    if (!response.ok) {
-      // Try to parse error message from response
-      const errorData = await response.json().catch(() => null);
-      throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-
-    Alert.alert("Success", "Uploaded successfully");
-    console.log("Track uploaded successfully:", result);
-  } catch (error) {
-    const errorMessage =
-      error.data?.error || error.message || "Failed to upload the album.";
-    Alert.alert("Error", errorMessage);
-    console.error("Upload err:", error);
-  }
-};
 
 
   return (
