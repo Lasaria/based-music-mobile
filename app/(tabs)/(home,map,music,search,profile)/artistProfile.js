@@ -16,9 +16,10 @@ import Music from '../../../components/ArtistProfile/Music';
 import Events from '../../../components/ArtistProfile/Events';
 import Posts from '../../../components/ArtistProfile/Posts';
 import Dashboard from '../../../components/ArtistProfile/Dashboard';
-import { ArtistService } from '../../../services/ArtistService';
+import { ArtistService } from '../../../services/artistService';
 import { tokenManager } from '../../../utils/tokenManager';
-import { launchImageLibrary } from 'react-native-image-picker';
+// import { launchImageLibrary } from 'react-native-image-picker';
+import * as ImagePicker from 'expo-image-picker';
 import RNBlobUtil from 'react-native-blob-util';
 import MusicPlayer from '../../../components/MusicPlayer';
 
@@ -130,48 +131,118 @@ const ArtistProfileScreen = () => {
     fetchArtistProfile(); // Fetch the artist profile when the component is mounted or refreshed
   }, []);
 
-  //FUNCTION TO IMAGE PICKER AND SELECT PROFILE IMAGE FOR ARTIST PROFILE
-  const openImagePicker = async () => {
-    const options = {
-      mediaType: 'photo',
-      includeBase64: false,
-    };
+  // const openImagePicker = async () => {
+  //   const options = {
+  //     mediaType: 'photo',
+  //     includeBase64: false,
+  //   };
 
-    launchImageLibrary(options, (response) => {
-      if (response.didCancel) {
-        console.log('User cancelled image picker');
-      } else if (response.errorMessage) {
-        console.log('Image picker error: ', response.errorMessage);
-      } else if (response.assets && response.assets.length > 0) {
-        const imageUri = response.assets[0].uri;
-        console.log('Selected image URI:', imageUri);
-        if (imageUri) {
-          setAvatarUri(imageUri);  // Store the selected image URI in state
-        }
-      }
+  //   launchImageLibrary(options, (response) => {
+  //     if (response.didCancel) {
+  //       console.log('User cancelled image picker');
+  //     } else if (response.errorMessage) {
+  //       console.log('Image picker error: ', response.errorMessage);
+  //     } else if (response.assets && response.assets.length > 0) {
+  //       const imageUri = response.assets[0].uri;
+  //       console.log('Selected image URI:', imageUri);
+  //       if (imageUri) {
+  //         setAvatarUri(imageUri);  // Store the selected image URI in state
+  //       }
+  //     }
+  //   });
+  // };
+
+  // FUNCTION TO IMAGE PICKER AND SELECT PROFILE IMAGE FOR ARTIST PROFILE
+  const openImagePicker = async () => {
+    // Request permissions to access the media library
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permissions Required',
+        'Please grant photo library permissions to upload an image.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // Open the image picker
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,      // Enables cropping
+      aspect: [1, 1],           // Square aspect ratio
+      quality: 0.8,             // Set image quality
     });
+
+    if (result.canceled) {
+      console.log('User cancelled image picker');
+    } else {
+      // Try to capture the URI based on where it is stored
+      const imageUri = result.uri || (result.assets && result.assets[0].uri);
+      if (imageUri) {
+        setAvatarUri(imageUri);  // Store the selected image URI in state
+        console.log('Selected image URI:', imageUri);  // Log the URI for verification
+      } else {
+        console.log('Image URI not found');
+      }
+    }
   };
+
+
+  //FUNCTION TO IMAGE PICKER AND SELECT COVER IMAGE FOR ARTIST PROFILE
+  // const openCoverImagePicker = async () => {
+  //   const options = {
+  //     mediaType: 'photo',
+  //     includeBase64: false,
+  //   };
+
+  //   launchImageLibrary(options, (response) => {
+  //     if (response.didCancel) {
+  //       console.log('User cancelled image picker');
+  //     } else if (response.errorMessage) {
+  //       console.log('Image picker error: ', response.errorMessage);
+  //     } else if (response.assets && response.assets.length > 0) {
+  //       const imageUri = response.assets[0].uri;
+  //       console.log('Selected cover image URI:', imageUri);
+  //       if (imageUri) {
+  //         setCoverImageUri(imageUri);  // Store the selected cover image URI in state
+  //       }
+  //     }
+  //   });
+  // };
 
   //FUNCTION TO IMAGE PICKER AND SELECT COVER IMAGE FOR ARTIST PROFILE
   const openCoverImagePicker = async () => {
-    const options = {
-      mediaType: 'photo',
-      includeBase64: false,
-    };
+    // Request permissions to access the media library
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permissions Required',
+        'Please grant photo library permissions to upload an image.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
 
-    launchImageLibrary(options, (response) => {
-      if (response.didCancel) {
-        console.log('User cancelled image picker');
-      } else if (response.errorMessage) {
-        console.log('Image picker error: ', response.errorMessage);
-      } else if (response.assets && response.assets.length > 0) {
-        const imageUri = response.assets[0].uri;
-        console.log('Selected cover image URI:', imageUri);
-        if (imageUri) {
-          setCoverImageUri(imageUri);  // Store the selected cover image URI in state
-        }
-      }
+    // Open the image picker
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,      // Enables cropping
+      aspect: [2, 1],           // Aspect ratio 2:1 for cover image
+      quality: 0.8,             // Set image quality
     });
+
+    if (result.canceled) {
+      console.log('User cancelled image picker');
+    } else {
+      // Try to capture the URI based on where it is stored
+      const imageUri = result.uri || (result.assets && result.assets[0].uri);
+      if (imageUri) {
+        setCoverImageUri(imageUri);  // Store the selected cover image URI in state
+        console.log('Selected cover image URI:', imageUri);  // Log the URI for verification
+      } else {
+        console.log('Cover image URI not found');
+      }
+    }
   };
 
   // HANDLE SAVE ARTIST PROFILE CHANGES
@@ -552,7 +623,7 @@ const styles = StyleSheet.create({
   },
   gradientBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)', 
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     width: '100%',
     height: '100%',
   },
@@ -603,7 +674,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   avatarContainer: {
-    position: 'relative', 
+    position: 'relative',
   },
   editIconContainer: {
     position: 'absolute',
@@ -630,7 +701,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     borderWidth: 2,
     borderColor: '#CECECE',
-    paddingBottom: 5,
     marginBottom: 10,
     borderRadius: 14,
     width: 343,
