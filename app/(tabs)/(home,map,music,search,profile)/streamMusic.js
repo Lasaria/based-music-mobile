@@ -48,6 +48,11 @@ const StreamMusic = ({ navigation }) => {
     }
   };
 
+  const navigatePlaylist = () => {
+    router.push('./playlistScreen')
+    closeModal();
+  }
+
   return (
     <View style={styles.mainConatiner}>
       <StatusBar style="light" />
@@ -166,7 +171,7 @@ const StreamMusic = ({ navigation }) => {
       <View style={styles.modalContainer}>
         <TouchableWithoutFeedback>
         <View style={styles.modalContent}>
-          <TouchableOpacity onPress={toggleModal} style={styles.modalItem}>
+          <TouchableOpacity onPress={navigatePlaylist} style={styles.modalItem}>
             <Ionicons name="list" size={24} color="white" />
             <Text style={styles.modalText}>View playlist</Text>
           </TouchableOpacity>
