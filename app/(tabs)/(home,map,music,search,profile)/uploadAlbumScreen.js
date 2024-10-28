@@ -726,7 +726,7 @@ const nextScreen = () => {
                   <Text style={styles.errorText}>{artwork.error}</Text>
                 ) : artwork.progress >= 100 ? (
                   <View>
-                    <Text style={styles.successText}>{artwork.size}MB</Text>
+                    <Text style={styles.successText}>{artwork.size}</Text>
                     <TouchableOpacity onPress={openArtworkModal}>
                       <Text style={styles.renameText}>Rename</Text>
                     </TouchableOpacity>
