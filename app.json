@@ -46,10 +46,12 @@
       "react-native-email-link",
       "expo-document-picker",
       "expo-image-picker",
+      [
         "@rnmapbox/maps",
         {
           "RNMapboxMapsDownloadToken": "sk.eyJ1IjoibGFzYXJpYSIsImEiOiJjbTJheXlodWswbnpuMmptd2xvM3VxbGhvIn0.Sgl_rqyoKzpW2UdH7lZHkA"
         }
+      ]
     ]
   }
 }
