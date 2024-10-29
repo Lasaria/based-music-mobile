@@ -180,48 +180,7 @@ const ConfirmSignUpScreen = ({ }) => {
 
 
     <View style={[styles.container]}>
-      {/* Modal for "Check your mailbox" */}
-      <Modal
-        transparent={true}
-        visible={isModalVisible}
-        animationType="fade"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            {/* Close Button (X) */}
-            <Pressable onPress={handleCloseModal} style={styles.closeButton}>
-              {/* <Text style={styles.closeText}>✕</Text> */}
-              <FontAwesome6 name={'circle-xmark'} size={24} color={'white'} />
-            </Pressable>
-
-            {/* Mailbox Icon */}
-            <View style={styles.mailIconContainer}>
-              <Image
-                source={require('../assets/images/GlowWhite.png')} // Replace with your own icon asset
-                style={styles.glowWhite}
-              />
-              <Image
-                source={require('../assets/images/message.png')} // Replace with your own icon asset
-                style={styles.mailIcon}
-              />
-            </View>
-
-            {/* Text Content */}
-            <Text style={styles.modalTitle}>Check your mailbox</Text>
-            <Text style={styles.modalDescription}>
-              Verify your account via the code sent to your email
-            </Text>
-
-            {/* Button to check the letter */}
-            <ButtonComponent
-              title="Verify account"
-              buttonStyle={styles.checkButton}
-              textStyle={styles.checkButtonText}
-              onPress={handleCheckEmail}
-            />
-          </View>
-        </View>
-      </Modal>
+      
 
       {/* Back Icon */}
       <Pressable style={styles.backButtonContainer} onPress={handleNavigateBack}>

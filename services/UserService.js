@@ -51,10 +51,10 @@ export const UserService = {
                 method: "POST",
                 body: JSON.stringify({
                     username,
-                    displayname: displayname || '',  // Handle undefined with empty string
+                    display_name: displayname || '',  // Handle undefined with empty string
                     description: description || '',
-                    location: location || '',
-                    selectedGenres: Array.isArray(selectedGenres) ? selectedGenres.join(',') : selectedGenres
+                    user_location: location || '',
+                    selected_genres: Array.isArray(selectedGenres) ? selectedGenres.join(',') : selectedGenres
                 })
             });
     
