@@ -1,14 +1,16 @@
-import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { router, useNavigation } from 'expo-router';
 import { Colors } from '../../../constants/Color';
-import { Ionicons, Entypo, EvilIcons } from '@expo/vector-icons';
+import { Ionicons, Entypo, EvilIcons, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, {
   interpolate,
+  runOnJS,
   useAnimatedRef,
   useAnimatedStyle,
   useScrollViewOffset,
   useSharedValue,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { Dimensions } from 'react-native';
@@ -18,22 +20,23 @@ import Posts from '../../../components/ArtistProfile/Posts';
 import Dashboard from '../../../components/ArtistProfile/Dashboard';
 import { ArtistService } from '../../../services/artistService';
 import { tokenManager } from '../../../utils/tokenManager';
-// import { launchImageLibrary } from 'react-native-image-picker';
 import * as ImagePicker from 'expo-image-picker';
-import RNBlobUtil from 'react-native-blob-util';
 import MusicPlayer from '../../../components/MusicPlayer';
+import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
 
 // SERVER URL
 const serverURL = 'http://localhost:3000';
 // DEVICE ACTUAL WIDTH
 const { width } = Dimensions.get('window');
 // CONSTANT VALUE FOR IMAGE HEIGHT
-const IMG_HEIGHT = 400;
+const IMG_HEIGHT = 340;
 
 const ArtistProfileScreen = () => {
   // ANIMATION STATES
   const scrollRef = useAnimatedRef();
   const scrollOffset = useScrollViewOffset(scrollRef);
+  const translateY = useSharedValue(0);
+  const overlayOpacity = useSharedValue(1); // For fading out overlay
   // DEFINE ALL TABS OPTONS
   const tabs = ['Music', 'Events', 'Posts', 'Dashboard'];
   // STATE FOR SELECTED TAB
@@ -52,6 +55,8 @@ const ArtistProfileScreen = () => {
   const [bio, setBio] = useState('');
   const [genre, setGenre] = useState('');
   const [location, setLocation] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
+
 
   // STATE FOR EDIT MODE
   const [isEditing, setIsEditing] = useState(false);
@@ -126,89 +131,64 @@ const ArtistProfileScreen = () => {
     }
   };
 
-
   useEffect(() => {
     fetchArtistProfile(); // Fetch the artist profile when the component is mounted or refreshed
   }, []);
 
-  // const openImagePicker = async () => {
-  //   const options = {
-  //     mediaType: 'photo',
-  //     includeBase64: false,
-  //   };
-
-  //   launchImageLibrary(options, (response) => {
-  //     if (response.didCancel) {
-  //       console.log('User cancelled image picker');
-  //     } else if (response.errorMessage) {
-  //       console.log('Image picker error: ', response.errorMessage);
-  //     } else if (response.assets && response.assets.length > 0) {
-  //       const imageUri = response.assets[0].uri;
-  //       console.log('Selected image URI:', imageUri);
-  //       if (imageUri) {
-  //         setAvatarUri(imageUri);  // Store the selected image URI in state
-  //       }
-  //     }
-  //   });
-  // };
-
   // FUNCTION TO IMAGE PICKER AND SELECT PROFILE IMAGE FOR ARTIST PROFILE
-  const openImagePicker = async () => {
-    // Request permissions to access the media library
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert(
-        'Permissions Required',
-        'Please grant photo library permissions to upload an image.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
+  const openImagePicker = async (source) => {
+    setModalVisible(true);
 
-    // Open the image picker
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,      // Enables cropping
-      aspect: [1, 1],           // Square aspect ratio
-      quality: 0.8,             // Set image quality
-    });
-
-    if (result.canceled) {
-      console.log('User cancelled image picker');
-    } else {
-      // Try to capture the URI based on where it is stored
-      const imageUri = result.uri || (result.assets && result.assets[0].uri);
-      if (imageUri) {
-        setAvatarUri(imageUri);  // Store the selected image URI in state
-        console.log('Selected image URI:', imageUri);  // Log the URI for verification
-      } else {
-        console.log('Image URI not found');
+    if (source === 'gallery') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permissions Required',
+          'Please grant photo library permissions to upload an image.',
+          [{ text: 'OK' }]
+        );
+        return;
       }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [2, 1],
+        quality: 0.8,
+      });
+      setModalVisible(false);
+
+      if (!result.canceled) {
+        const imageUri = result.uri || (result.assets && result.assets[0].uri);
+        if (imageUri) setAvatarUri(imageUri);
+      }
+    } else if (source === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permissions Required',
+          'Please grant camera permissions to take a photo.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      setModalVisible(false);
+
+      if (!result.canceled) {
+        const imageUri = result.uri || (result.assets && result.assets[0].uri);
+        if (imageUri) setAvatarUri(imageUri);
+      }
+    } else if (source === 'default') {
+      const defaultImageUri = Image.resolveAssetSource(require('../../../assets/images/profile.png')).uri;
+      setAvatarUri(defaultImageUri);
+      setModalVisible(false);
     }
   };
-
-
-  //FUNCTION TO IMAGE PICKER AND SELECT COVER IMAGE FOR ARTIST PROFILE
-  // const openCoverImagePicker = async () => {
-  //   const options = {
-  //     mediaType: 'photo',
-  //     includeBase64: false,
-  //   };
-
-  //   launchImageLibrary(options, (response) => {
-  //     if (response.didCancel) {
-  //       console.log('User cancelled image picker');
-  //     } else if (response.errorMessage) {
-  //       console.log('Image picker error: ', response.errorMessage);
-  //     } else if (response.assets && response.assets.length > 0) {
-  //       const imageUri = response.assets[0].uri;
-  //       console.log('Selected cover image URI:', imageUri);
-  //       if (imageUri) {
-  //         setCoverImageUri(imageUri);  // Store the selected cover image URI in state
-  //       }
-  //     }
-  //   });
-  // };
 
   //FUNCTION TO IMAGE PICKER AND SELECT COVER IMAGE FOR ARTIST PROFILE
   const openCoverImagePicker = async () => {
@@ -263,49 +243,45 @@ const ArtistProfileScreen = () => {
         artistId: userId,
         ...profileData,
       });
-      // Upload profile image if changed
+
+      const token = await tokenManager.getAccessToken();  // Get access token for authorization
+
       // Upload profile image if changed
       if (avatarUri && (!artistData.profile_image_url || avatarUri !== artistData.profile_image_url)) {
-        const formData = [
-          {
-            name: 'profileImage',
-            filename: 'profile.jpg',
-            type: 'image/jpeg',
-            data: RNBlobUtil.wrap(decodeURIComponent(avatarUri.replace('file://', ''))),
-          },
-        ];
+        const formData = new FormData();
+        formData.append('profileImage', {
+          uri: avatarUri,
+          name: 'profile.jpg',
+          type: 'image/jpeg',
+        });
 
-        await RNBlobUtil.fetch(
-          'PATCH',
-          `${serverURL}/artists/${userId}/profile-image`,
-          {
+        await fetch(`${serverURL}/artists/${userId}/profile-image`, {
+          method: 'PATCH',
+          headers: {
             'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${await tokenManager.getAccessToken()}`,
+            Authorization: `Bearer ${token}`,
           },
-          formData
-        );
+          body: formData,
+        });
       }
 
       // Upload cover image if changed
       if (coverImageUri && (!artistData.cover_image_url || coverImageUri !== artistData.cover_image_url)) {
-        const coverFormData = [
-          {
-            name: 'coverImage',
-            filename: 'cover.jpg',
-            type: 'image/jpeg',
-            data: RNBlobUtil.wrap(decodeURIComponent(coverImageUri.replace('file://', ''))),
-          },
-        ];
+        const coverFormData = new FormData();
+        coverFormData.append('coverImage', {
+          uri: coverImageUri,
+          name: 'cover.jpg',
+          type: 'image/jpeg',
+        });
 
-        await RNBlobUtil.fetch(
-          'PATCH',
-          `${serverURL}/artists/${userId}/cover-image`,
-          {
+        await fetch(`${serverURL}/artists/${userId}/cover-image`, {
+          method: 'PATCH',
+          headers: {
             'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${await tokenManager.getAccessToken()}`,
+            Authorization: `Bearer ${token}`,
           },
-          coverFormData
-        );
+          body: coverFormData,
+        });
       }
 
       alert('Profile updated successfully!');
@@ -316,7 +292,6 @@ const ArtistProfileScreen = () => {
       alert('Failed to update profile');
     }
   };
-
 
   // TOP HEADER PART
   useLayoutEffect(() => {
@@ -333,35 +308,42 @@ const ArtistProfileScreen = () => {
       ),
       // NOTIFICATION, MESSAGES AND SETTINGS ICONS
       headerRight: () => (
-        <Animated.View style={[styles.bar, iconsAnimatedStyle]}>
-          {isEditing ? (
-            <>
-              <TouchableOpacity style={styles.roundButton} onPress={() => {
-                handleSaveChanges();
-                setIsEditing(false);
-              }}>
-                <Image source={require('../../../assets/images/ArtistProfile/save.png')} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.roundButton} onPress={handleCloseEditing}>
-                <Image source={require('../../../assets/images/ArtistProfile/close.png')} />
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <TouchableOpacity style={styles.roundButton}>
-                <Image source={require('../../../assets/images/ArtistProfile/bell.png')} />
-                <Image source={require('../../../assets/images/ArtistProfile/ellipse.png')} style={styles.badge} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.roundButton} onPress={() => router.push("/artistInboxScreen")}>
-                <Image source={require('../../../assets/images/ArtistProfile/message.png')} />
-                <Image source={require('../../../assets/images/ArtistProfile/ellipse.png')} style={styles.badge} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.roundButton} onPress={() => router.push("/settings")}>
-                <Image source={require('../../../assets/images/ArtistProfile/settings.png')} />
-              </TouchableOpacity>
-            </>
-          )}
-        </Animated.View>
+        <>
+          <Animated.View style={[styles.bar, iconsAnimatedStyle]}>
+            {isEditing ? (
+              <>
+                <TouchableOpacity style={styles.roundButton} onPress={() => {
+                  handleSaveChanges();
+                  setIsEditing(false);
+                }}>
+                  <Image source={require('../../../assets/images/ArtistProfile/save.png')} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.roundButton} onPress={handleCloseEditing}>
+                  <Image source={require('../../../assets/images/ArtistProfile/close.png')} />
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity style={styles.roundButton}>
+                  <Image source={require('../../../assets/images/ArtistProfile/bell.png')} />
+                  <Image source={require('../../../assets/images/ArtistProfile/ellipse.png')} style={styles.badge} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.roundButton} onPress={() => router.push("/artistInboxScreen")}>
+                  <Image source={require('../../../assets/images/ArtistProfile/message.png')} />
+                  <Image source={require('../../../assets/images/ArtistProfile/ellipse.png')} style={styles.badge} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.roundButton} onPress={() => router.push("/settings")}>
+                  <Image source={require('../../../assets/images/ArtistProfile/settings.png')} />
+                </TouchableOpacity>
+              </>
+            )}
+          </Animated.View>
+          <Animated.View style={[styles.halfOutsideIconContainer, buttonAnimatedStyle]}>
+            <TouchableOpacity style={styles.iconButton}>
+              <Entypo name="upload" size={18} color="white" />
+            </TouchableOpacity>
+          </Animated.View>
+        </>
       ),
       // BACK BUTTON ICON
       headerLeft: () => (
@@ -404,6 +386,11 @@ const ArtistProfileScreen = () => {
     };
   }, []);
 
+  const buttonAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: interpolate(scrollOffset.value, [IMG_HEIGHT / 1.5, IMG_HEIGHT], [0, 1]),
+    };
+  }, []);
   // ANIMATED STYLE FOR PROFILE IMAGE
   const profileImageAnimatedStyle = useAnimatedStyle(() => {
     return {
@@ -437,6 +424,28 @@ const ArtistProfileScreen = () => {
     return { opacity };
   });
 
+  const closeWithAnimation = () => {
+    overlayOpacity.value = withTiming(0, { duration: 300 }); // Fade out overlay
+    translateY.value = withTiming(400, { duration: 300 }, () => {
+      // After animation completes, hide modal
+      runOnJS(setModalVisible)(false);
+      translateY.value = 0; // Reset for next opening
+      overlayOpacity.value = 1; // Reset overlay opacity
+    });
+  };
+
+  const resetPosition = () => {
+    translateY.value = withSpring(0); // Animate back to original position if not dismissed
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: overlayOpacity.value, // Animate overlay opacity
+  }));
+
   // ANIMATED STYLE FOR TABS SMOOTH TRANSITION
   const getOpacityStyle = (tabIndex) => {
     return useAnimatedStyle(() => {
@@ -451,155 +460,239 @@ const ArtistProfileScreen = () => {
     tabTransition.value = withTiming(tabs.indexOf(tab), { duration: 1000 });
   };
 
+  // HANDLE GESTURE FOR MODAL
+  const handleGesture = (event) => {
+    translateY.value = Math.max(event.nativeEvent.translationY, 0); // Only allow downward movement
+    if (event.nativeEvent.translationY > 300) {
+      closeWithAnimation(); // Trigger smooth close with animation
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      <Animated.ScrollView
-        contentContainerStyle={{ paddingBottom: 100 }} // Add extra padding to ensure content is not hidden behind MusicPlayer
-        ref={scrollRef}
-        scrollEventThrottle={16}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* COVER IMAGE */}
-        {isEditing ? (
-          <TouchableOpacity onPress={openCoverImagePicker}>
-            <Animated.Image
-              source={{ uri: coverImageUri }}
-              style={[styles.image, imageAnimatedStyle]}
-              resizeMode="cover"
-            />
-            <Animated.View style={[styles.gradientOverlay, imageAnimatedStyle]}>
-              <View style={styles.gradientBackground} />
-            </Animated.View>
-          </TouchableOpacity>
-        ) : (
-          <>
-            <Animated.Image
-              source={{ uri: coverImageUri }}
-              style={[styles.image, imageAnimatedStyle]}
-              resizeMode="cover"
-            />
-            <Animated.View style={[styles.gradientOverlay, imageAnimatedStyle]}>
-              <View style={styles.gradientBackground} />
-            </Animated.View>
-          </>
-        )}
+    <GestureHandlerRootView>
+      <View style={styles.container}>
+        <Animated.ScrollView
+          contentContainerStyle={{ paddingBottom: 100 }} // Add extra padding to ensure content is not hidden behind MusicPlayer
+          ref={scrollRef}
+          scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* COVER IMAGE */}
+          {isEditing ? (
+            <TouchableOpacity onPress={openCoverImagePicker}>
+              <Animated.Image
+                source={{ uri: coverImageUri }}
+                style={[styles.image, imageAnimatedStyle]}
+                resizeMode="cover"
+              />
+              <Animated.View style={[styles.gradientOverlay, imageAnimatedStyle]}>
+                <View style={styles.gradientBackground} />
+              </Animated.View>
+            </TouchableOpacity>
+          ) : (
+            <>
+              <Animated.Image
+                source={{ uri: coverImageUri }}
+                style={[styles.image, imageAnimatedStyle]}
+                resizeMode="cover"
+              />
+              <Animated.View style={[styles.gradientOverlay, imageAnimatedStyle]}>
+                <View style={styles.gradientBackground} />
+              </Animated.View>
+            </>
+          )}
 
-        {/* PROFILE AND INFO OVERLAY */}
-        <Animated.View style={[styles.profileOverlay, profileImageAnimatedStyle]}>
-          {/* ARTIST PROFILE IMAGE */}
-          <View style={styles.avatarContainer}>
-            <Image
-              source={avatarUri ? { uri: avatarUri } : require('../../../assets/images/profile.png')}
-              style={styles.profileImage}
-            />
-            {isEditing && (
-              <TouchableOpacity style={styles.editIconContainer} onPress={openImagePicker}>
-                <Image source={require('../../../assets/images/ArtistProfile/add.png')} style={styles.editIcon} />
-              </TouchableOpacity>
+          {/* PROFILE AND INFO OVERLAY */}
+          <Animated.View style={[styles.profileOverlay, profileImageAnimatedStyle, { marginTop: isEditing ? 100 : 180 }]}>
+            {/* ARTIST PROFILE IMAGE */}
+            <View style={styles.avatarContainer}>
+              <Image
+                source={avatarUri ? { uri: avatarUri } : require('../../../assets/images/profile.png')}
+                style={styles.profileImage}
+              />
+              {isEditing && (
+                <TouchableOpacity style={styles.editIconContainer} onPress={openImagePicker}>
+                  <Image source={require('../../../assets/images/ArtistProfile/add.png')} style={styles.editIcon} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Modal for selecting image source */}
+            <Modal
+              transparent={true}
+              visible={modalVisible}
+              animationType="none" // Set to "none" for instant overlay appearance
+              onRequestClose={() => setModalVisible(false)}
+            >
+              {/* Static Overlay */}
+              <View style={styles.modalOverlay} />
+
+              {/* Animated Modal Content */}
+              <PanGestureHandler onGestureEvent={handleGesture} onEnded={resetPosition}>
+                <Animated.View style={[styles.modalContent, animatedStyle, overlayStyle]}>
+                  <View style={styles.pullIndicator} />
+
+                  <Text style={styles.modalTitle}>Profile</Text>
+
+                  <View style={styles.innerModalContainer}>
+                    <TouchableOpacity style={styles.modalOption} onPress={() => openImagePicker('gallery')}>
+                      <Entypo name="images" size={24} color={Colors.white} style={styles.optionIcon} />
+                      <View style={styles.optionTextContainer}>
+                        <Text style={styles.optionText}>Upload from Gallery</Text>
+                        <Text style={styles.optionSubText}>Choose a photo from your library.</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.modalOption} onPress={() => openImagePicker('camera')}>
+                      <FontAwesome name="camera" size={24} color={Colors.white} style={styles.optionIcon} />
+                      <View style={styles.optionTextContainer}>
+                        <Text style={styles.optionText}>Take a Photo</Text>
+                        <Text style={styles.optionSubText}>Capture a new photo with your camera.</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={[styles.modalOption, { borderBottomWidth: 0, paddingTop: 15, paddingBottom: 0 }]} onPress={() => openImagePicker('default')}>
+                      <MaterialCommunityIcons name="face-recognition" size={24} color={Colors.white} style={styles.optionIcon} />
+                      <View style={styles.optionTextContainer}>
+                        <Text style={styles.optionText}>Set to Default</Text>
+                        <Text style={styles.optionSubText}>Use default photo. You can change it later.</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                  </View>
+                  <TouchableOpacity style={styles.cancelModalButton} onPress={() => setModalVisible(false)}>
+                    <Text style={styles.cancelModalText}>Cancel</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              </PanGestureHandler>
+            </Modal>
+
+            {/* ARTIST NAME */}
+            {isEditing ? (
+              <Animated.View style={inputAnimatedStyle}>
+                <TextInput
+                  style={styles.input}
+                  value={name}
+                  autoCorrect={false}
+                  onChangeText={setName}
+                />
+              </Animated.View>
+            ) : (
+              <Text style={styles.artistName}>{name}</Text>
             )}
-          </View>
 
-          {/* ARTIST NAME */}
-          {isEditing ? (
-            <Animated.View style={inputAnimatedStyle}>
-              <TextInput
-                style={styles.input}
-                value={name}
-                autoCorrect={false}
-                onChangeText={setName}
-              />
-            </Animated.View>
-          ) : (
-            <Text style={styles.artistName}>{name}</Text>
-          )}
+            {/* ARTIST DESCRIPTION/GENRE */}
+            {isEditing ? (
+              <Animated.View style={inputAnimatedStyle}>
+                <TextInput
+                  style={[styles.input, { opacity: 0.7, borderColor: Colors.white }]}
+                  value={genre}
+                  autoCorrect={false}
+                  onChangeText={handleGenreChange}
+                  maxLength={30}
+                />
+                <Text style={styles.charCount}>
+                  {remainingChars} / 30
+                </Text>
+              </Animated.View>
+            ) : (
+              <Text style={styles.artistInfo}>{genre}</Text>
+            )}
 
-          {/* ARTIST DESCRIPTION/GENRE */}
-          {isEditing ? (
-            <Animated.View style={inputAnimatedStyle}>
-              <TextInput
-                style={[styles.input, { opacity: 0.7, borderColor: Colors.white }]}
-                value={genre}
-                autoCorrect={false}
-                onChangeText={handleGenreChange}
-                maxLength={30}
-              />
-              <Text style={styles.charCount}>
-                {remainingChars} / 30
-              </Text>
-            </Animated.View>
-          ) : (
-            <Text style={styles.artistInfo}>{genre}</Text>
-          )}
+          </Animated.View>
 
-        </Animated.View>
-
-        {/* BUTTON CONTAINER */}
-        {!isEditing && (
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.uploadButton}>
-              <Entypo name="upload" size={18} color={Colors.white} />
-              <Text style={styles.buttonText}>Upload</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.editProfileButton} onPress={() => {
-              setIsEditing(true)
-              handleEnterEditMode()
-            }}>
-              <EvilIcons name="pencil" size={28} color={Colors.white} />
-              <Text style={styles.buttonText}>Edit Profile</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* TAB SELECTION */}
-        <View style={styles.container}>
-          {/* Other components */}
+          {/* BUTTON CONTAINER */}
+          {/* {!isEditing && (
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={styles.uploadButton}>
+                <Entypo name="upload" size={18} color={Colors.white} />
+                <Text style={styles.buttonText}>Upload</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.editProfileButton} onPress={() => {
+                setIsEditing(true)
+                handleEnterEditMode()
+              }}>
+                <EvilIcons name="pencil" size={28} color={Colors.white} />
+                <Text style={styles.buttonText}>Edit Profile</Text>
+              </TouchableOpacity>
+            </View>
+          )} */}
 
           {/* TAB SELECTION */}
-          <View style={styles.toggleContainer}>
-            {tabs.map((tab) => (
-              <TouchableOpacity
-                key={tab}
-                style={[
-                  styles.toggleButton,
-                  selectedTab === tab.toLowerCase() && styles.activeButton,
-                ]}
-                onPress={() => handleTabToggle(tab)}
-              >
-                <Text
+          <View style={styles.container}>
+            {/* TAB SELECTION */}
+            <View style={styles.trackContainer}>
+              {/* Left Side - Album Art */}
+              <Image
+                source={{ uri: 'https://i.scdn.co/image/ab67616d0000b2733574ce3a15cb5edc6559065e' }}
+                style={styles.artCover}
+              />
+              {/* Center - Latest Song or Album Info */}
+              <View style={styles.songInfoContainer}>
+                <Text style={styles.releaseDate}>Oct 31, 2024</Text>
+                <Text style={styles.songName}>Shukraan</Text>
+                <Text style={styles.trackType}>Latest Track</Text>
+              </View>
+              <Animated.View style={styles.stickyButtonContainer}>
+                <TouchableOpacity style={styles.editButton}
+                  onPress={() => {
+                    setIsEditing(true)
+                    handleEnterEditMode()
+                  }}>
+                  <EvilIcons name="pencil" size={28} color={Colors.white} />
+                  <Text style={styles.editButtonText}>Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.uploadButton}>
+                  <Entypo name="upload" size={18} color={Colors.white} />
+                </TouchableOpacity>
+              </Animated.View>
+            </View>
+            <View style={styles.toggleContainer}>
+              {tabs.map((tab) => (
+                <TouchableOpacity
+                  key={tab}
                   style={[
-                    styles.toggleText,
-                    selectedTab === tab.toLowerCase() && styles.activeText,
+                    styles.toggleButton,
+                    selectedTab === tab.toLowerCase() && styles.activeButton,
                   ]}
+                  onPress={() => handleTabToggle(tab)}
                 >
-                  {tab}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                  <Text
+                    style={[
+                      styles.toggleText,
+                      selectedTab === tab.toLowerCase() && styles.activeText,
+                    ]}
+                  >
+                    {tab}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-          {/* TAB CONTENT SECTION */}
-          <View style={{ width: '100%', marginTop: -20, }}>
-            <Animated.View style={[getOpacityStyle(0)]}>
-              {selectedTab === 'music' && <Music />}
-            </Animated.View>
-            <Animated.View style={[getOpacityStyle(1)]}>
-              {selectedTab === 'events' && <Events />}
-            </Animated.View>
-            <Animated.View style={[getOpacityStyle(2)]}>
-              {selectedTab === 'posts' && <Posts avatarUri={avatarUri} name={name} />}
-            </Animated.View>
-            <Animated.View style={[getOpacityStyle(3)]}>
-              {selectedTab === 'dashboard' && <Dashboard />}
-            </Animated.View>
+            {/* TAB CONTENT SECTION */}
+            <View style={{ width: '100%', marginTop: -20, }}>
+              <Animated.View style={[getOpacityStyle(0)]}>
+                {selectedTab === 'music' && <Music />}
+              </Animated.View>
+              <Animated.View style={[getOpacityStyle(1)]}>
+                {selectedTab === 'events' && <Events />}
+              </Animated.View>
+              <Animated.View style={[getOpacityStyle(2)]}>
+                {selectedTab === 'posts' && <Posts avatarUri={avatarUri} name={name} />}
+              </Animated.View>
+              <Animated.View style={[getOpacityStyle(3)]}>
+                {selectedTab === 'dashboard' && <Dashboard />}
+              </Animated.View>
+            </View>
           </View>
-        </View>
-      </Animated.ScrollView>
+        </Animated.ScrollView>
 
-      {/* Music Player - Fixed at the bottom */}
-      <View style={styles.musicPlayerContainer}>
-        <MusicPlayer />
+        {/* Music Player - Fixed at the bottom */}
+        <View style={styles.musicPlayerContainer}>
+          <MusicPlayer />
+        </View >
       </View >
-    </View >
+    </GestureHandlerRootView >
   );
 };
 
@@ -608,7 +701,7 @@ export default ArtistProfileScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.black,
+    backgroundColor: '#1A1A1A',
   },
   image: {
     height: IMG_HEIGHT,
@@ -668,7 +761,6 @@ const styles = StyleSheet.create({
   },
   profileOverlay: {
     position: "absolute",
-    marginTop: 190,
     left: 0,
     right: 0,
     alignItems: "center",
@@ -851,5 +943,187 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderBottomColor: Colors.white,
     marginHorizontal: 5,
+  },
+
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  modalContent: {
+    backgroundColor: '#1C1D22',
+    padding: 20,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    alignItems: 'flex-start',
+    width: '100%',
+    position: 'absolute',
+    bottom: 0,
+    height: 400,
+  },
+  pullIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#313139',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
+    marginTop: -10,
+  },
+  modalTitle: {
+    color: Colors.white,
+    fontFamily: 'Open Sans',
+    fontSize: 20,
+    fontStyle: 'normal',
+    fontWeight: '900',
+    lineHeight: 28,
+    alignSelf: 'center',
+  },
+  innerModalContainer: {
+    backgroundColor: '#27272F',
+    width: '100%',
+    borderRadius: 16,
+    marginTop: 16,
+    padding: 20,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#3A3A3C',
+    width: '100%',
+  },
+  optionIcon: {
+    marginRight: 15,
+    opacity: 0.7
+  },
+  optionTextContainer: {
+    flexDirection: 'column',
+  },
+  optionText: {
+    color: Colors.white,
+    fontFamily: 'Open Sans',
+    fontSize: 14,
+    fontStyle: 'normal',
+    fontWeight: '600',
+    lineHeight: 22,
+  },
+  optionSubText: {
+    color: Colors.white,
+    fontSize: 10,
+    fontFamily: 'Open Sans',
+    fontStyle: 'normal',
+    fontWeight: '300',
+    opacity: 0.6
+  },
+  cancelModalButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4554F0',
+    borderRadius: 8,
+    height: 50,
+    width: '100%',
+    marginTop: 18,
+  },
+  cancelModalText: {
+    color: Colors.white,
+    fontSize: 14,
+    fontFamily: 'Open Sans',
+    fontStyle: 'normal',
+    fontWeight: '800',
+    lineHeight: 22,
+  },
+
+
+
+
+  trackContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    paddingHorizontal: 26,
+    marginTop: 4,
+    borderRadius: 10,
+  },
+  artCover: {
+    width: 56,
+    height: 56,
+    marginRight: 10,
+  },
+  songInfoContainer: {
+    flex: 1,        // Takes remaining space in the center
+    paddingLeft: 5,
+  },
+  releaseDate: {
+    fontSize: 10,
+    color: '#C0C0C0',
+    fontWeight: '600'
+  },
+  songName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+    marginVertical: 2,
+  },
+  trackType: {
+    fontSize: 10,
+    color: '#0DBCEE',
+  },
+  stickyButtonContainer: {
+    position: 'absolute',
+    top: 10, // Adjust this value as needed
+    right: 20,
+    flexDirection: 'row',
+    gap: 14,
+  },
+  halfOutsideIconContainer: {
+    position: 'absolute',
+    top: 16, // Position it halfway out of the header
+    right: 5,
+    zIndex: 10,
+  },
+  iconButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#4554F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  uploadButton: {
+    width: 48,
+    height: 50,
+    borderRadius: 24,
+    backgroundColor: '#4554F0',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#1A1A1A',
+    alignItems: 'center',
+    position: 'absolute', // Overlapping position
+    right: 0, // Shifted to overlap on the right side of the upload button
+    top: 0, // Adjust to overlap slightly at the top
+    zIndex: 10, // Ensures it sits above the first button
+  },
+  editButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingRight: 45,
+    flexShrink: 0,
+    width: 130,
+    height: 50,
+    borderRadius: 48,
+    backgroundColor: '#4554F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editButtonText: {
+    color: Colors.white,
+    textAlign: 'center',
+    fontFamily: 'Open Sans',
+    fontSize: 16,
+    fontStyle: 'normal',
+    fontWeight: '800',
+    lineHeight: 20,
   },
 });

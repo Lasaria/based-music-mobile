@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { Colors } from '../constants/Color';
 
 const MusicPlayer = () => {
     return (
@@ -31,15 +32,9 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1C1C1E', // Dark background
+        backgroundColor: '#A95C68',
         borderRadius: 10,
         padding: 10,
-        // marginVertical: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
     },
     albumCover: {
         width: 40,
@@ -51,14 +46,18 @@ const styles = StyleSheet.create({
         marginLeft: 12,
     },
     songTitle: {
-        color: '#FFF',
+        color: Colors.white,
         fontSize: 16,
         fontWeight: '600',
         marginBottom: 2,
     },
     artistName: {
-        color: '#A9A9A9', // Lighter gray for artist name
-        fontSize: 14,
+        color: Colors.white,
+        fontFamily: 'Open Sans',
+        fontSize: 12,
+        fontStyle: 'normal',
+        fontWeight: '400',
+        opacity: 0.7
     },
     playButton: {
         marginLeft: 'auto',

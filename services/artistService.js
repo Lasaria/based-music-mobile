@@ -1,6 +1,8 @@
 import { axiosGet, axiosPatch, axiosPost } from '../utils/axiosCalls';
 
-const serverURL = 'http://localhost:3000'
+// const serverURL = 'http://localhost:3000'
+const serverURL = `http://${process.env.EXPO_PUBLIC_IP_ADDRESS}:3000`;
+
 
 export const ArtistService = {
 

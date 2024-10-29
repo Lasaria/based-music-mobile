@@ -1,6 +1,9 @@
 import { StyleSheet, Text, View, ScrollView, Image, TouchableOpacity, Modal, Button } from 'react-native';
 import React, { useState } from 'react';
 import { Colors } from '../../constants/Color';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { Feather } from '@expo/vector-icons';
+
 
 // DUMMY MUSIC DATA
 const tracksData = [
@@ -303,7 +306,7 @@ const Music = () => {
         if (selectedItems.includes(item)) {
             setSelectedItems(selectedItems.filter((i) => i !== item));
         } else {
-            setSelectedItems([...selectedItems, item]); 
+            setSelectedItems([...selectedItems, item]);
         }
     };
 
@@ -311,19 +314,19 @@ const Music = () => {
     const handleDelete = () => {
         if (modalContent.type === 'albums') {
             const updatedAlbums = albums.filter((album) => !selectedItems.includes(album));
-            setAlbums(updatedAlbums); 
+            setAlbums(updatedAlbums);
         } else if (modalContent.type === 'tracks') {
             const updatedTracks = tracks.filter((track) => !selectedItems.includes(track));
             setTracks(updatedTracks);
         } else if (modalContent.type === 'beats') {
             const updatedBeats = beats.filter((beat) => !selectedItems.includes(beat));
-            setBeats(updatedBeats); 
+            setBeats(updatedBeats);
         } else if (modalContent.type === 'sounds') {
             const updatedSounds = sounds.filter((sound) => !selectedItems.includes(sound));
             setSounds(updatedSounds);
         } else if (modalContent.type === 'presets') {
             const updatedPresets = presets.filter((preset) => !selectedItems.includes(preset));
-            setPresets(updatedPresets); 
+            setPresets(updatedPresets);
         }
         setSelectedItems([]);
         setIsSelectingTracks(false);
@@ -434,10 +437,18 @@ const Music = () => {
                             key={index}
                             style={[
                                 styles.trackItem,
-                                selectedItems.includes(track) && styles.selectedItem,
+                                selectedItems.includes(track) && styles.selectedItem
                             ]}
                             onPress={() => isSelectingTracks && handleSelectItem(track)}
                         >
+                            {selectedItems.includes(track) && (
+                                <View style={[styles.checkIconContainer, {
+                                    top: 14,
+                                    left: 50,
+                                }]}>
+                                    <Feather name="check" size={18} color="black" style={styles.checkIcon} />
+                                </View>
+                            )}
                             <View style={styles.trackOrder}>
                                 <Text style={styles.trackCount}>{index + 1}</Text>
                                 <Image source={{ uri: track.cover }} style={styles.trackImage} />
@@ -511,6 +522,11 @@ const Music = () => {
                                 ]}
                                 onPress={() => isSelectingAlbums && handleSelectItem(album)}
                             >
+                                {selectedItems.includes(album) && (
+                                    <View style={styles.checkIconContainer}>
+                                        <Feather name="check" size={18} color="black" style={styles.checkIcon} />
+                                    </View>
+                                )}
                                 <View style={styles.squareImage}>
                                     <Image source={{ uri: album.cover }} style={styles.albumGridImage} />
                                 </View>
@@ -533,7 +549,6 @@ const Music = () => {
                     </ScrollView>
                 )}
             </View>
-
 
             {/* BEATS SECTION */}
             <View style={styles.section}>
@@ -591,6 +606,14 @@ const Music = () => {
                                 ]}
                                 onPress={() => isSelectingBeats && handleSelectItem(beat)}
                             >
+                                {selectedItems.includes(beat) && (
+                                    <View style={[styles.checkIconContainer, {
+                                        top: 5,
+                                        left: 120,
+                                    }]}>
+                                        <Feather name="check" size={18} color="black" style={styles.checkIcon} />
+                                    </View>
+                                )}
                                 <View style={styles.squareImage}>
                                     <Image source={{ uri: beat.cover }} style={styles.coverImage} />
                                 </View>
@@ -672,6 +695,14 @@ const Music = () => {
                                 ]}
                                 onPress={() => isSelectingSounds && handleSelectItem(sound)}
                             >
+                                {selectedItems.includes(sound) && (
+                                    <View style={[styles.checkIconContainer, {
+                                        top: 5,
+                                        left: 120,
+                                    }]}>
+                                        <Feather name="check" size={18} color="black" style={styles.checkIcon} />
+                                    </View>
+                                )}
                                 <View style={styles.squareImage}>
                                     <Image source={{ uri: sound.cover }} style={styles.coverImage} />
                                 </View>
@@ -753,6 +784,14 @@ const Music = () => {
                                 ]}
                                 onPress={() => isSelectingPresets && handleSelectItem(preset)}
                             >
+                                {selectedItems.includes(preset) && (
+                                    <View style={[styles.checkIconContainer, {
+                                        top: 5,
+                                        left: 120,
+                                    }]}>
+                                        <Feather name="check" size={18} color="black" style={styles.checkIcon} />
+                                    </View>
+                                )}
                                 <View style={styles.squareImage}>
                                     <Image source={{ uri: preset.cover }} style={styles.coverImage} />
                                 </View>
@@ -840,7 +879,21 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     selectedItem: {
-        backgroundColor: '#474747',
+        position: 'relative'
+    },
+    checkIconContainer: {
+        position: 'absolute',
+        top: -4,
+        left: 80,
+        backgroundColor: '#28A745',
+        borderRadius: 24,
+        padding: 6,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1,
+    },
+    checkIcon: {
+        color: Colors.white,
     },
     trackItem: {
         flexDirection: 'row',
@@ -953,28 +1006,24 @@ const styles = StyleSheet.create({
     beatGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        justifyContent: 'space-between',
+        justifyContent: 'space-around',
     },
     textContainer: {
         width: '100%',
-        marginRight: 30,
-        paddingTop: 5,
+        marginRight: 24,
         alignItems: 'flex-start',
     },
     beatGridItem: {
-        width: '45%', 
-        marginVertical: 10,
+        width: '45%',
         alignItems: 'center',
     },
     presetGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        paddingHorizontal: 10,
+        justifyContent: 'space-around',
     },
     presetGridItem: {
         width: '45%',
-        marginVertical: 10,
         alignItems: 'center',
     },
     coverItem: {
@@ -986,17 +1035,16 @@ const styles = StyleSheet.create({
     soundKitGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        paddingHorizontal: 10,
+        justifyContent: 'space-around',
+        // paddingHorizontal: 10,
     },
     soundKitGridItem: {
-        width: '45%', 
-        marginVertical: 10,
+        width: '45%',
         alignItems: 'center',
     },
     coverImage: {
-        height: 150,
-        width: 150,
+        height: 146,
+        width: 146,
         borderRadius: 14,
         marginRight: 20,
     },
@@ -1017,6 +1065,7 @@ const styles = StyleSheet.create({
         fontWeight: '400',
         lineHeight: 20,
         marginLeft: 22,
+        marginBottom: 10,
         opacity: 0.7,
     },
     soundKitItem: {
