@@ -17,7 +17,7 @@ const PlaylistScreen = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [filterVisible, setFilterVisible] = useState(false);
- // const [filterModal, setFilterModal] = useState(false);
+
   const albumInfo = {
     title: "Boyshit",
     artist: "Madison Beer",
