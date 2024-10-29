@@ -3,7 +3,7 @@ import { router } from "expo-router";
 import { axiosPost } from "../utils/axiosCalls";
 import { tokenManager } from "../utils/tokenManager";
 
-const serverURL = "http://localhost:3001";
+const serverURL = "http://10.0.0.235:3001";
 
 
 export const AuthService = {

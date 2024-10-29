@@ -13,6 +13,7 @@ import React, { useState } from "react";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { tokenManager } from "../../../utils/tokenManager";
+import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 
 const uploadTrackScreen = () => {
@@ -30,6 +31,8 @@ const uploadTrackScreen = () => {
   const [artwork, setArtwork] = useState(null);
   const [modalVisibleArtwork, setModalVisibleArtwork] = useState(false);
   const [newArtworkName, setNewArtworkName] = useState("");
+  const [nameMapping, setNameMapping] = useState({});
+  const [lyricsMapping, setLyricsMapping] = useState({});
 
 
   const artistId = tokenManager.getIdToken();
@@ -45,13 +48,14 @@ const uploadTrackScreen = () => {
         copyToCacheDirectory: false,
       });
 
-      if (result && !result.canceled) {
+      if (result && !result.canceled && result.assets?.length > 0) {
         console.log("pick track 1");
 
         const file = result.assets[0];
         let trackSize = (file.size / (1024 * 1024)).toFixed(2);
-        const allowedTypes = ["audio/mpeg", "audio/mp3", "audio/wav"];
-
+        const allowedTypes = ["audio/mpeg", "audio/mp3", "audio/wav"];    
+        const simplifiedName = file.name.replace(/\.[^/.]+$/, "");
+       
         if (!allowedTypes.includes(file.mimeType)) {
           setTracks((prevTrack) => [
             ...prevTrack,
@@ -69,6 +73,15 @@ const uploadTrackScreen = () => {
             },
           ]);
         } else {
+
+          //mapping each track.
+
+          setNameMapping((prev) => ({
+            ...prev,
+            [file.name] : simplifiedName,
+          }))
+
+          
           // Add the new track and start upload
           const newTrack = {
             uri: file.uri,
@@ -146,6 +159,12 @@ const uploadTrackScreen = () => {
 
   {/** selects the lyrics from device */}
   const pickLyrics = async () => {
+
+    if (tracks.length === 0) {
+      Alert.alert("Error", "Please select a track first before adding lyrics.");
+      return;
+    }
+
     try {
       console.log("pick lyrics");
 
@@ -154,12 +173,18 @@ const uploadTrackScreen = () => {
         copyToCacheDirectory: false,
       });
 
+      console.log(result);
+      
+
       if (result && !result.canceled) {
         console.log("pick lyrics 1");
 
         const file = result.assets[0];
         let lyricsSize = file.size;
-        const allowedTypes = ["text/plain"];
+        const allowedTypes = ["text/plain"]; 
+        const selectedTrack = tracks[tracks.length - 1];
+
+  
          
         {/** check if the choosen file if of allowed type or not */}
         if (!allowedTypes.includes(file.mimeType)) {
@@ -179,6 +204,12 @@ const uploadTrackScreen = () => {
             },
           ]);
         } else {
+         
+          //mapping each track to it's lyrics
+          setLyricsMapping((prev) => ({
+            ...prev,
+            [selectedTrack.name]: file.name,
+          }))
 
           // Add the new lyrics and start upload
           const newLyrics = {
@@ -264,13 +295,15 @@ const uploadTrackScreen = () => {
   try {
     console.log("pick artwork");
 
-    const result = await DocumentPicker.getDocumentAsync({
-      type: ["image/jpg", "image/png", "image/jpeg", "image/heic"],
-      copyToCacheDirectory: false,
-      multiple:false,
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, 
+      allowsEditing: true,
     });
 
-    if (result && !result.canceled) {
+    console.log(result);
+    
+
+    if (result && result.assets.length > 0) {
       console.log("pick artwork 1");
 
       const file = result.assets[0];
@@ -354,28 +387,26 @@ const deleteArtwork = () => {
   
 }
 
-const saveAlbum = async() => {
+const nextScreen = () => {
 
-  console.log("token: ", token);
-
-  let token;
-  try {
-    token = await tokenManager.getAccessToken();
-    console.log("token: ", token);
-  } catch (error) {
-    Alert.alert("Error", "Failed to retrieve token.");
-    return;
-  }
-
-  // Ensure all required fields are filled before proceeding
-  if (!title || !isrc || !genre || !tracks || !artworks) {
-    Alert.alert("Error", "Please fill in all required fields.");
-    return;
-  }
-
- 
-
+   router.push({
+    pathname: '/editAlbumScreen',
+    params: {
+      title,
+      isrc,
+      genre,
+      tracks:JSON.stringify(tracks),
+      lyrics: JSON.stringify(lyrics),
+      artwork:JSON.stringify(artwork),
+      lyricsMapping: JSON.stringify(lyricsMapping),
+      nameMapping:  JSON.stringify(nameMapping),
+    }
+   });
 }
+
+
+
+
   return (
     <View style={styles.outerView}>
       <ScrollView contentContainerStyle={styles.scrollView}>
@@ -695,7 +726,7 @@ const saveAlbum = async() => {
                   <Text style={styles.errorText}>{artwork.error}</Text>
                 ) : artwork.progress >= 100 ? (
                   <View>
-                    <Text style={styles.successText}>{artwork.size}MB</Text>
+                    <Text style={styles.successText}>{artwork.size}</Text>
                     <TouchableOpacity onPress={openArtworkModal}>
                       <Text style={styles.renameText}>Rename</Text>
                     </TouchableOpacity>
@@ -732,10 +763,9 @@ const saveAlbum = async() => {
               </View>
             </View>
           )}
-        </View>
-
-        <TouchableOpacity style={styles.saveButton} onPress={saveAlbum}>
-          <Text style={styles.saveText}>Save</Text>
+        </View>   
+        <TouchableOpacity style={styles.saveButton} onPress={nextScreen}>
+          <Text style={styles.saveText}>Next</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
