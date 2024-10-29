@@ -6,17 +6,17 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import Slider from "@react-native-community/slider";
 
-
 const StreamMusic = ({ navigation }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [message, setMessage] = useState("");
   const [isLike, setIsLike] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const totalTime = 180;
@@ -33,7 +33,6 @@ const StreamMusic = ({ navigation }) => {
     setIsModalVisible(false);
   };
 
-
   //skips the song 10 sec backward
   const backward = () => {
     if (currentTime > 10) {
@@ -49,9 +48,17 @@ const StreamMusic = ({ navigation }) => {
   };
 
   const navigatePlaylist = () => {
-    router.push('./playlistScreen')
+    router.push("./playlistScreen");
     closeModal();
-  }
+  };
+
+  const handleLikeToggle = () => {
+    setIsLike(!isLike);
+    setMessage(isLike ? "Youe liked the song" : "You unliked the song");
+
+    //display the message only for 3 sec
+    setTimeout(() => setMessage(""), 3000);
+  };
 
   return (
     <View style={styles.mainConatiner}>
@@ -64,15 +71,14 @@ const StreamMusic = ({ navigation }) => {
         </TouchableOpacity>
         {/** will be replace by the actual album name */}
         <Text style={styles.headerText}>Album Name</Text>
-        <TouchableOpacity onPress={() => toggleModal()} >
-        <Ionicons name="ellipsis-vertical" size={24} color="white" />
+        <TouchableOpacity onPress={() => toggleModal()}>
+          <Ionicons name="ellipsis-vertical" size={24} color="white" />
         </TouchableOpacity>
-
       </View>
 
       {/* Album Art(Cover) */}
       <View style={styles.artView}>
-        <TouchableOpacity onPress={() => setIsLike(!isLike)}>
+        <TouchableOpacity onPress={handleLikeToggle}>
           <Image
             source={require("../../../assets/images/profile6.jpg")}
             style={styles.artImage}
@@ -80,7 +86,7 @@ const StreamMusic = ({ navigation }) => {
         </TouchableOpacity>
         <TouchableOpacity
           style={{ position: "absolute", right: 2, top: 5 }}
-          onPress={() => setIsLike(!isLike)}
+          onPress={handleLikeToggle}
         >
           <Ionicons
             name={isLike ? "heart" : "heart-outline"}
@@ -89,6 +95,12 @@ const StreamMusic = ({ navigation }) => {
           />
         </TouchableOpacity>
       </View>
+
+      {message ? (
+        <View style={styles.messageContainer}>
+          <Text style={styles.messageText}>{message}</Text>
+        </View>
+      ) : null}
 
       {/* Song Info */}
       <View style={styles.songView}>
@@ -167,38 +179,41 @@ const StreamMusic = ({ navigation }) => {
         visible={isModalVisible}
         onRequestClose={closeModal}
       >
-      <TouchableWithoutFeedback  onPress={closeModal}>
-      <View style={styles.modalContainer}>
-        <TouchableWithoutFeedback>
-        <View style={styles.modalContent}>
-          <TouchableOpacity onPress={navigatePlaylist} style={styles.modalItem}>
-            <Ionicons name="list" size={24} color="white" />
-            <Text style={styles.modalText}>View playlist</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.modalItem}>
-            <Ionicons name="add" size={24} color="white" />
-            <Text style={styles.modalText}>Add to queue</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.modalItem}>
-            <Ionicons name="albums" size={24} color="white" />
-            <Text style={styles.modalText}>View queue list</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.modalItem}>
-            <Ionicons name="share-social" size={24} color="white" />
-            <Text style={styles.modalText}>Share</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.modalItem}>
-            <Ionicons name="heart" size={24} color="white" />
-            <Text style={styles.modalText}>Like</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.modalItem}>
-            <Ionicons name="information-circle" size={24} color="white" />
-            <Text style={styles.modalText}>About</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableWithoutFeedback onPress={closeModal}>
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <TouchableOpacity
+                  onPress={navigatePlaylist}
+                  style={styles.modalItem}
+                >
+                  <Ionicons name="list" size={24} color="white" />
+                  <Text style={styles.modalText}>View playlist</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalItem}>
+                  <Ionicons name="add" size={24} color="white" />
+                  <Text style={styles.modalText}>Add to queue</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalItem}>
+                  <Ionicons name="albums" size={24} color="white" />
+                  <Text style={styles.modalText}>View queue list</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalItem}>
+                  <Ionicons name="share-social" size={24} color="white" />
+                  <Text style={styles.modalText}>Share</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalItem}>
+                  <Ionicons name="heart" size={24} color="white" />
+                  <Text style={styles.modalText}>Like</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalItem}>
+                  <Ionicons name="information-circle" size={24} color="white" />
+                  <Text style={styles.modalText}>About</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
         </TouchableWithoutFeedback>
-      </View>
-      </TouchableWithoutFeedback>
       </Modal>
     </View>
   );
@@ -231,6 +246,25 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     backgroundColor: "#333",
   },
+  messageContainer: {
+    position: "absolute",
+    top: 400,
+    width: "100%",
+    alignItems: "center",
+    z: 9999,
+    borderRadius: 20,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  messageText: {
+    backgroundColor: "white",
+    color: "black",
+    padding: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 20,
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   songView: {
     alignItems: "center",
     marginTop: 20,
@@ -251,30 +285,34 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 50,
   },
-  currentDevice: { color: "purple", textAlign: "center", marginTop: 20 },
-  modalContainer:{
-    flex:1,
-    justifyContent:'flex-end',
-    backgroundColor:"rgba(0,0,0,0.5)",
+  currentDevice: {
+     color: "purple",
+      textAlign: "center",
+       marginTop: 20
+    },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
-  modalContent:{
-    backgroundColor:"#1c1c1c",
-    padding:20,
-    borderTopEndRadius:20,
-    borderTopRightRadius:20,
+  modalContent: {
+    backgroundColor: "#1c1c1c",
+    padding: 20,
+    borderTopEndRadius: 20,
+    borderTopRightRadius: 20,
   },
-  modalItem:{
-    flexDirection:'row',
-    alignItems:'center',
-    paddingVertical:15,
-    borderBottomWidth:1,
-    borderBottomColor:'grey',
+  modalItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "grey",
   },
-  modalText:{
-    color:'white',
-    fontSize:16,
-    marginLeft:18
-  }
+  modalText: {
+    color: "white",
+    fontSize: 16,
+    marginLeft: 18,
+  },
 });
 
 export default StreamMusic;
