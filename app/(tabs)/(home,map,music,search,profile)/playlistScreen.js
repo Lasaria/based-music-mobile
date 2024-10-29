@@ -16,6 +16,8 @@ import { router } from "expo-router";
 const PlaylistScreen = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [filterVisible, setFilterVisible] = useState(false);
+ // const [filterModal, setFilterModal] = useState(false);
   const albumInfo = {
     title: "Boyshit",
     artist: "Madison Beer",
@@ -46,6 +48,15 @@ const PlaylistScreen = () => {
   const closeModal = () => {
     setIsModalVisible(false);
   };
+
+  const closeFliter = () => {
+    setFilterVisible(false);
+  };
+
+  const toggleFilter = () => {
+    setFilterVisible(!filterVisible);
+  }
+
 
   const renderTrack = ({ item }) => (
     <View style={styles.trackItem}>
@@ -108,7 +119,7 @@ const PlaylistScreen = () => {
           {/* Tracks Header with Filter Icon */}
           <View style={styles.tracksHeaderContainer}>
         <Text style={styles.tracksHeader}>TRACKS</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={toggleFilter}>
           <Ionicons name="filter" size={20} color="grey" />
         </TouchableOpacity>
       </View>
@@ -159,6 +170,56 @@ const PlaylistScreen = () => {
                   <Ionicons name="information-circle" size={24} color="white" />
                   <Text style={styles.modalText}>About</Text>
                 </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Filter Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={filterVisible}
+        onRequestClose={closeFliter}
+      >
+        <TouchableWithoutFeedback onPress={closeFliter}>
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Filter</Text>
+
+                {/* Genre Filter */}
+                <Text style={styles.filterCategory}>GENRE</Text>
+                <View style={styles.filterOptionsContainer}>
+                  {["Pop", "Rock", "RnB", "Blues", "Jazz", "Hiphop", "Funk", "Metal", "Reggae", "Soul", "Classical", "Indie/Alternative"].map((genre) => (
+                    <TouchableOpacity key={genre} style={styles.filterOption}>
+                      <Text style={styles.filterOptionText}>{genre}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Release Date Filter */}
+                <Text style={styles.filterCategory}>RELEASE DATE</Text>
+                <View style={styles.filterOptionsContainer}>
+                  <TouchableOpacity style={styles.filterOption}>
+                    <Text style={styles.filterOptionText}>New - Old</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.filterOption}>
+                    <Text style={styles.filterOptionText}>Old - New</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Alphabetical Order Filter */}
+                <Text style={styles.filterCategory}>ALPHABETICAL ORDER</Text>
+                <View style={styles.filterOptionsContainer}>
+                  <TouchableOpacity style={styles.filterOption}>
+                    <Text style={styles.filterOptionText}>A - Z</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.filterOption}>
+                    <Text style={styles.filterOptionText}>Z - A</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </TouchableWithoutFeedback>
           </View>
@@ -258,6 +319,35 @@ const styles = StyleSheet.create({
   trackTitle: {
     color: "white",
     fontSize: 16,
+  },
+  modalTitle: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 20,
+  },
+  filterCategory: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+    marginTop: 15,
+  },
+  filterOptionsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 10,
+  },
+  filterOption: {
+    backgroundColor: "#333",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  filterOptionText: {
+    color: "white",
+    fontSize: 14,
   },
   trackArtist: {
     color: "grey",
