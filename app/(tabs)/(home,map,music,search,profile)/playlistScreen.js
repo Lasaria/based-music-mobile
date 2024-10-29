@@ -6,13 +6,16 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
+  Modal,
   TextInput,
+  TouchableWithoutFeedback
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
 const PlaylistScreen = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const albumInfo = {
     title: "Boyshit",
     artist: "Madison Beer",
@@ -36,6 +39,14 @@ const PlaylistScreen = () => {
     track.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const toggleModal= () => {
+    setIsModalVisible(!isModalVisible);
+  }
+
+  const closeModal = () => {
+    setIsModalVisible(false);
+  };
+
   const renderTrack = ({ item }) => (
     <View style={styles.trackItem}>
       <View>
@@ -53,7 +64,10 @@ const PlaylistScreen = () => {
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Playlist</Text>
+        <TouchableOpacity onPress={toggleModal}>
         <Ionicons name="ellipsis-vertical" size={24} color="white" />
+        </TouchableOpacity>
+     
       </View>
 
       {/* Search Bar */}
@@ -110,6 +124,46 @@ const PlaylistScreen = () => {
       ) : (
         <Text style={styles.noTracksText}>No tracks found</Text>
       )}
+
+       {/** bottom sheet modal */}
+
+       <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isModalVisible}
+        onRequestClose={closeModal}
+      >
+        <TouchableWithoutFeedback onPress={closeModal}>
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <TouchableOpacity
+                  style={styles.modalItem}
+                >
+                  <Ionicons name="list" size={24} color="white" />
+                  <Text style={styles.modalText}>Add the playlist to queue</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalItem} onPress={() => router.push('./queueList')} >
+                  <Ionicons name="add" size={24} color="white" />
+                  <Text style={styles.modalText}>View queue list</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalItem}>
+                  <Ionicons name="share-social" size={24} color="white" />
+                  <Text style={styles.modalText}>Share</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalItem}>
+                  <Ionicons name="heart" size={24} color="white" />
+                  <Text style={styles.modalText}>Like</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalItem}>
+                  <Ionicons name="information-circle" size={24} color="white" />
+                  <Text style={styles.modalText}>About</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </View>
   );
 };
@@ -235,6 +289,29 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContent: {
+    backgroundColor: "#1c1c1c",
+    padding: 20,
+    borderTopEndRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  modalItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "grey",
+  },
+  modalText: {
+    color: "white",
+    fontSize: 16,
+    marginLeft: 18,
   },
 });
 
