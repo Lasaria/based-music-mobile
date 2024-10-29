@@ -61,32 +61,32 @@ export const UserService = {
             console.log("Basic profile data updated successfully", profileResponse);
     
             // Second API call: Upload profile image if it exists
-            // if (profileImage?.startsWith('file://')) {
-            //     try {
-            //         const profileBlob = await uriToBlob(profileImage);
-            //         const profileImageFormData = new FormData();
-            //         profileImageFormData.append('profileImage', profileBlob, 'profile-image.jpg');
+            if (profileImage?.startsWith('file://')) {
+                try {
+                    const profileBlob = await uriToBlob(profileImage);
+                    const profileImageFormData = new FormData();
+                    profileImageFormData.append('profileImage', profileBlob, 'profile-image.jpg');
     
-            //         await RNBlobUtil.fetch(
-            //             'PATCH',
-            //             `${serverURL}/artists/${profileResponse.data.userId}/profile-image`,
-            //             {
-            //                 'Content-Type': 'multipart/form-data',
-            //                 Authorization: `Bearer ${await tokenManager.getAccessToken()}`,
-            //             },
-            //             [{
-            //                 name: 'profileImage',
-            //                 filename: 'profile.jpg',
-            //                 type: 'image/jpeg',
-            //                 data: RNBlobUtil.wrap(decodeURIComponent(profileImage.replace('file://', '')))
-            //             }]
-            //         );
-            //         console.log("Profile image uploaded successfully");
-            //     } catch (error) {
-            //         console.error('Error uploading profile image:', error);
-            //         throw new Error('Failed to upload profile image');
-            //     }
-            // }
+                    await RNBlobUtil.fetch(
+                        'PATCH',
+                        `${serverURL}/artists/${profileResponse.data.userId}/profile-image`,
+                        {
+                            'Content-Type': 'multipart/form-data',
+                            Authorization: `Bearer ${await tokenManager.getAccessToken()}`,
+                        },
+                        [{
+                            name: 'profileImage',
+                            filename: 'profile.jpg',
+                            type: 'image/jpeg',
+                            data: RNBlobUtil.wrap(decodeURIComponent(profileImage.replace('file://', '')))
+                        }]
+                    );
+                    console.log("Profile image uploaded successfully");
+                } catch (error) {
+                    console.error('Error uploading profile image:', error);
+                    throw new Error('Failed to upload profile image');
+                }
+            }
     
             // Third API call: Upload cover image if it exists
             // if (coverImage?.startsWith('file://')) {
