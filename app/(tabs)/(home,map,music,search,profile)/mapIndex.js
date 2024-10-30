@@ -9,15 +9,70 @@ import {
 } from "react-native";
 import MapboxGL from "@rnmapbox/maps";
 import { Modalize } from "react-native-modalize";
+import { MapService } from "../../../services/MapService";
 import * as turf from "@turf/turf";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { color } from "react-native-elements/dist/helpers";
 
 MapboxGL.setAccessToken(
   "pk.eyJ1IjoibGFzYXJpYSIsImEiOiJjbTJheXV0cjcwNG9zMmxwdnlxZWdoMjc5In0.NoBtaBj9cNvdemNp52pxGQ"
 );
 
+const CACHE_KEY = "mapDataCache";  // Define a cache key
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
 const MapScreen = () => {
   const [geojsonData, setGeojsonData] = useState(null);
+  const [mapData, setMapData] = useState(null);
+  const [selectedLayer, setSelectedLayer] = useState(null); // For tracking the selected polygon
+  const [venuesInPolygon, setVenuesInPolygon] = useState([]); // For tracking the venues inside the polygon
   const modalizeRef = useRef(null); // Ref for controlling the modal
+
+  const [currentViewport, setCurrentViewport] = useState({
+    latitude: 38.8951,
+    longitude: -77.0364,
+    zoomLevel: 8,
+  });
+
+  useEffect(() => {
+    const getMaps = async () => {
+      try {
+        const cachedData = await AsyncStorage.getItem(CACHE_KEY);
+        const cachedTimestamp = await AsyncStorage.getItem(`${CACHE_KEY}_timestamp`);
+
+        const now = Date.now();
+        if (cachedData && cachedTimestamp && now - parseInt(cachedTimestamp) < CACHE_DURATION) {
+          // If cache is valid, use cached data
+          console.log("Using cached data");
+          setMapData(JSON.parse(cachedData));
+        } else {
+          // Otherwise, fetch new data from server
+          console.log("Fetching new data");
+          const data = await MapService.getAllMapData();
+          setMapData(data);
+
+          // Store the data and timestamp in AsyncStorage
+          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data));
+          await AsyncStorage.setItem(`${CACHE_KEY}_timestamp`, now.toString());
+        }
+
+        // const data = await MapService.getAllMapData();
+        // setMapData(data)
+        
+
+      } catch (error) {
+        console.error("Error getting all maps: ", error);
+      }
+    };
+
+    getMaps();
+  }, []);
+
+  console.log("MAPDATA0: ", mapData?.data[0]);
+
+  
+
+
   // Hardcoded venue data
   const venueData = [
     { name: "Ultra Bar DC", latitude: 38.8963, longitude: -77.0241 },
@@ -199,20 +254,76 @@ const MapScreen = () => {
     setGeojsonData(geojson); // Set the GeoJSON data to state
   }, []);
   //   const hasLineString = geojsonData.features.some(
-  //     (feature) => feature.geometry.type === "LineString"
-  //   );
+ 
 
-  //   if (hasLineString) {
-  //     console.log("LineString exists in the data");
-  //   } else {
-  //     console.log("No LineString found in the data");
-  //   }
-  //   // Log the entire geojsonData to see the structure
-  //console.log(JSON.stringify(geojsonData, null, 2)); // This will log the full structure with indentation
+  const handlePolygonPress = (item) => {
+    console.log("ITEM: ", item);
+    const polygons = JSON.parse(item.polygons);
+
+    // Check which venues fall inside the polygon
+    const venuesInsidePolygon = venueData.filter((venue) => {
+      const point = turf.point([venue.longitude, venue.latitude]);
+      return turf.booleanPointInPolygon(point, polygons.features[0]);
+    });
+
+    // Set the selected layer name and the venues in the polygon
+    setSelectedLayer(item.name);
+    setVenuesInPolygon(venuesInsidePolygon);
+
+    // Open the modal to show the data
+    modalizeRef.current?.open();
+  };
 
   // Function to open the modal
   const openModal = () => {
     modalizeRef.current?.open();
+  };
+
+  const renderMapLayers = () => {
+    if (!mapData || !mapData.data) return null;
+
+    return mapData.data.map((item, index) => {
+      // Parse the polygons and outline JSON strings
+      const polygons = JSON.parse(item.polygons);
+      const outline = JSON.parse(item.outline);
+
+      return (
+        <React.Fragment key={index}>
+          {/* FillLayer for polygons */}
+          <MapboxGL.ShapeSource
+            id={`polygon-source-${item.boundary_id}`}
+            shape={polygons}
+            onPress={() => handlePolygonPress(item)} // Capture the polygon press
+          >
+            <MapboxGL.FillLayer
+              id={`polygon-fill-${item.boundary_id}`}
+              minZoomLevel={item.level == 1 ? 0 : 9} // Visible from the lowest zoom level
+                maxZoomLevel={item.level == 1 ? 9 : 22} // Hidden at zoom level 10 and above
+                style={{
+                    fillColor: "hsla(260, 100%, 40%, 0.26)",
+                    fillOpacity: 0.5,
+                }}
+            />
+          </MapboxGL.ShapeSource>
+
+          {/* LineLayer for outline */}
+          <MapboxGL.ShapeSource
+            id={`outline-source-${item.boundary_id}`}
+            shape={outline}
+          >
+            <MapboxGL.LineLayer
+              id={`outline-line-${item.boundary_id}`}
+              minZoomLevel={item.level == 1 ? 0 : 9}
+              maxZoomLevel={item.level == 1 ? 9 : 22}
+                style={{
+                    lineColor: "purple", // Color of the boundary line
+                    lineWidth: 3, // Thickness of the boundary line
+                }}
+            />
+          </MapboxGL.ShapeSource>
+        </React.Fragment>
+      );
+    });
   };
 
   const renderModalContent = () => (
@@ -255,7 +366,7 @@ const MapScreen = () => {
         }}
       >
         <MapboxGL.Camera
-          zoomLevel={10}
+          zoomLevel={7}
           centerCoordinate={[-77.0364, 38.8951]} // Washington DC area
         />
 
@@ -320,64 +431,17 @@ const MapScreen = () => {
         )}
 
         {/* DMV Boundary Layer - Visible when zoomed out */}
-        <MapboxGL.FillLayer
-          id="dmv-boundary-full"
-          sourceLayer="dmv-boundary-full" // Replace with your source
-          minZoomLevel={0} // Visible from the lowest zoom level
-          maxZoomLevel={10} // Hidden at zoom level 10 and above
-          style={{
-            fillOpacity: 0.5,
-          }}
-        />
-        <MapboxGL.LineLayer
-          id="dmv-boundary-line"
-          sourceLayer="dmv-boundary-full" // Replace with your source
-          minZoomLevel={0}
-          maxZoomLevel={10}
-          style={{
-            lineColor: "purple", // Color of the boundary line
-            lineWidth: 10, // Thickness of the boundary line
-          }}
-        />
-        {/* DC Layer - Visible when zoomed in closer */}
-        <MapboxGL.FillLayer
-          id="dc-full"
-          sourceLayer="dc-full" // Replace with your source
-          minZoomLevel={10} // Visible from zoom level 10
-          maxZoomLevel={22} // Visible at any higher zoom level
-          style={{
-            fillOpacity: 0.5,
-          }}
-        />
-
-        {/* Maryland Layer - Visible when zoomed in closer */}
-        <MapboxGL.FillLayer
-          id="maryland-full"
-          sourceLayer="maryland-full" // Replace with your source
-          minZoomLevel={10} // Visible from zoom level 10
-          maxZoomLevel={22} // Visible at any higher zoom level
-          style={{
-            fillOpacity: 0.5,
-          }}
-        />
-
-        {/* Northern Virginia Layer - Visible when zoomed in closer */}
-        <MapboxGL.FillLayer
-          id="northern-virginia-full"
-          sourceLayer="northern-virginia-full" // Replace with your source
-          minZoomLevel={10} // Visible from zoom level 10
-          maxZoomLevel={22} // Visible at any higher zoom level
-          style={{
-            fillOpacity: 0.5,
-          }}
-        />
+        {renderMapLayers()}
       </MapboxGL.MapView>
 
       {/* Modal for upcoming events */}
       <Modalize ref={modalizeRef} snapPoint={300}>
         <View style={{ padding: 20 }}>
-          {venueData && venueData.length > 0 ? (
-            venueData.map((venue, index) => (
+          <Text style={styles.modalHeader}>
+            {selectedLayer ? `Venues in ${selectedLayer}` : "No area selected"}
+          </Text>
+          {venuesInPolygon && venuesInPolygon.length > 0 ? (
+            venuesInPolygon.map((venue, index) => (
               <View key={index} style={{ marginBottom: 20 }}>
                 <Text style={{ fontSize: 18, fontWeight: "bold" }}>
                   {venue.name}
@@ -389,7 +453,7 @@ const MapScreen = () => {
               </View>
             ))
           ) : (
-            <Text>No venues available</Text>
+            <Text>No venues available in this area</Text>
           )}
         </View>
       </Modalize>
