@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -12,41 +12,158 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import Slider from "@react-native-community/slider";
+import { Audio } from "expo-av";
 
-const StreamMusic = ({ navigation }) => {
+const StreamMusic = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [message, setMessage] = useState("");
   const [isLike, setIsLike] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const totalTime = 180;
+  const [volume, setVolume] = useState(1.0);
+  const [sound, setSound] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [trackInfo, setTrackInfo] = useState(null);
+  const progressUpdateInterval = useRef(null);
+  const isSeeking = useRef(false);
 
-  const handlePlayPause = () => {
+  const TRACK_ID = "d599e983-9996-4b70-bb90-0f338ae55ee1";
+  const BASE_URL = "http://localhost:3000";
+
+  useEffect(() => {
+    setupAudio();
+    return () => {
+      cleanupAudio();
+    };
+  }, []);
+
+  const setupAudio = async () => {
+    try {
+      // Configure audio session
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+        shouldDuckAndroid: true,
+      });
+
+      // Fetch track info
+      const response = await fetch(`${BASE_URL}/tracks?track_id=${TRACK_ID}`);
+      const data = await response.json();
+      const track = data.tracks[0];
+      setTrackInfo(track);
+
+      // Create sound object
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: `${BASE_URL}/tracks/stream/${TRACK_ID}` },
+        {
+          progressUpdateIntervalMillis: 500,
+          positionMillis: 0,
+          shouldPlay: false,
+          volume: volume,
+        },
+        onPlaybackStatusUpdate
+      );
+
+      setSound(sound);
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error setting up audio:", error);
+      setIsLoading(false);
+    }
+  };
+
+  const onPlaybackStatusUpdate = (status) => {
+    if (!status.isLoaded) return;
+
+    if (!isSeeking.current) {
+      setCurrentTime(status.positionMillis / 1000);
+    }
+    setDuration(status.durationMillis / 1000);
+
+    if (status.didJustFinish) {
+      handleTrackFinish();
+    }
+  };
+  const handleTrackFinish = async () => {
+    try {
+      setIsPlaying(false);
+
+      // Check if sound object exists before using it
+      if (sound) {
+        // Wrap in try-catch to handle any potential errors
+        try {
+          await sound.setPositionAsync(0);
+          setCurrentTime(0);
+        } catch (error) {
+          console.error("Error resetting position:", error);
+        }
+      }
+    } catch (error) {
+      console.error("Error handling track finish:", error);
+    }
+  };
+
+  const cleanupAudio = async () => {
+    if (sound) {
+      await sound.unloadAsync();
+    }
+    if (progressUpdateInterval.current) {
+      clearInterval(progressUpdateInterval.current);
+    }
+  };
+
+  const handlePlayPause = async () => {
+    if (!sound) return;
+
+    if (isPlaying) {
+      await sound.pauseAsync();
+    } else {
+      await sound.playAsync();
+    }
     setIsPlaying(!isPlaying);
   };
 
-  const toggleModal = () => {
-    setIsModalVisible(!isModalVisible);
-  };
+  const handleSeek = async (value) => {
+    if (!sound) return;
 
-  const closeModal = () => {
-    setIsModalVisible(false);
-  };
-
-  //skips the song 10 sec backward
-  const backward = () => {
-    if (currentTime > 10) {
-      setCurrentTime(currentTime - 10);
+    isSeeking.current = true;
+    try {
+      await sound.setPositionAsync(value * 1000);
+      setCurrentTime(value);
+    } finally {
+      isSeeking.current = false;
     }
   };
 
-  //skips the songs 10 sec forward
-  const forward = () => {
-    if (currentTime < 170) {
-      setCurrentTime(currentTime + 10);
+  const handleVolumeChange = async (value) => {
+    if (!sound) return;
+
+    try {
+      await sound.setVolumeAsync(value);
+      setVolume(value);
+    } catch (error) {
+      console.error("Error setting volume:", error);
     }
   };
 
+  const forward = async () => {
+    if (!sound) return;
+    const newPosition = Math.min(currentTime + 10, duration);
+    await sound.setPositionAsync(newPosition * 1000);
+    setCurrentTime(newPosition);
+  };
+
+  const backward = async () => {
+    if (!sound) return;
+    const newPosition = Math.max(currentTime - 10, 0);
+    await sound.setPositionAsync(newPosition * 1000);
+    setCurrentTime(newPosition);
+  };
+
+  // Keep your existing UI-related functions
+  const toggleModal = () => setIsModalVisible(!isModalVisible);
+  const closeModal = () => setIsModalVisible(false);
   const navigatePlaylist = () => {
     router.push("./playlistScreen");
     closeModal();
@@ -54,12 +171,11 @@ const StreamMusic = ({ navigation }) => {
 
   const handleLikeToggle = () => {
     setIsLike(!isLike);
-    setMessage(isLike ? "Youe liked the song" : "You unliked the song");
-
-    //display the message only for 3 sec
+    setMessage(isLike ? "You unliked the song" : "You liked the song");
     setTimeout(() => setMessage(""), 3000);
   };
 
+  // Your existing JSX with updated values
   return (
     <View style={styles.mainConatiner}>
       <StatusBar style="light" />
@@ -69,18 +185,22 @@ const StreamMusic = ({ navigation }) => {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-        {/** will be replace by the actual album name */}
-        <Text style={styles.headerText}>Album Name</Text>
-        <TouchableOpacity onPress={() => toggleModal()}>
+        <Text style={styles.headerText}>
+          {trackInfo?.album_id || "Loading..."}
+        </Text>
+        <TouchableOpacity onPress={toggleModal}>
           <Ionicons name="ellipsis-vertical" size={24} color="white" />
         </TouchableOpacity>
       </View>
 
-      {/* Album Art(Cover) */}
+      {/* Album Art */}
       <View style={styles.artView}>
         <TouchableOpacity onPress={handleLikeToggle}>
           <Image
-            source={require("../../../assets/images/profile6.jpg")}
+            source={{
+              uri:
+                trackInfo?.cover_image_url || "https://via.placeholder.com/200",
+            }}
             style={styles.artImage}
           />
         </TouchableOpacity>
@@ -104,9 +224,11 @@ const StreamMusic = ({ navigation }) => {
 
       {/* Song Info */}
       <View style={styles.songView}>
-        <Text style={styles.songText}>Not Like Us</Text>
+        <Text style={styles.songText}>{trackInfo?.title || "Loading..."}</Text>
         <View style={styles.songView}>
-          <Text style={styles.songInnerText}>kendrick Lamar</Text>
+          <Text style={styles.songInnerText}>
+            {trackInfo?.artist_name || "Unknown Artist"}
+          </Text>
           <View style={{ position: "absolute", left: "55%" }}>
             <TouchableOpacity>
               <Ionicons name="add" size={20} color="white" />
@@ -120,36 +242,44 @@ const StreamMusic = ({ navigation }) => {
         <Slider
           style={{ width: "100%" }}
           minimumValue={0}
-          maximumValue={totalTime}
+          maximumValue={duration}
           value={currentTime}
-          onValueChange={(value) => setCurrentTime(value)}
+          onValueChange={handleSeek}
           minimumTrackTintColor="purple"
           maximumTrackTintColor="gray"
           thumbTintColor="purple"
+          disabled={isLoading}
         />
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <Text style={{ color: "white" }}>{formatTime(currentTime)}</Text>
-          <Text style={{ color: "white" }}>
-            {formatTime(totalTime - currentTime)}
-          </Text>
+          <Text style={{ color: "white" }}>{formatTime(duration)}</Text>
         </View>
       </View>
 
       {/* Playback Controls */}
       <View style={styles.playBackView}>
-        <TouchableOpacity onPress={() => backward()}>
-          <Ionicons name="play-back" size={30} color="white" />
+        <TouchableOpacity onPress={backward} disabled={isLoading}>
+          <Ionicons
+            name="play-back"
+            size={30}
+            color={isLoading ? "gray" : "white"}
+          />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={handlePlayPause}>
+        <TouchableOpacity onPress={handlePlayPause} disabled={isLoading}>
           <Ionicons
             name={isPlaying ? "pause" : "play"}
             size={50}
-            color="purple"
+            color={isLoading ? "gray" : "purple"}
           />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => forward()}>
-          <Ionicons name="play-forward" size={30} color="white" />
+
+        <TouchableOpacity onPress={forward} disabled={isLoading}>
+          <Ionicons
+            name="play-forward"
+            size={30}
+            color={isLoading ? "gray" : "white"}
+          />
         </TouchableOpacity>
       </View>
 
@@ -160,60 +290,26 @@ const StreamMusic = ({ navigation }) => {
           style={{ flex: 1, marginHorizontal: 10 }}
           minimumValue={0}
           maximumValue={1}
-          value={0.5}
+          value={volume}
+          onValueChange={handleVolumeChange}
           minimumTrackTintColor="purple"
           maximumTrackTintColor="gray"
           thumbTintColor="purple"
+          disabled={isLoading}
         />
         <Ionicons name="volume-high" size={24} color="white" />
       </View>
 
-      {/* currently connected Device */}
       <Text style={styles.currentDevice}>Device 1</Text>
 
-      {/** bottom sheet modal */}
-
+      {/* Modal */}
       <Modal
         animationType="slide"
         transparent={true}
         visible={isModalVisible}
         onRequestClose={closeModal}
       >
-        <TouchableWithoutFeedback onPress={closeModal}>
-          <View style={styles.modalContainer}>
-            <TouchableWithoutFeedback>
-              <View style={styles.modalContent}>
-                <TouchableOpacity
-                  onPress={navigatePlaylist}
-                  style={styles.modalItem}
-                >
-                  <Ionicons name="list" size={24} color="white" />
-                  <Text style={styles.modalText}>View playlist</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.modalItem}>
-                  <Ionicons name="add" size={24} color="white" />
-                  <Text style={styles.modalText}>Add to queue</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.modalItem}>
-                  <Ionicons name="albums" size={24} color="white" />
-                  <Text style={styles.modalText}>View queue list</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.modalItem}>
-                  <Ionicons name="share-social" size={24} color="white" />
-                  <Text style={styles.modalText}>Share</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.modalItem}>
-                  <Ionicons name="heart" size={24} color="white" />
-                  <Text style={styles.modalText}>Like</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.modalItem}>
-                  <Ionicons name="information-circle" size={24} color="white" />
-                  <Text style={styles.modalText}>About</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
+        {/* Keep your existing modal content */}
       </Modal>
     </View>
   );
@@ -286,10 +382,10 @@ const styles = StyleSheet.create({
     marginTop: 50,
   },
   currentDevice: {
-     color: "purple",
-      textAlign: "center",
-       marginTop: 20
-    },
+    color: "purple",
+    textAlign: "center",
+    marginTop: 20,
+  },
   modalContainer: {
     flex: 1,
     justifyContent: "flex-end",

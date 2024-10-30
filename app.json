@@ -27,9 +27,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.basedmusic.mobile",
-      "permissions": [
-        "android.permission.INTERNET"
-      ]
+      "permissions": ["android.permission.INTERNET"]
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -46,6 +44,12 @@
       "react-native-email-link",
       "expo-document-picker",
       "expo-image-picker",
+      [
+        "expo-av",
+        {
+          "microphonePermission": false
+        }
+      ],
       [
         "@rnmapbox/maps",
         {
