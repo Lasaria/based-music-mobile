@@ -10,7 +10,7 @@ import {
   Image,
   StatusBar
 } from 'react-native';
-import { launchImageLibrary } from 'react-native-image-picker';
+import * as ImagePicker from 'expo-image-picker';
 import RNBlobUtil from 'react-native-blob-util';
 import { EventService } from '../../services/EventService';
 import { tokenManager } from '../../utils/tokenManager';
@@ -21,7 +21,7 @@ import uploadImage from '../../assets/icon/24x24/uploadImage.png';
 import calendar from '../../assets/icon/24x24/calendar.png';
 import { router } from 'expo-router';
 
-const serverURL = 'http://10.3.65.223:3000';
+const serverURL = 'http://10.3.65.248:3000';
 
 const VenueEventsScreen = () => {
   // State for event details
@@ -66,26 +66,36 @@ const VenueEventsScreen = () => {
 
   // Function to pick image
   const pickImage = async () => {
-    const options = {
-      mediaType: 'photo',
-      includeBase64: false,
-      quality: 1,
-    };
-
-    launchImageLibrary(options, (response) => {
-      if (response.didCancel) {
-        console.log('User cancelled image picker');
-      } else if (response.errorMessage) {
-        console.error('Image picker error: ', response.errorMessage);
-        setErrorMessage('Image picker error. Please try again.');
-      } else if (response.assets && response.assets.length > 0) {
-        const imageUri = response.assets[0].uri;
-        console.log('Selected image URI:', imageUri);
-        if (imageUri) {
-          setImageUri(imageUri);
-        }
+    try {
+      // Request permission first (required for iOS)
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (!permissionResult.granted) {
+        console.log('Permission to access media library was denied');
+        setErrorMessage('Permission to access photos was denied');
+        return;
       }
-    });
+  
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 1,
+        base64: false,
+      });
+  
+      if (!result.canceled) {
+        // In Expo's Image Picker, selected asset is in result.assets[0]
+        const imageUri = result.assets[0].uri;
+        console.log('Selected image URI:', imageUri);
+        setImageUri(imageUri);
+      } else {
+        console.log('User cancelled image picker');
+      }
+    } catch (error) {
+      console.error('Image picker error: ', error);
+      setErrorMessage('Image picker error. Please try again.');
+    }
   };
 
   const createEvent = async () => {

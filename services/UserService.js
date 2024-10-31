@@ -1,6 +1,6 @@
 import { axiosPost } from '../utils/axiosCalls';
 
-const serverURL = 'http://10.3.65.223:3000'
+const serverURL = 'http://10.3.65.248:3000'
 
 export const UserService = {
 

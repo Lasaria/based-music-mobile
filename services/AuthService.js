@@ -2,7 +2,7 @@
 import { axiosPost } from '../utils/axiosCalls';
 import { tokenManager } from '../utils/tokenManager';
 
-const serverURL = 'http://10.3.65.223:3001'
+const serverURL = 'http://10.3.65.248:3001'
 
 export const AuthService = {
 

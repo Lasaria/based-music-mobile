@@ -16,12 +16,12 @@ const VenueEventScreen = ({ }) => {
             {/* Upcoming Event Button */}
             <Button
                 title="Upcoming Event"
-                onPress={() => router.push('eventOptions/pastEvent')}
+                onPress={() => router.push('eventOptions/upcomingEvent')}
             />
             {/* Past Event Button */}
             <Button
                 title="Past Event"
-                onPress={() => router.push('eventOptions/upcomingEvent')}
+                onPress={() => router.push('eventOptions/pastEvent')}
             />
             <Button
                 title="Back"
