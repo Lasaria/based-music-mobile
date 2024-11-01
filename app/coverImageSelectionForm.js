@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import {
   StyleSheet,
   View,
@@ -10,17 +10,20 @@ import {
   Alert,
   Platform,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialIcons } from '@expo/vector-icons';
+import useProfileStore from '../zusStore/userFormStore';
+import { UserService } from '../services/UserService';
 
 const { width } = Dimensions.get('window');
 const COVER_ASPECT_RATIO = 16 / 9;
 const COVER_HEIGHT = width / COVER_ASPECT_RATIO;
 
-const CoverPhotoScreen = ({ route, navigation }) => {
-  const { profileData, selectedGenres, profileImage } = useLocalSearchParams();
-  const [coverImage, setCoverImage] = useState(null);
+const CoverPhotoScreen = () => {
+  const { coverImage, updateField } = useProfileStore();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
@@ -51,15 +54,15 @@ const CoverPhotoScreen = ({ route, navigation }) => {
         quality: 0.8,
       });
 
-      if (!result.canceled) {
-        setCoverImage(result.assets[0].uri);
+      if (!result.canceled && result.assets[0]?.uri) {
+        updateField('coverImage', result.assets[0].uri);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
 
-  const handleNext = () => {
+  const handleSubmit = () => {
     if (!coverImage) {
       Alert.alert(
         'No Cover Photo',
@@ -71,25 +74,26 @@ const CoverPhotoScreen = ({ route, navigation }) => {
           },
           {
             text: 'Continue',
-            onPress: () => navigateNext(),
+            onPress: submitProfile,
           },
         ]
       );
     } else {
-      navigateNext();
+      submitProfile();
     }
   };
 
-  const navigateNext = () => {
-    router.push({ 
-      pathname: 'addMultipleProfileImagesForm',
-      params: {
-        profileData,
-        selectedGenres,
-        profileImage,
-        coverImage,
-      }
-    });
+  const submitProfile = async () => {
+    setIsSubmitting(true);
+    try {
+      await UserService.setupUserProfile();
+      router.replace('profileCreationSuccess');
+    } catch (error) {
+      console.error('Profile creation error:', error);
+      Alert.alert('Error', 'Failed to create profile. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -139,7 +143,7 @@ const CoverPhotoScreen = ({ route, navigation }) => {
       {coverImage && (
         <TouchableOpacity 
           style={styles.removeButton} 
-          onPress={() => setCoverImage(null)}
+          onPress={() => updateField('coverImage', null)}
         >
           <MaterialIcons name="delete-outline" size={24} color="#ff3b30" />
           <Text style={styles.removeButtonText}>Remove Photo</Text>
@@ -148,15 +152,21 @@ const CoverPhotoScreen = ({ route, navigation }) => {
 
       <View style={styles.bottomContainer}>
         <TouchableOpacity
-          style={styles.nextButton}
-          onPress={handleNext}
+          style={styles.submitButton}
+          onPress={handleSubmit}
+          disabled={isSubmitting}
         >
-          <Text style={styles.nextButtonText}>Next</Text>
+          {isSubmitting ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.submitButtonText}>Create Profile</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {

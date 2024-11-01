@@ -1,120 +1,97 @@
-import { axiosPost } from '../utils/axiosCalls';
-import uriToBlob from '../utils/uriManager';
 
-const serverURL = 'http://localhost:3000'
+import { axiosPost } from '../utils/axiosCalls';
+import * as FileSystem from 'expo-file-system';
+import { Platform } from 'react-native';
+import { tokenManager } from '../utils/tokenManager';
+import { uploadImage } from '../utils/imageUploadManager';
+import useProfileStore from '../zusStore/userFormStore';
+import { AuthService } from './AuthService';
+
+const serverURL = 'http://localhost:3000';
 
 export const UserService = {
-
     setUserType: async (userType) => {
         try {
             const response = await axiosPost({
-              url: `${serverURL}/users/set-user-type`,
-              body: JSON.stringify({ userType: userType }),
-          });
+                url: `${serverURL}/users/set-user-type`,
+                body: JSON.stringify({ userType: userType }),
+            });
 
             console.log('User type updated successfully:', response);
-      
-          } catch (err) {
-              console.error('Error:', err.message);
-              throw new Error(err.message);
-          }
+        } catch (err) {
+            console.error('Error:', err.message);
+            throw new Error(err.message);
+        }
     },
 
-    setupUserProfile: async (userData) => {
+    setupUserProfile: async () => {
         try {
+            // Get all required data from store
             const {
-                profileData,
-                profileImage,
-                coverImage,
-                additionalPhotos,
-                selectedGenres
-            } = userData;
-            
-            const {
-                username,
-                displayname,
-                description,
-                location
-            } = profileData;
-
-            console.log("\n\nbody:  ", {
+                email,
+                password,
                 username,
                 displayname,
                 description,
                 location,
-                selectedGenres
-            })
-            
+                selectedGenres,
+                profileImage,
+                coverImage,
+                additionalPhotos,
+                userType
+            } = useProfileStore.getState();
+
+            // Extract genre names from genre objects
+            const genreNames = selectedGenres.map(genre => genre.name);
+
+            // Logging in here, finally, before setting up profile
+            await AuthService.signIn(email, password)
+
             // First API call: Send non-image data
             const profileResponse = await axiosPost({
                 url: `${serverURL}/users/setup-user-profile`,
                 method: "POST",
                 body: JSON.stringify({
                     username,
-                    display_name: displayname || '',  // Handle undefined with empty string
+                    display_name: displayname || '',
                     description: description || '',
                     user_location: location || '',
-                    selected_genres: Array.isArray(selectedGenres) ? selectedGenres.join(',') : selectedGenres
+                    selected_genres: genreNames.join(','),
+                    user_type: userType || ''
                 })
             });
     
             console.log("Basic profile data updated successfully", profileResponse);
-    
-            // Second API call: Upload profile image if it exists
-            if (profileImage?.startsWith('file://')) {
-                try {
-                    const profileBlob = await uriToBlob(profileImage);
-                    const profileImageFormData = new FormData();
-                    profileImageFormData.append('profileImage', profileBlob, 'profile-image.jpg');
-    
-                    await RNBlobUtil.fetch(
-                        'PATCH',
-                        `${serverURL}/artists/${profileResponse.data.userId}/profile-image`,
-                        {
-                            'Content-Type': 'multipart/form-data',
-                            Authorization: `Bearer ${await tokenManager.getAccessToken()}`,
-                        },
-                        [{
-                            name: 'profileImage',
-                            filename: 'profile.jpg',
-                            type: 'image/jpeg',
-                            data: RNBlobUtil.wrap(decodeURIComponent(profileImage.replace('file://', '')))
-                        }]
+
+            // Upload profile image
+            if (profileImage) {
+                await uploadImage(
+                    profileImage,
+                    `/users/upload-profile-image`,
+                    'profileImage'
+                );
+            }
+
+            // Upload cover image
+            if (coverImage) {
+                await uploadImage(
+                    coverImage,
+                    `/users/upload-cover-image`,
+                    'coverImage'
+                );
+            }
+
+            // Handle additional photos
+            if (additionalPhotos?.length > 0) {
+                const photosToUpload = additionalPhotos.filter(photo => photo !== profileImage);
+                for (const [index, photo] of photosToUpload.entries()) {
+                    await uploadImage(
+                        photo,
+                        `/users/upload-additional-profile-image`,
+                        `additionalProfileImage`
                     );
-                    console.log("Profile image uploaded successfully");
-                } catch (error) {
-                    console.error('Error uploading profile image:', error);
-                    throw new Error('Failed to upload profile image');
                 }
             }
-    
-            // Third API call: Upload cover image if it exists
-            // if (coverImage?.startsWith('file://')) {
-            //     try {
-            //         const coverBlob = await uriToBlob(coverImage);
-            //         const coverImageFormData = new FormData();
-            //         coverImageFormData.append('coverImage', coverBlob, 'cover-image.jpg');
-    
-            //         await RNBlobUtil.fetch(
-            //             'PATCH',
-            //             `${serverURL}/artists/${profileResponse.data.userId}/cover-image`,
-            //             {
-            //                 'Content-Type': 'multipart/form-data',
-            //                 Authorization: `Bearer ${await tokenManager.getAccessToken()}`,
-            //             },
-            //             [{
-            //                 name: 'coverImage',
-            //                 filename: 'cover.jpg',
-            //                 type: 'image/jpeg',
-            //                 data: RNBlobUtil.wrap(decodeURIComponent(coverImage.replace('file://', '')))
-            //             }]
-            //         );
-            //         console.log("Cover image uploaded successfully");
-            //     } catch (error) {
-            //         console.error('Error uploading cover image:', error);
-            //         throw new Error('Failed to upload cover image');
-            //     }
-            // }
     
             return profileResponse;
         } catch (err) {
@@ -122,5 +99,8 @@ export const UserService = {
             throw new Error(err.message || 'Error setting up profile');
         }
     }
+};
 
-}
+
+
+

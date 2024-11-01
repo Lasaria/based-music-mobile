@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
+import React from 'react';
+import { router } from 'expo-router';
 import {
   StyleSheet,
   View,
@@ -10,18 +10,19 @@ import {
   Alert,
   Platform,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialIcons } from '@expo/vector-icons';
-import { UserService } from '../services/UserService';
+import useProfileStore from '../zusStore/userFormStore';
 
-const MAX_PHOTOS = 3;
+const MAX_PHOTOS = 6;
 
-const AdditionalPhotosScreen = ({ route, navigation }) => {
-  const { profileData, selectedGenres, profileImage, coverImage } = useLocalSearchParams();
-  const [photos, setPhotos] = useState(Array(MAX_PHOTOS).fill(null));
-  const [isSubmitting, setIsSubmitting] = useState(false);
+const AdditionalPhotosScreen = () => {
+  const { 
+    additionalPhotos,
+    profileImage,
+    updateField
+  } = useProfileStore();
 
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
@@ -40,7 +41,7 @@ const AdditionalPhotosScreen = ({ route, navigation }) => {
     return true;
   };
 
-  const pickImage = async (index) => {
+  const pickImage = async () => {
     const hasPermissions = await requestPermissions();
     if (!hasPermissions) return;
 
@@ -53,61 +54,51 @@ const AdditionalPhotosScreen = ({ route, navigation }) => {
       });
 
       if (!result.canceled && result.assets[0]?.uri) {
-        addPhotoAtIndex(result.assets[0].uri, index);
+        if (additionalPhotos.length >= MAX_PHOTOS) {
+          Alert.alert('Maximum Photos', `You can only add up to ${MAX_PHOTOS} photos`);
+          return;
+        }
+        
+        const newPhotoUri = result.assets[0].uri;
+        updateField('additionalPhotos', [...additionalPhotos, newPhotoUri]);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
 
-  const addPhotoAtIndex = (uri, index) => {
-    if (!uri) return; // Don't add if uri is null or undefined
+  const removePhoto = (indexToRemove) => {
+    const newPhotos = additionalPhotos.filter((_, index) => index !== indexToRemove);
     
-    const newPhotos = [...photos];
-    newPhotos[index] = uri;
-    setPhotos(newPhotos);
-  };
-
-  const removePhoto = (index) => {
-    const newPhotos = [...photos];
-    newPhotos[index] = null;  // Use null consistently
-    setPhotos(newPhotos);
-  };
-
-  const handleSubmit = async () => {
-    // Filter out null values and ensure we have a clean array
-    const filteredPhotos = photos.filter(photo => photo !== null && photo !== undefined);
-    setIsSubmitting(true);
-  
-    try {
-      const userData = {
-        profileData: typeof profileData === 'string' ? JSON.parse(profileData) : profileData,
-        selectedGenres,
-        profileImage,
-        coverImage,
-        additionalPhotos: filteredPhotos, // This will now always be a clean array
-      };
-      
-      console.log('Submitting user data:', userData);
-      
-      await UserService.setupUserProfile(userData);
-  
-      router.replace({ 
-        pathname: 'profileCreationSuccess',
-        params: { profile: userData }
-      });
-    } catch (error) {
-      console.error('Profile creation error:', error);
-      Alert.alert('Error', 'Failed to create profile. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+    if (additionalPhotos[indexToRemove] === profileImage) {
+      updateField('profileImage', null);
     }
+    
+    updateField('additionalPhotos', newPhotos);
   };
 
-  const renderPhotoSlot = (index) => {
-    const photo = photos[index];
+  const toggleProfileImage = (photoUri) => {
+    updateField('profileImage', profileImage === photoUri ? null : photoUri);
+  };
 
+  const handleNext = () => {
+    if (additionalPhotos.length === 0) {
+      Alert.alert('Error', 'Please add at least one photo');
+      return;
+    }
+
+    if (!profileImage) {
+      Alert.alert('Error', 'Please select a profile photo by starring one of the images');
+      return;
+    }
+
+    router.push('coverImageSelectionForm');
+  };
+
+  const renderPhotoSlot = (photo, index) => {
     if (photo) {
+      const isProfilePhoto = profileImage === photo;
+
       return (
         <View style={styles.photoContainer}>
           <Image source={{ uri: photo }} style={styles.photo} />
@@ -118,58 +109,68 @@ const AdditionalPhotosScreen = ({ route, navigation }) => {
             >
               <MaterialIcons name="close" size={20} color="white" />
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.starButton, isProfilePhoto && styles.starButtonActive]}
+              onPress={() => toggleProfileImage(photo)}
+            >
+              <MaterialIcons 
+                name={isProfilePhoto ? "star" : "star-border"} 
+                size={24} 
+                color={isProfilePhoto ? "#FFD700" : "white"} 
+              />
+            </TouchableOpacity>
           </View>
         </View>
       );
     }
-
-    return (
-      <View style={styles.photoPlaceholder}>
-        <TouchableOpacity
-          style={styles.addPhotoButton}
-          onPress={() => pickImage(index)}
-        >
-          <MaterialIcons name="photo-library" size={32} color="#666" />
-          <Text style={styles.addPhotoText}>Choose from Gallery</Text>
-        </TouchableOpacity>
-      </View>
-    );
+    return null;
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.header}>Add More Photos</Text>
+        <Text style={styles.header}>Add Photos</Text>
         <Text style={styles.subHeader}>
-          Add up to {MAX_PHOTOS} photos to your profile
+          Add up to {MAX_PHOTOS} photos and star one as your profile photo
         </Text>
 
         <View style={styles.photoGrid}>
-          {Array(MAX_PHOTOS).fill(null).map((_, index) => (
+          {additionalPhotos.map((photo, index) => (
             <View key={index} style={styles.photoSlot}>
-              {renderPhotoSlot(index)}
+              {renderPhotoSlot(photo, index)}
             </View>
           ))}
+          
+          {additionalPhotos.length < MAX_PHOTOS && (
+            <View style={styles.photoSlot}>
+              <View style={styles.photoPlaceholder}>
+                <TouchableOpacity
+                  style={styles.addPhotoButton}
+                  onPress={pickImage}
+                >
+                  <MaterialIcons name="photo-library" size={32} color="#666" />
+                  <Text style={styles.addPhotoText}>Add Photo</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
 
         <Text style={styles.tip}>
-          Tip: Choose photos that show different aspects of yourself
+          Tip: Star your favorite photo to set it as your profile picture
         </Text>
       </ScrollView>
 
       <View style={styles.bottomContainer}>
         <TouchableOpacity
-          style={styles.submitButton}
-          onPress={handleSubmit}
-          disabled={isSubmitting}
+          style={[
+            styles.nextButton,
+            (additionalPhotos.length === 0 || !profileImage) && styles.nextButtonDisabled
+          ]}
+          onPress={handleNext}
+          disabled={additionalPhotos.length === 0 || !profileImage}
         >
-          {isSubmitting ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.submitButtonText}>
-              Create Profile
-            </Text>
-          )}
+          <Text style={styles.nextButtonText}>Next</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -201,13 +202,14 @@ const styles = StyleSheet.create({
   photoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     gap: 12,
     marginBottom: 24,
   },
   photoSlot: {
     width: '48%',
     aspectRatio: 4/5,
+    marginBottom: 12,
   },
   photoContainer: {
     flex: 1,
@@ -241,6 +243,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 8,
   },
   removeButton: {
     width: 28,
@@ -249,6 +254,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  starButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  starButtonActive: {
+    backgroundColor: 'rgba(0,0,0,0.7)',
   },
   tip: {
     fontSize: 14,
@@ -280,6 +296,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#cccccc',
   },
   submitButtonText: {
     color: '#ffffff',

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import {
   StyleSheet,
   View,
@@ -12,39 +12,42 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import useProfileStore from '../zusStore/userFormStore';
 
-const ProfileSetupScreen = ({ route, navigation }) => {
-  const { genreNames } = useLocalSearchParams();
-  const selectedGenres = genreNames;
-  const [formData, setFormData] = useState({
-    username: '',
-    displayName: '',
-    description: '',
-    location: '',
-  });
+const ProfileSetupScreen = () => {
+  const { 
+    username,
+    displayname,
+    description,
+    location,
+    selectedGenres,
+    updateField
+  } = useProfileStore();
+  
+  // Keep errors in local state as they're UI-specific
   const [errors, setErrors] = useState({});
 
   const validateForm = () => {
     let newErrors = {};
     
     // Username validation
-    if (!formData.username.trim()) {
+    if (!username.trim()) {
       newErrors.username = 'Username is required';
-    } else if (formData.username.length < 3) {
+    } else if (username.length < 3) {
       newErrors.username = 'Username must be at least 3 characters';
-    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+    } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
       newErrors.username = 'Username can only contain letters, numbers, and underscores';
     }
 
     // Display name validation
-    if (!formData.displayName.trim()) {
-      newErrors.displayName = 'Display name is required';
-    } else if (formData.displayName.length < 2) {
-      newErrors.displayName = 'Display name must be at least 2 characters';
+    if (!displayname.trim()) {
+      newErrors.displayname = 'Display name is required';
+    } else if (displayname.length < 2) {
+      newErrors.displayname = 'Display name must be at least 2 characters';
     }
 
     // Description validation (optional but with max length)
-    if (formData.description.length > 150) {
+    if (description.length > 150) {
       newErrors.description = 'Description must be less than 150 characters';
     }
 
@@ -54,16 +57,7 @@ const ProfileSetupScreen = ({ route, navigation }) => {
 
   const handleNext = () => {
     if (validateForm()) {
-      // Navigate to next screen with both genres and profile data
-      console.log("selectedGenres: ", selectedGenres)
-      console.log("form data", formData)
-      router.push({ 
-        pathname: 'profileImageSelectionForm', 
-        params: {
-          profileData: JSON.stringify(formData),
-          selectedGenres,
-        }
-      });
+      router.push('addMultipleProfileImagesForm');
     } else {
       Alert.alert(
         "Invalid Information",
@@ -90,9 +84,9 @@ const ProfileSetupScreen = ({ route, navigation }) => {
             <TextInput
               style={[styles.input, errors.username && styles.inputError]}
               placeholder="Enter username"
-              value={formData.username}
+              value={username}
               onChangeText={(text) => {
-                setFormData({ ...formData, username: text });
+                updateField('username', text);
                 if (errors.username) {
                   setErrors({ ...errors, username: null });
                 }
@@ -113,19 +107,19 @@ const ProfileSetupScreen = ({ route, navigation }) => {
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Display Name*</Text>
             <TextInput
-              style={[styles.input, errors.displayName && styles.inputError]}
+              style={[styles.input, errors.displayname && styles.inputError]}
               placeholder="Enter display name"
-              value={formData.displayName}
+              value={displayname}
               onChangeText={(text) => {
-                setFormData({ ...formData, displayName: text });
-                if (errors.displayName) {
-                  setErrors({ ...errors, displayName: null });
+                updateField('displayname', text);
+                if (errors.displayname) {
+                  setErrors({ ...errors, displayname: null });
                 }
               }}
               maxLength={50}
             />
-            {errors.displayName && (
-              <Text style={styles.errorText}>{errors.displayName}</Text>
+            {errors.displayname && (
+              <Text style={styles.errorText}>{errors.displayname}</Text>
             )}
             <Text style={styles.helperText}>
               This is how others will see you
@@ -142,9 +136,9 @@ const ProfileSetupScreen = ({ route, navigation }) => {
                 errors.description && styles.inputError
               ]}
               placeholder="Tell us about yourself"
-              value={formData.description}
+              value={description}
               onChangeText={(text) => {
-                setFormData({ ...formData, description: text });
+                updateField('description', text);
                 if (errors.description) {
                   setErrors({ ...errors, description: null });
                 }
@@ -158,7 +152,7 @@ const ProfileSetupScreen = ({ route, navigation }) => {
               <Text style={styles.errorText}>{errors.description}</Text>
             )}
             <Text style={styles.helperText}>
-              {formData.description.length}/150 characters
+              {description.length}/150 characters
             </Text>
           </View>
 
@@ -168,8 +162,8 @@ const ProfileSetupScreen = ({ route, navigation }) => {
             <TextInput
               style={styles.input}
               placeholder="Enter your location"
-              value={formData.location}
-              onChangeText={(text) => setFormData({ ...formData, location: text })}
+              value={location}
+              onChangeText={(text) => updateField('location', text)}
               maxLength={100}
             />
             <Text style={styles.helperText}>

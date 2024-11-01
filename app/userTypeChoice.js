@@ -2,14 +2,18 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { UserService } from "../services/UserService"
 import { router } from 'expo-router';
+import useProfileStore from '../zusStore/userFormStore';
 
 const UserTypeChoiceScreen = ({ }) => {
+  const { updateField } = useProfileStore();
+
   const handleUserTypeSelection = async (userType) => {
     console.log(userType)
     // Here you would typically save the user type to your app's state or backend
     try{
-      await UserService.setUserType(userType)
+      // await UserService.setUserType(userType)
       if(userType == 'artist') {
+        updateField('userType', 'artist');
         // TODO: This needs to be the route regardless if the type is listener or artist
         router.push('genreSelectionForm')
         return;

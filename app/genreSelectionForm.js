@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+
+// Updated GenreSelectionScreen
+import React, { useEffect } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
+
 import {
   StyleSheet,
   View,
@@ -9,40 +12,35 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
+import { tokenManager } from '../utils/tokenManager';
+import useProfileStore from '../zusStore/userFormStore';
 
 const MAX_SELECTIONS = 3;
 
-const GenreSelectionScreen = ({ navigation }) => {
-  const [selectedGenres, setSelectedGenres] = useState([]);
+const GenreSelectionScreen = () => {
+  const { selectedGenres, updateField } = useProfileStore();
+
+  // Initialize access token
+  useEffect(() => {
+    const initializeToken = async () => {
+      const token = await tokenManager.getAccessToken();
+      updateField('accessToken', token);
+    };
+    initializeToken();
+  }, []);
 
   const genres = [
     { id: '1', name: 'Pop' },
     { id: '2', name: 'Rock' },
-    { id: '3', name: 'Hip Hop/Rap' },
-    { id: '4', name: 'R&B/Soul' },
-    { id: '5', name: 'Electronic/Dance' },
-    { id: '6', name: 'Jazz' },
-    { id: '7', name: 'Classical' },
-    { id: '8', name: 'Country' },
-    { id: '9', name: 'Latin' },
-    { id: '10', name: 'Blues' },
-    { id: '11', name: 'Reggae' },
-    { id: '12', name: 'Folk' },
-    { id: '13', name: 'Metal' },
-    { id: '14', name: 'Indie' },
-    { id: '15', name: 'Alternative' },
-    { id: '16', name: 'Gospel' },
-    { id: '17', name: 'World Music' },
-    { id: '18', name: 'Funk' },
-    { id: '19', name: 'Punk' },
-    { id: '20', name: 'K-Pop' },
+    // ... rest of the genres array
   ];
 
   const handleGenreSelect = (genre) => {
     const isSelected = selectedGenres.some(g => g.id === genre.id);
     
     if (isSelected) {
-      setSelectedGenres(selectedGenres.filter(g => g.id !== genre.id));
+      const updatedGenres = selectedGenres.filter(g => g.id !== genre.id);
+      updateField('selectedGenres', updatedGenres);
     } else {
       if (selectedGenres.length >= MAX_SELECTIONS) {
         Alert.alert(
@@ -51,7 +49,7 @@ const GenreSelectionScreen = ({ navigation }) => {
         );
         return;
       }
-      setSelectedGenres([...selectedGenres, genre]);
+      updateField('selectedGenres', [...selectedGenres, genre]);
     }
   };
 
@@ -63,13 +61,8 @@ const GenreSelectionScreen = ({ navigation }) => {
       );
       return;
     }
-    const genreNames = selectedGenres.map(genre => genre.name);
-    console.log("selectedGenres right after selection", genreNames)
-    // You can pass the selected genres to the next screen
-    router.push({ 
-        pathname: 'userBasicInfoForm', 
-        params: { genreNames }
-      });
+    
+    router.push('userBasicInfoForm');
   };
 
   const renderGenreItem = ({ item }) => {
@@ -138,6 +131,7 @@ const GenreSelectionScreen = ({ navigation }) => {
     </SafeAreaView>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {

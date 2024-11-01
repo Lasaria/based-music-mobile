@@ -1,13 +1,58 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 const SuccessModal = ({ visible, onClose }) => {
+  const handleNext = async () => {
+    try {
+      console.log("Attempting to navigate...");
+      
+      // First close the modal
+      if (onClose) {
+        console.log("Closing modal...");
+        onClose();
+      }
+
+      // Small delay to ensure modal closes properly
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      console.log("Navigating to home...");
+      
+      // Try different navigation approaches
+      try {
+        // Option 1: Using router.replace
+        router.replace('/(tabs)');
+      } catch (error) {
+        console.error("First navigation attempt failed:", error);
+        
+        try {
+          // Option 2: Using router.push
+          router.push('/(tabs)');
+        } catch (error) {
+          console.error("Second navigation attempt failed:", error);
+          
+          // Option 3: Basic path
+          router.replace('/');
+        }
+      }
+    } catch (error) {
+      console.error("Navigation error:", error);
+    }
+  };
+
+  const handlePress = () => {
+    console.log("Button pressed");
+    handleNext();
+  };
+
   return (
     <Modal
       visible={visible}
       transparent
       statusBarTranslucent
+      animationType="fade"
+      onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
@@ -23,7 +68,8 @@ const SuccessModal = ({ visible, onClose }) => {
 
           <TouchableOpacity
             style={styles.button}
-            onPress={onClose}
+            onPress={handlePress}
+            activeOpacity={0.7}
           >
             <Text style={styles.buttonText}>Go to Home</Text>
           </TouchableOpacity>
@@ -80,6 +126,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     borderRadius: 12,
     width: '100%',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
   },
   buttonText: {
     color: 'white',
