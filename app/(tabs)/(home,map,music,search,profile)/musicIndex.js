@@ -11,7 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import Style from "../../../style";
-import AudioPlayer from "./audioPlayer";
+import AudioPlayer from "../../../components/audioPlayer";
 
 function MusicScreen() {
   const router = useRouter();
