@@ -534,23 +534,7 @@ function MusicScreen() {
       </View>
 
       {/* Always render the AudioPlayer but hide it when not playing */}
-      <View
-        style={{
-          position: "absolute",
-          bottom: 50,
-          left: 0,
-          right: 0,
-          paddingHorizontal: 10,
-          opacity: isPlaying ? 1 : 0,
-          height: isPlaying ? "auto" : 0,
-        }}
-      >
-        <AudioPlayer
-          isPlaying={isPlaying}
-          onPlayPause={handlePlayPause}
-          onReady={handlePlayerReady}
-        />
-      </View>
+
     </View>
   );
 }
