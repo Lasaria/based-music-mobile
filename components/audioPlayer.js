@@ -15,7 +15,7 @@ const AudioPlayer = () => {
   };
 
   // Do not render the AudioPlayer if the player is not ready
-  if ((!isPlayerReady && !trackInfo) || pathname === "/streamMusic") {
+  if ((!isPlayerReady && !trackInfo) || pathname === "/streamMusic"|| pathname === "/signIn") {
     return null;
   }
 console.log("trackInfo CoverURL", trackInfo?.cover_image_url);

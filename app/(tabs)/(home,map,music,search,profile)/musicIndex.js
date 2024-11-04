@@ -1,45 +1,159 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   TextInput,
-  ScrollView,
   Image,
   StyleSheet,
-  Button,
-  Animated,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import Style from "../../../style";
 import { FlatList } from "react-native-gesture-handler";
-import { color } from "react-native-elements/dist/helpers";
+import { axiosGet } from "../../../utils/axiosCalls";
+import { tokenManager } from "../../../utils/tokenManager";
+
+const MAIN_SERVER_URL = "http://localhost:3000";
 
 function MusicScreen() {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState("My Library");
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isPlayerReady, setIsPlayerReady] = useState(false);
+  const [contentType, setContentType] = useState("playlist");
+  const [libraryData, setLibraryData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [userId, setUserId] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [lastEvaluatedKey, setLastEvaluatedKey] = useState(null);
   const [isPlaylist, setIsPlaylist] = useState(true);
   const [isSongs, setIsSongs] = useState(false);
   const [isAlbums, setIsAlbums] = useState(false);
-  const [isUploads, setIsUploads] = useState(false);
+  const [isArtists, setIsArtists] = useState(false);
 
-  const handlePlayPause = (playing) => {
-    console.log("Play/Pause handled:", playing);
-    setIsPlaying(playing);
+  // Get user ID on component mount
+  useEffect(() => {
+    const getUserId = async () => {
+      try {
+        const id = await tokenManager.getUserId();
+        setUserId(id);
+      } catch (err) {
+        console.error("Error getting user ID:", err);
+        setError("Failed to get user ID");
+      }
+    };
+    getUserId();
+  }, []);
+
+  // Fetch library data
+
+  const fetchLibraryData = async (resetData = false) => {
+    if (!userId || loading || (!hasMore && !resetData)) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const queryParams = new URLSearchParams({
+        limit: "50",
+      });
+
+      // Only add type if it's not 'all'
+      if (contentType !== "all") {
+        queryParams.append("type", contentType);
+      }
+
+      if (!resetData && lastEvaluatedKey) {
+        queryParams.append("lastEvaluatedKey", lastEvaluatedKey);
+      }
+
+      const response = await axiosGet({
+        url: `${MAIN_SERVER_URL}/library/${userId}?${queryParams.toString()}`,
+        isAuthenticated: true,
+      });
+
+      setLibraryData((prev) =>
+        resetData ? response.items : [...prev, ...response.items]
+      );
+      setLastEvaluatedKey(response.lastEvaluatedKey);
+      setHasMore(response.hasMore);
+    } catch (err) {
+      console.error("Error fetching library:", err);
+      setError(err.data?.error || "Failed to load library");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handlePlayerReady = () => {
-    setIsPlayerReady(true);
+  // Initial fetch when userId is available
+  useEffect(() => {
+    if (userId) {
+      fetchLibraryData(true);
+    }
+  }, [userId, contentType]);
+
+  const renderLibraryItem = ({ item }) => {
+    const getSubtitle = () => {
+      switch (item.content_type) {
+        case "playlist":
+          return `${item.track_count || 0} songs • ${
+            item.total_duration || 0
+          } min`;
+        case "song":
+          return `${item.artist_name} • ${Math.floor(item.duration / 60)}:${(
+            item.duration % 60
+          )
+            .toString()
+            .padStart(2, "0")}`;
+        case "album":
+          return `${item.artist_name} • ${item.track_count} tracks`;
+        case "artist":
+          return `${item.total_albums || 0} albums • ${
+            item.total_tracks || 0
+          } tracks`;
+        default:
+          return "";
+      }
+    };
+
+    return (
+      <View style={styles.libraryItem}>
+        <Image
+          source={{
+            uri: item.cover_image_url || "https://via.placeholder.com/50",
+          }}
+          style={[
+            styles.itemImage,
+            item.content_type === "artist" && styles.artistImage,
+          ]}
+        />
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemTitle}>{item.title || item.artist_name}</Text>
+          <Text style={styles.itemSubtitle}>{getSubtitle()}</Text>
+        </View>
+        <TouchableOpacity onPress={() => handlePlay(item)}>
+          <Ionicons
+            name={item.content_type === "artist" ? "chevron-forward" : "play"}
+            size={24}
+            color="white"
+          />
+        </TouchableOpacity>
+      </View>
+    );
   };
 
-  const handlePlayButtonPress = () => {
-    if (isPlayerReady) {
-      setIsPlaying(!isPlaying);
-    } else {
-      console.log("Player not ready yet");
+  const handlePlay = (item) => {
+    if (item.content_type === "song") {
+      router.push({
+        pathname: "/streamMusic",
+        params: { trackId: item.track_id },
+      });
+    } else if (item.content_type === "artist") {
+      router.push({
+        pathname: "/artistDetail",
+        params: { artistId: item.artist_id },
+      });
     }
   };
 
@@ -47,481 +161,175 @@ function MusicScreen() {
     setIsPlaylist(true);
     setIsSongs(false);
     setIsAlbums(false);
-    setIsUploads(false);
+    setIsArtists(false);
+    setContentType("playlist");
+    setLastEvaluatedKey(null); // Reset pagination
+    setHasMore(true);
   };
 
   const displaySongs = () => {
     setIsPlaylist(false);
-    setIsAlbums(false);
-    setIsUploads(false);
     setIsSongs(true);
-   
+    setIsAlbums(false);
+    setIsArtists(false);
+    setContentType("song");
+    setLastEvaluatedKey(null);
+    setHasMore(true);
   };
 
   const displayAlbums = () => {
+    setIsPlaylist(false);
+    setIsSongs(false);
     setIsAlbums(true);
-    setIsSongs(false);
-    setIsPlaylist(false);
-    setIsUploads(false);
+    setIsArtists(false);
+    setContentType("album");
+    setLastEvaluatedKey(null);
+    setHasMore(true);
   };
 
-  const displayUploads = () => {
-    setIsUploads(true);
+  const displayArtists = () => {
+    setIsPlaylist(false);
+    setIsSongs(false);
     setIsAlbums(false);
-    setIsSongs(false);
-    setIsPlaylist(false);
+    setIsArtists(true);
+    setContentType("artist");
+    setLastEvaluatedKey(null);
+    setHasMore(true);
   };
-
-  const playlist = [
-    {
-      id: "1",
-      title: "Favorites",
-      num: 6,
-      duration: "3:24",
-      profileImage: require("../../../assets/images/profile1.png"),
-    },
-    {
-      id: "2",
-      title: "English pop",
-      num: 4,
-      duration: "2:24",
-      profileImage: require("../../../assets/images/profile2.jpg"),
-    },
-    {
-      id: "3",
-      title: "Only for me",
-      num: 3,
-      duration: "3:26",
-      profileImage: require("../../../assets/images/profile3.jpg"),
-    },
-    {
-      id: "4",
-      title: "My daily playlist",
-      num: 8,
-      duration: "4:20",
-      profileImage: require("../../../assets/images/profile4.jpg"),
-    },
-    {
-      id: "5",
-      title: "Best friend",
-      num: 2,
-      duration: "4:50",
-      profileImage: require("../../../assets/images/profile5.jpg"),
-    },
-    {
-      id: "6",
-      title: "Beach",
-      num: 620,
-      duration: "3:47",
-      profileImage: require("../../../assets/images/profile6.jpg"),
-    },
-  ];
-
-  const songs = [
-    {
-      id: "1",
-      title: "Eat your young",
-      artistName:"Drake",
-      duration: "3:24",
-      profileImage: require("../../../assets/images/profile1.png"),
-    },
-    {
-      id: "2",
-      title: "Little things",
-      artistName:"Sabrina Carpenter",
-      duration: "2:24",
-      profileImage: require("../../../assets/images/profile2.jpg"),
-    },
-    {
-      id: "3",
-      title: "Only you",
-      artistName:"Kendrick Lamar",
-      duration: "3:26",
-      profileImage: require("../../../assets/images/profile3.jpg"),
-    },
-    {
-      id: "4",
-      title: "Trash",
-      artistName:"Kanye West",
-      duration: "4:20",
-      profileImage: require("../../../assets/images/profile4.jpg"),
-    },
-    {
-      id: "5",
-      title: "Best friend",
-      artistName:"Anuv Jain",
-      duration: "4:50",
-      profileImage: require("../../../assets/images/profile5.jpg"),
-    },
-    {
-      id: "6",
-      title: "Beach",
-      artistName:"Travis Scott",
-      duration: "3:47",
-      profileImage: require("../../../assets/images/profile6.jpg"),
-    },
-  ];
-
-  const albums = [
-    {
-      id: "1",
-      title: "Eat your young",
-      artistName:"Drake",
-     tracks: 10,
-      profileImage: require("../../../assets/images/profile1.png"),
-    },
-    {
-      id: "2",
-      title: "Little things",
-      artistName:"Sabrina Carpenter",
-      tracks: 22,
-      profileImage: require("../../../assets/images/profile5.jpg"),
-    },
-    {
-      id: "3",
-      title: "Only you",
-      artistName:"Kendrick Lamar",
-      tracks: 11,
-      profileImage: require("../../../assets/images/profile3.jpg"),
-    },
-    {
-      id: "4",
-      title: "Trash",
-      artistName:"Kanye West",
-      tracks: 5,
-      profileImage: require("../../../assets/images/profile2.jpg"),
-    },
-    {
-      id: "5",
-      title: "Best friend",
-      artistName:"Anuv Jain",
-      tracks: 13,
-      profileImage: require("../../../assets/images/profile5.jpg"),
-    },
-    {
-      id: "6",
-      title: "Beach",
-      artistName:"Travis Scott",
-      tracks: 19,
-      profileImage: require("../../../assets/images/profile6.jpg"),
-    },
-  ];
-
-
-  const renderList = ({ item }) => {
-    return (
-      <View style={{ flex: 1,  }}>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginVertical: 10,
-            marginLeft:10,
-          }}
-        >
-          <Image
-            source={item.profileImage}
-            style={{ borderRadius: 12, width: 50, height: 50 , marginRight:10}}
-          />
-          <View style={{ marginLeft: 10, marginVertical:10,  }}>
-            <Text style={{ color: "white", paddingVertical:5 }}>{item.title}</Text>
-            <Text style={{ color: "white" }}>
-              {item.num}# of songs • {item.duration} min 
-            </Text>
-          </View>
-          <Ionicons name="play" size={24} color="white" style={{position:'absolute', right:20}} />
-        </View>
-      </View>
-    );
-  };
-
-  const renderSongs = ({ item }) => {
-    return (
-      <View style={{ flex: 1}}>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginVertical: 10,
-            marginLeft:10,
-          }}
-        >
-          <Image
-            source={item.profileImage}
-            style={{ borderRadius: 12, width: 50, height: 50 , marginRight:10}}
-          />
-          <View style={{ marginLeft: 10, marginVertical:10,  }}>
-            <Text style={{ color: "white", paddingVertical:5 }}>{item.title}</Text>
-            <Text style={{ color: "white" }}>
-              {item.artistName} • {item.duration} sec
-            </Text>
-          </View>
-
-          <Ionicons name="play" size={24} color="white" style={{position:'absolute', right:20}} />
-        </View>
-      </View>
-    );
-  };
-
-  const renderAlbums = ({ item }) => {
-    return (
-      <View style={{ flex: 1}}>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginVertical: 10,
-            marginLeft:10,
-          }}
-        >
-          <Image
-            source={item.profileImage}
-            style={{ borderRadius: 12, width: 50, height: 50 , marginRight:10}}
-          />
-          <View style={{ marginLeft: 10, marginVertical:10,  }}>
-            <Text style={{ color: "white", paddingVertical:5 }}>{item.title}</Text>
-            <Text style={{ color: "white" }}>
-              {item.artistName} • {item.tracks} tracks
-            </Text>
-          </View>
-          <Ionicons name="play" size={24} color="white" style={{position:'absolute', right:20}} />
-        </View>
-      </View>
-    );
-  };
-
   const renderMyLibrary = () => (
-    <View>
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 20,
-          paddingHorizontal: 10,
-        }}
-      >
-        <Text
-          style={{
-            color: "white",
-            fontSize: 24,
-            fontWeight: "bold",
-            marginRight: 240,
-          }}
-        >
-          My Library
-        </Text>
-        <Ionicons name="settings-outline" size={24} color="white" />
+    <View style={styles.libraryContainer}>
+      <View style={styles.libraryHeader}>
+        <Text style={styles.libraryTitle}>My Library</Text>
+        <TouchableOpacity>
+          <Ionicons name="settings-outline" size={24} color="white" />
+        </TouchableOpacity>
       </View>
 
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          backgroundColor: "#333",
-          borderRadius: 10,
-          padding: 8,
-          marginBottom: 10,
-        }}
-      >
-        <Ionicons
-          name="search"
-          size={20}
-          color="gray"
-          style={{ marginRight: 8 }}
-        />
+      <View style={styles.searchBar}>
+        <Ionicons name="search" size={20} color="gray" />
         <TextInput
           placeholder="Search"
           placeholderTextColor="gray"
-          style={{ color: "white", flex: 1 }}
+          style={styles.searchInput}
         />
       </View>
 
-      <View
-        style={styles.container}
-      >
+      <View style={styles.filterContainer}>
         <TouchableOpacity
           onPress={displayPlaylist}
-          style={[styles.touchable, {borderColor: isPlaylist?"purple" :"white"}]}
+          style={[
+            styles.filterButton,
+            { borderColor: isPlaylist ? "purple" : "white" },
+          ]}
         >
           <Text
-            style={{
-              textAlign: "center",
-              color: isPlaylist ? "purple" : "white",
-              fontSize: 14,
-              fontWeight: "500",
-            }}
+            style={[
+              styles.filterText,
+              { color: isPlaylist ? "purple" : "white" },
+            ]}
           >
-            Playlist
+            Playlists
           </Text>
         </TouchableOpacity>
+
         <TouchableOpacity
-              style={[styles.touchable, {borderColor: isSongs?"purple" :"white"}]}
-              onPress={ displaySongs}
+          onPress={displaySongs}
+          style={[
+            styles.filterButton,
+            { borderColor: isSongs ? "purple" : "white" },
+          ]}
         >
           <Text
-            style={{
-              textAlign: "center",
-              color: isSongs ? "purple" : "white",
-              fontSize: 14,
-              fontWeight: "500",
-            }}
+            style={[styles.filterText, { color: isSongs ? "purple" : "white" }]}
           >
             Songs
           </Text>
         </TouchableOpacity>
+
         <TouchableOpacity
-          style={[styles.touchable, {borderColor: isAlbums?"purple" :"white"}]}
           onPress={displayAlbums}
+          style={[
+            styles.filterButton,
+            { borderColor: isAlbums ? "purple" : "white" },
+          ]}
         >
           <Text
-            style={{
-              textAlign: "center",
-              color: isAlbums ? "purple" : "white",
-              fontSize: 14,
-              fontWeight: "500",
-            }}
+            style={[
+              styles.filterText,
+              { color: isAlbums ? "purple" : "white" },
+            ]}
           >
             Albums
           </Text>
         </TouchableOpacity>
+
         <TouchableOpacity
-         style={[styles.touchable, {borderColor: isUploads?"purple" :"white"}, {width:67}]}
-         onPress={() => displayUploads}
+          onPress={displayArtists}
+          style={[
+            styles.filterButton,
+            { borderColor: isArtists ? "purple" : "white" },
+          ]}
         >
           <Text
-            style={{
-              textAlign: "center",
-              color: isUploads ? "purple" : "white",
-              fontSize: 14,
-              fontWeight: "500",
-            }}
+            style={[
+              styles.filterText,
+              { color: isArtists ? "purple" : "white" },
+            ]}
           >
-            Uploads
+            Artists
           </Text>
         </TouchableOpacity>
       </View>
 
-      {isPlaylist ? (
-        <>
-          <Text style={styles.currentScreenText}>Playlist</Text>
-          <FlatList
-            data={playlist}
-            renderItem={renderList}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={{paddingBottom:100}}
-          />
-        </>
-      ) : isSongs? (
-        <>
-        <Text style={styles.currentScreenText}>
-          Songs
-          </Text>
-          <FlatList
-          data={songs}
-          renderItem={renderSongs}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{paddingBottom:100}}
-          />
-        </>
-      ): isAlbums? (
-        <>
-        <Text style={styles.currentScreenText}>
-          Albums
-          </Text>
-          <FlatList
-          data={albums}
-          renderItem={renderAlbums}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{paddingBottom:100}}
-          />
-        </>
-      ): null}
-
-      
-
-      {/* <ScrollView style={{ marginBottom: 70 }}>
-        <Button
-          title={isPlaying ? "Stop Test Track" : "Play Test Track"}
-          onPress={handlePlayButtonPress}
-          disabled={!isPlayerReady}
+      {error ? (
+        <Text style={styles.errorText}>{error}</Text>
+      ) : (
+        <FlatList
+          data={libraryData}
+          renderItem={renderLibraryItem}
+          keyExtractor={(item) => `${item.content_type}-${item.content_id}`}
+          onEndReached={() => hasMore && fetchLibraryData()}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={() =>
+            loading && (
+              <ActivityIndicator color="purple" style={styles.loader} />
+            )
+          }
+          contentContainerStyle={styles.listContainer}
         />
-        {!isPlayerReady && (
-          <Text style={{ color: "gray", textAlign: "center", marginTop: 10 }}>
-            Loading audio player...
-          </Text>
-        )}
-      </ScrollView> */}
+      )}
     </View>
   );
 
-  const renderForYou = () => (
-    <ScrollView style={{ paddingHorizontal: 15, marginBottom: 70 }}>
-      <Text style={{ color: "white", fontSize: 18, marginBottom: 20 }}>
-        For You content coming soon...
-      </Text>
-    </ScrollView>
-  );
-
   return (
-    <View style={[Style.container, { backgroundColor: "#000", flex: 1 }]}>
-      <View
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: "#000",
-          zIndex: 1,
-          paddingTop: 60,
-          paddingBottom: 20,
-        }}
-      >
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "center",
-          }}
-        >
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[
-              {
-                paddingVertical: 8,
-                paddingHorizontal: 20,
-                borderRadius: 20,
-                backgroundColor:
-                  selectedTab === "My Library" ? "purple" : "#fff",
-                marginRight: 5,
-              },
+              styles.tab,
+              selectedTab === "My Library" && styles.activeTab,
             ]}
             onPress={() => setSelectedTab("My Library")}
           >
             <Text
-              style={{
-                color: selectedTab === "My Library" ? "#fff" : "#000",
-                fontWeight: "bold",
-              }}
+              style={[
+                styles.tabText,
+                selectedTab === "My Library" && styles.activeTabText,
+              ]}
             >
               MY LIBRARY
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[
-              {
-                paddingVertical: 8,
-                paddingHorizontal: 20,
-                borderRadius: 20,
-                backgroundColor: selectedTab === "For You" ? "purple" : "#fff",
-                marginLeft: 5,
-              },
-            ]}
+            style={[styles.tab, selectedTab === "For You" && styles.activeTab]}
             onPress={() => setSelectedTab("For You")}
           >
             <Text
-              style={{
-                color: selectedTab === "For You" ? "#fff" : "#000",
-                fontWeight: "bold",
-              }}
+              style={[
+                styles.tabText,
+                selectedTab === "For You" && styles.activeTabText,
+              ]}
             >
               FOR YOU
             </Text>
@@ -529,31 +337,142 @@ function MusicScreen() {
         </View>
       </View>
 
-      <View style={{ paddingTop: 120, flex: 1 }}>
-        {selectedTab === "My Library" ? renderMyLibrary() : renderForYou()}
-      </View>
-
-      {/* Always render the AudioPlayer but hide it when not playing */}
-
+      {selectedTab === "My Library" ? (
+        renderMyLibrary()
+      ) : (
+        <View style={styles.forYouContainer}>
+          <Text style={styles.comingSoonText}>
+            For You content coming soon...
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  currentScreenText:{ color: "white", padding: 10, fontSize:18, fontWeight:'500' },
   container: {
-    marginHorizontal: 20,
-    margin: 10,
+    flex: 1,
+    backgroundColor: "#000",
+  },
+  header: {
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: "#000",
+    zIndex: 1,
+  },
+  tabContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: "#fff",
+    marginHorizontal: 5,
+  },
+  activeTab: {
+    backgroundColor: "purple",
+  },
+  tabText: {
+    color: "#000",
+    fontWeight: "bold",
+  },
+  activeTabText: {
+    color: "#fff",
+  },
+  libraryContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  libraryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
   },
-  touchable:{
+  libraryTitle: {
+    color: "white",
+    fontSize: 24,
+    fontWeight: "bold",
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#333",
+    borderRadius: 10,
+    padding: 8,
+    marginBottom: 10,
+  },
+  searchInput: {
+    color: "white",
+    flex: 1,
+    marginLeft: 8,
+  },
+  filterContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginVertical: 10,
+  },
+  filterButton: {
     borderRadius: 10,
     borderWidth: 1,
     padding: 5,
-    width: 60,
-    height: 30,
-  }
-})
+    minWidth: 60,
+    alignItems: "center",
+  },
+  filterText: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  libraryItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 10,
+  },
+  itemImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+  },
+  artistImage: {
+    borderRadius: 25, // Make artist images circular
+  },
+  itemInfo: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  itemTitle: {
+    color: "white",
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  itemSubtitle: {
+    color: "gray",
+    fontSize: 14,
+  },
+  listContainer: {
+    paddingBottom: 100,
+  },
+  loader: {
+    marginVertical: 20,
+  },
+  errorText: {
+    color: "red",
+    textAlign: "center",
+    marginTop: 20,
+  },
+  forYouContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  comingSoonText: {
+    color: "white",
+    fontSize: 18,
+  },
+});
 
 export default MusicScreen;

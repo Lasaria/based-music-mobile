@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,21 +7,44 @@ import {
   StyleSheet,
   Modal,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AudioContext } from "../contexts/AudioContext";
 import { useRouter } from "expo-router";
 import Slider from "@react-native-community/slider";
 import { StatusBar } from "expo-status-bar";
+import { axiosPost, axiosGet, axiosDelete } from "../utils/axiosCalls";
+import { tokenManager } from "../utils/tokenManager";
 
 const { width, height } = Dimensions.get("window");
+const MAIN_SERVER_URL = "http://localhost:3000";
+
+const decodeJWT = (token) => {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map(function (c) {
+          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error("[StreamMusic] Error decoding JWT:", error);
+    return null;
+  }
+};
 
 const StreamMusic = () => {
   const {
     isPlaying,
     togglePlayPause,
     trackInfo,
-    error,
+    error: playerError,
     isPlayerReady,
     currentTime,
     duration,
@@ -33,16 +56,139 @@ const StreamMusic = () => {
   } = useContext(AudioContext);
 
   const router = useRouter();
+  const [userId, setUserId] = useState(null);
   const [isLike, setIsLike] = useState(false);
+  const [isLikeLoading, setIsLikeLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [localSliderValue, setLocalSliderValue] = useState(null);
   const [isSeeking, setIsSeeking] = useState(false);
 
-  const handleLikeToggle = () => {
-    setIsLike(!isLike);
-    setMessage(isLike ? "You unliked the song" : "You liked the song");
-    setTimeout(() => setMessage(""), 3000);
+  useEffect(() => {
+    const getUserId = async () => {
+      try {
+        const userid = await tokenManager.getUserId();
+        setUserId(userid);
+      } catch (error) {
+        console.error("[StreamMusic] Error getting user ID:", error);
+      }
+    };
+    getUserId();
+  }, []);
+
+  useEffect(() => {
+    console.log("[StreamMusic] Track Info updated:", trackInfo);
+  }, [trackInfo]);
+
+  useEffect(() => {
+    const checkLibraryStatus = async () => {
+      if (!trackInfo) {
+        console.log("[StreamMusic] No track info available");
+        return;
+      }
+
+      const trackId = trackInfo.track_id;
+      if (!trackId || !userId) {
+        console.log("[StreamMusic] Missing required data:", {
+          trackId,
+          userId,
+        });
+        return;
+      }
+
+      try {
+        console.log("[StreamMusic] Checking library status for:", {
+          userId,
+          trackId,
+        });
+
+        // Fix 1: Construct URL with query params explicitly
+        const response = await axiosGet({
+          url: `${MAIN_SERVER_URL}/library/${userId}/check?contentId=${trackId}`,
+          isAuthenticated: true,
+        });
+
+        // Alternative Fix 2: If using params object
+        /*
+      const response = await axiosGet({
+        url: `${MAIN_SERVER_URL}/library/${userId}/check`,
+        params: {
+          contentId: trackId
+        },
+        paramsSerializer: params => {
+          return `contentId=${params.contentId}`;
+        },
+        isAuthenticated: true,
+      });
+      */
+
+        console.log("[StreamMusic] Library check response:", response);
+        setIsLike(response.exists);
+      } catch (err) {
+        console.error("[StreamMusic] Error checking library status:", err);
+        console.error("[StreamMusic] Error details:", {
+          trackId,
+          userId,
+          error: err.message,
+        });
+      }
+    };
+
+    checkLibraryStatus();
+  }, [trackInfo, userId]);
+
+  const handleLikeToggle = async () => {
+    if (!trackInfo || !userId) {
+      setMessage("Cannot modify library: Missing required information");
+      setTimeout(() => setMessage(""), 3000);
+      return;
+    }
+
+    const trackId = trackInfo.track_id;
+
+    setIsLikeLoading(true);
+    try {
+      if (isLike) {
+        console.log("[StreamMusic] Removing track from library:", {
+          userId,
+          contentId: trackId,
+        });
+
+        await axiosDelete({
+          url: `${MAIN_SERVER_URL}/library/${userId}`,
+          body: {
+            contentType: "song",
+            contentId: trackId,
+          },
+          isAuthenticated: true,
+        });
+        setIsLike(false);
+        setMessage("Removed from your library");
+      } else {
+        console.log("[StreamMusic] Adding track to library:", {
+          userId,
+          contentId: trackId,
+          contentType: "song",
+        });
+
+        await axiosPost({
+          url: `${MAIN_SERVER_URL}/library/${userId}/add`,
+          body: {
+            contentType: "song",
+            contentId: trackId,
+          },
+          isAuthenticated: true,
+        });
+        setIsLike(true);
+        setMessage("Added to your library");
+      }
+    } catch (err) {
+      console.error("[StreamMusic] Error toggling library status:", err);
+      setMessage(err?.data?.error || "Failed to update library");
+    } finally {
+      setIsLikeLoading(false);
+      setTimeout(() => setMessage(""), 3000);
+    }
   };
 
   const toggleModal = () => setIsModalVisible(!isModalVisible);
@@ -53,14 +199,18 @@ const StreamMusic = () => {
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
+
   const handleSliderValueChange = (value) => {
+    setIsSeeking(true);
     setLocalSliderValue(value);
   };
 
   const handleSlidingComplete = (value) => {
+    setIsSeeking(false);
     seekTo(value);
     setLocalSliderValue(null);
   };
+
   return (
     <View style={styles.mainContainer}>
       <StatusBar style="light" />
@@ -71,7 +221,7 @@ const StreamMusic = () => {
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerText}>
-          {"album name or page name ?" || "Loading..."}
+          {trackInfo?.album_name || "Now Playing"}
         </Text>
         <TouchableOpacity onPress={toggleModal}>
           <Ionicons name="ellipsis-vertical" size={24} color="white" />
@@ -80,21 +230,27 @@ const StreamMusic = () => {
 
       {/* Album Art */}
       <View style={styles.artView}>
-        <TouchableOpacity onPress={handleLikeToggle}>
-          <Image
-            source={{
-              uri:
-                trackInfo?.cover_image_url || "https://via.placeholder.com/200",
-            }}
-            style={styles.artImage}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.likeButton} onPress={handleLikeToggle}>
-          <Ionicons
-            name={isLike ? "heart" : "heart-outline"}
-            size={30}
-            color={isLike ? "purple" : "white"}
-          />
+        <Image
+          source={{
+            uri:
+              trackInfo?.cover_image_url || "https://via.placeholder.com/200",
+          }}
+          style={styles.artImage}
+        />
+        <TouchableOpacity
+          style={styles.likeButton}
+          onPress={handleLikeToggle}
+          disabled={isLikeLoading || !userId}
+        >
+          {isLikeLoading ? (
+            <ActivityIndicator color="purple" size="small" />
+          ) : (
+            <Ionicons
+              name={isLike ? "heart" : "heart-outline"}
+              size={30}
+              color={isLike ? "purple" : "white"}
+            />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -183,15 +339,6 @@ const StreamMusic = () => {
 
       <Text style={styles.currentDevice}>Device 1</Text>
 
-      {error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Error: {error.message}</Text>
-          {error.details && (
-            <Text style={styles.errorDetails}>{error.details}</Text>
-          )}
-        </View>
-      )}
-
       {/* Modal */}
       <Modal
         animationType="slide"
@@ -250,6 +397,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 2,
     top: 5,
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    borderRadius: 20,
   },
   messageContainer: {
     position: "absolute",
@@ -259,13 +412,11 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
   messageText: {
-    backgroundColor: "white",
-    color: "black",
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    color: "white",
     padding: 10,
     paddingHorizontal: 15,
-    paddingVertical: 20,
     fontSize: 16,
-    fontWeight: "bold",
     borderRadius: 10,
   },
   songView: {
@@ -345,21 +496,6 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     marginLeft: 18,
-  },
-  errorContainer: {
-    marginTop: 20,
-    paddingHorizontal: 20,
-  },
-  errorText: {
-    color: "red",
-    fontSize: 16,
-    textAlign: "center",
-  },
-  errorDetails: {
-    color: "#ff6b6b",
-    fontSize: 12,
-    marginTop: 5,
-    textAlign: "center",
   },
 });
 

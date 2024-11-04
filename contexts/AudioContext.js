@@ -108,7 +108,7 @@ export const AudioProvider = ({ children }) => {
       return null;
     }
   };
-
+  console.log("[AudioContext] Setting track info:", trackInfo);
   const loadAudio = async (track) => {
     try {
       if (loadAttempts.current >= MAX_LOAD_ATTEMPTS) {
