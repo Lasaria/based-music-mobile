@@ -11,8 +11,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  FlatList
 } from 'react-native';
 import useProfileStore from '../zusStore/userFormStore';
+import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
+
+const geocodingClient = mbxGeocoding({ accessToken: 'pk.eyJ1IjoibGFzYXJpYSIsImEiOiJjbTJheXV0cjcwNG9zMmxwdnlxZWdoMjc5In0.NoBtaBj9cNvdemNp52pxGQ' });
 
 const ProfileSetupScreen = () => {
   const { 
@@ -26,6 +30,31 @@ const ProfileSetupScreen = () => {
   
   // Keep errors in local state as they're UI-specific
   const [errors, setErrors] = useState({});
+  const [suggestions, setSuggestions] = useState([]);
+
+  const handleLocationChange = async (text) => {
+    updateField('location', text);
+    if (text.length > 2) {
+      try {
+        const response = await geocodingClient.forwardGeocode({
+          query: text,
+          autocomplete: true,
+          limit: 5,
+        }).send();
+
+        setSuggestions(response.body.features.map((feature) => feature.place_name));
+      } catch (error) {
+        console.error('Error fetching location suggestions:', error);
+      }
+    } else {
+      setSuggestions([]);
+    }
+  };
+
+  const handleLocationSelect = (selectedLocation) => {
+    updateField('location', selectedLocation);
+    setSuggestions([]);
+  };
 
   const validateForm = () => {
     let newErrors = {};
@@ -72,10 +101,11 @@ const ProfileSetupScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoid}
       >
-        <ScrollView 
+        {/* <ScrollView 
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
-        >
+        > */}
+          <View style={styles.scrollContainer}>
           <Text style={styles.header}>Create Your Profile</Text>
 
           {/* Username Input */}
@@ -87,6 +117,7 @@ const ProfileSetupScreen = () => {
               value={username}
               onChangeText={(text) => {
                 updateField('username', text);
+                console.log(text);
                 if (errors.username) {
                   setErrors({ ...errors, username: null });
                 }
@@ -157,20 +188,34 @@ const ProfileSetupScreen = () => {
           </View>
 
           {/* Location Input */}
+          {/* Location Input with Autocomplete */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Location</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter your location"
               value={location}
-              onChangeText={(text) => updateField('location', text)}
+              onChangeText={handleLocationChange}
               maxLength={100}
             />
+            {suggestions.length > 0 && (
+              <FlatList
+                data={suggestions}
+                keyExtractor={(item, index) => index.toString()}
+                renderItem={({ item }) => (
+                  <TouchableOpacity onPress={() => handleLocationSelect(item)}>
+                    <Text style={styles.suggestionItem}>{item}</Text>
+                  </TouchableOpacity>
+                )}
+                style={styles.suggestionsContainer}
+              />
+            )}
             <Text style={styles.helperText}>
               Optional: City, Country
             </Text>
           </View>
-        </ScrollView>
+        {/* </ScrollView> */}
+        </View>
 
         {/* Next Button */}
         <View style={styles.bottomContainer}>

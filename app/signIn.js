@@ -11,6 +11,7 @@ import { Ionicons, Feather, AntDesign, SimpleLineIcons } from '@expo/vector-icon
 import RadioButtonGroup, { RadioButtonItem } from "expo-radio-button";
 import ButtonComponent from "../components/ButtonComponents";
 import { router } from 'expo-router';
+import useProfileStore from '../zusStore/userFormStore';
 
 
 WebBrowser.maybeCompleteAuthSession();
@@ -31,6 +32,7 @@ const SignInScreen = () => {
   const [loading, setLoading] = useState(false);
   const [current, setCurrent] = useState(false);
   const navigation = useNavigation();
+  const {updateField } = useProfileStore();
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: GOOGLE_CLIENT_ID,
@@ -56,6 +58,8 @@ const SignInScreen = () => {
       const result = await AuthService.googleSignIn(idToken);
       console.log(result);
       if (result.userCreated) {
+        updateField('email', result.email);
+        updateField('password', result.password);
         router.push("userTypeChoice");
       } else {
         router.back()

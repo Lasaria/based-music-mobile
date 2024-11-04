@@ -41,6 +41,17 @@ export const UserService = {
                 userType
             } = useProfileStore.getState();
 
+            console.log("EMAIl: ", email);
+            console.log("PASSWORD: ", password);
+            console.log("USERNAME: ", username);
+            console.log("DISPLAYNAME: ", displayname);
+            console.log("DESRIPTION: ", description);
+            console.log("LOCATION: ", location);
+            console.log("GENRES: ", selectedGenres);
+            console.log("IMAGE PROFILE: ", profileImage);
+
+
+
             // Extract genre names from genre objects
             const genreNames = selectedGenres.map(genre => genre.name);
 
@@ -52,7 +63,7 @@ export const UserService = {
                 url: `${serverURL}/users/setup-user-profile`,
                 method: "POST",
                 body: JSON.stringify({
-                    username,
+                    username: username,
                     display_name: displayname || '',
                     description: description || '',
                     user_location: location || '',
