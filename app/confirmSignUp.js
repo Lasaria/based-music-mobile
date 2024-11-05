@@ -1,6 +1,6 @@
 // ConfirmSignUpScreen.js
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { View, TextInput, Image, Text, StyleSheet, Pressable } from 'react-native';
 import { AuthService } from '../services/AuthService';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -9,11 +9,23 @@ import { FontAwesome6 } from "react-native-vector-icons";
 import ButtonComponent from '../components/ButtonComponents';
 import { openInbox } from 'react-native-email-link';
 import { Colors } from '../constants/Color';
+import useProfileStore from '../zusStore/userFormStore';
 
 
 const ConfirmSignUpScreen = ({ }) => {
+  const {updateField } = useProfileStore();
   //const { email, password } = route.params;
   const { email, password } = useLocalSearchParams();
+
+  // Add the email and password to zustand user store
+  // Move store updates to useEffect
+  useEffect(() => {
+    if (email && password) {
+      updateField('email', email);
+      updateField('password', password);
+    }
+  }, [email, password]);
+
   //console.log(route.params)
   const [confirmationCode, setConfirmationCode] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -50,7 +62,8 @@ const ConfirmSignUpScreen = ({ }) => {
       await AuthService.confirmSignUp(email, enteredCode);
       console.log('Confirmation successful');
       console.log("Password: " + password)
-      await AuthService.signIn(email, password)
+      // Not logging in here
+      // await AuthService.signIn(email, password)
       console.log('Login successful');
       router.back();
       router.back();
@@ -180,48 +193,7 @@ const ConfirmSignUpScreen = ({ }) => {
 
 
     <View style={[styles.container]}>
-      {/* Modal for "Check your mailbox" */}
-      <Modal
-        transparent={true}
-        visible={isModalVisible}
-        animationType="fade"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            {/* Close Button (X) */}
-            <Pressable onPress={handleCloseModal} style={styles.closeButton}>
-              {/* <Text style={styles.closeText}>✕</Text> */}
-              <FontAwesome6 name={'circle-xmark'} size={24} color={'white'} />
-            </Pressable>
-
-            {/* Mailbox Icon */}
-            <View style={styles.mailIconContainer}>
-              <Image
-                source={require('../assets/images/GlowWhite.png')} // Replace with your own icon asset
-                style={styles.glowWhite}
-              />
-              <Image
-                source={require('../assets/images/message.png')} // Replace with your own icon asset
-                style={styles.mailIcon}
-              />
-            </View>
-
-            {/* Text Content */}
-            <Text style={styles.modalTitle}>Check your mailbox</Text>
-            <Text style={styles.modalDescription}>
-              Verify your account via the code sent to your email
-            </Text>
-
-            {/* Button to check the letter */}
-            <ButtonComponent
-              title="Verify account"
-              buttonStyle={styles.checkButton}
-              textStyle={styles.checkButtonText}
-              onPress={handleCheckEmail}
-            />
-          </View>
-        </View>
-      </Modal>
+      
 
       {/* Back Icon */}
       <Pressable style={styles.backButtonContainer} onPress={handleNavigateBack}>
