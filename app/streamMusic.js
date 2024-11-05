@@ -8,6 +8,7 @@ import {
   Modal,
   Dimensions,
   ActivityIndicator,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AudioContext } from "../contexts/AudioContext";
@@ -211,6 +212,10 @@ const StreamMusic = () => {
     setLocalSliderValue(null);
   };
 
+  const navigatePlaylist = () => {
+    router.push("./playlistScreen");
+    closeModal();
+  };
   return (
     <View style={styles.mainContainer}>
       <StatusBar style="light" />
@@ -346,22 +351,41 @@ const StreamMusic = () => {
         visible={isModalVisible}
         onRequestClose={closeModal}
       >
-        <TouchableOpacity
-          style={styles.modalContainer}
-          activeOpacity={1}
-          onPress={closeModal}
-        >
-          <View style={styles.modalContent}>
-            <TouchableOpacity style={styles.modalItem}>
-              <Ionicons name="add-circle-outline" size={24} color="white" />
-              <Text style={styles.modalText}>Add to Playlist</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.modalItem}>
-              <Ionicons name="share-outline" size={24} color="white" />
-              <Text style={styles.modalText}>Share</Text>
-            </TouchableOpacity>
+        <TouchableWithoutFeedback onPress={closeModal}>
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <TouchableOpacity
+                  onPress={navigatePlaylist}
+                  style={styles.modalItem}
+                >
+                  <Ionicons name="list" size={24} color="white" />
+                  <Text style={styles.modalText}>View playlist</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalItem}>
+                  <Ionicons name="add" size={24} color="white" />
+                  <Text style={styles.modalText}>Add to queue</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalItem}>
+                  <Ionicons name="albums" size={24} color="white" />
+                  <Text style={styles.modalText}>View queue list</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalItem}>
+                  <Ionicons name="share-social" size={24} color="white" />
+                  <Text style={styles.modalText}>Share</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalItem}>
+                  <Ionicons name="heart" size={24} color="white" />
+                  <Text style={styles.modalText}>Like</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalItem}>
+                  <Ionicons name="information-circle" size={24} color="white" />
+                  <Text style={styles.modalText}>About</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </TouchableOpacity>
+        </TouchableWithoutFeedback>
       </Modal>
     </View>
   );
@@ -410,18 +434,23 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     zIndex: 9999,
+    borderRadius: 20,
+    justifyContent: "center",
+    paddingHorizontal: 20,
   },
   messageText: {
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
-    color: "white",
+    backgroundColor: "white",
+    color: "black",
     padding: 10,
     paddingHorizontal: 15,
+    paddingVertical: 20,
     fontSize: 16,
-    borderRadius: 10,
+    fontWeight: "bold",
   },
   songView: {
     alignItems: "center",
     marginTop: 20,
+    justifyContent: "center",
   },
   songText: {
     color: "white",
@@ -432,13 +461,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginTop: 5,
+    position: "relative",
+    width: "100%",
+    justifyContent: "center",
   },
   songInnerText: {
     color: "#888",
     fontSize: 14,
   },
   addButton: {
-    marginLeft: 10,
+    position: "absolute",
+    left: "90%",
   },
   progressContainer: {
     marginTop: 50,
@@ -482,7 +515,7 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: "#1c1c1c",
     padding: 20,
-    borderTopLeftRadius: 20,
+    borderTopEndRadius: 20,
     borderTopRightRadius: 20,
   },
   modalItem: {
