@@ -1,374 +1,492 @@
-import { StyleSheet, Text, View, ScrollView, Image, TouchableOpacity, Modal, Button } from 'react-native';
-import React, { useState } from 'react';
+import { StyleSheet, Text, TextInput, View, ScrollView, Image, TouchableOpacity, Modal, ActivityIndicator, Alert, FlatList, Animated } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Colors } from '../../constants/Color';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
-import { Feather } from '@expo/vector-icons';
+import { Feather, FontAwesome6 } from '@expo/vector-icons';
+import { tokenManager } from '../../utils/tokenManager';
+import { ArtistService } from '../../services/artistService';
 
 
-// DUMMY MUSIC DATA
 const tracksData = [
     {
-        name: "Millionaire",
-        artist: "Yo Yo Honey Singh",
-        duration: 3.24,
-        cover: "https://i.scdn.co/image/ab67616d0000b273aad3f4b601ae8763b3fc4e88",
+        title: "Born to Shine",
+        artist: "Diljit Dosanjh",
+        duration: '3:32',
+        cover_image_url: "https://i.scdn.co/image/ab67616d0000b273e62ca3548e739bd85eebbbc9",
     },
     {
-        name: "Desi Kalakaar",
-        artist: "Yo Yo Honey Singh FT Sonakshi Sinha",
-        duration: 3.24,
-        cover: "https://i.scdn.co/image/ab67616d0000b27365ce8c712e4fb894bc88461b",
+        title: "Ghost",
+        artist: "Diljit Dosanjh, thiarajxtt",
+        duration: '2:45',
+        cover_image_url: "https://i.scdn.co/image/ab67616d0000b273cb2f9520171129a3df7a241a",
     },
     {
-        name: "Makhna",
-        artist: "Yo Yo Honey Singh, Neha Kakkar, Singhsta, Pinaki, Sean, Allistor",
-        duration: 3.24,
-        cover: "https://i.scdn.co/image/ab67616d0000b273a1c1ee1e4bdf81b17df2197a",
+        title: "Lover",
+        artist: "Diljit Dosanjh",
+        duration: '3:09',
+        cover_image_url: "https://i.scdn.co/image/ab67616d0000b273ef759d4ae310020a06939e99",
     },
     {
-        name: "In The City",
-        artist: "Estella Boersma",
-        duration: 3.24,
-        cover: "https://s3-alpha-sig.figma.com/img/2060/6678/09bd2506bf0b6b965ee69e4a575ff98b?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=R5lGlUgpMEzqy526qjHnbAZEY1td9PibzQY7TYfj-cDuqaAuWm7RjPlNdOvp6NFfpi97h8s8ENVIKlaOV3Iomlea7VfQT34CrjbqFfqvvL5fXr9jNw6wJ55Iafg4fqEEmuJAw9~BRgPp4V-EtAJKEbcAqwe2m8Sr~X7Cihi93ecF0RawtHAGgSv8KE~aXgnp0GDX3vDqel4gRxhR0t-RkRuc~sDXkcCJh-2oVEyQpuTTxq8IYBSapPXqVUhc2WB~U-KI043GckffyC~JhHeePTFWE8lTvX~wuVRHha-HM~gp0EJDL5~~YgIw2mXJkH7GxjIze2MVJ0Puy7h0tOmj~A__",
+        title: "Chauffeur",
+        artist: "Diljit Dosanjh, Tory Lanes, Ikky",
+        duration: '3:24',
+        cover_image_url: "https://i.scdn.co/image/ab67616d0000b27340e864fc991586ece815b11b",
     },
     {
-        name: "Phonky Town",
-        artist: "Estella Boersma",
-        duration: 3.24,
-        cover: "https://s3-alpha-sig.figma.com/img/806a/2523/b065345961d7819214833e43cda1a2e7?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=TdiSzdo3XiF1jJ8Q72kq8Imi8XsqbvdcBbjRZsll4j~ulY-ZZDu3zI1EeeN-Vxy7g~BSAf7zHlnQxVWXtN22n8tPsnY~I5bQ7KjDGTMGcouwTibqxjFKpr-Zhc-Nluux3sUg93vPIRnT1N7r1VMohT9yUEj77dmrxOkasavjRt7vytVzWPHmFf6v6N~OEOG~FnQ8S7lByJ-KC8HagF7IcFxO-jsZgf-zU6RTd5iAHlwDZ-9Kx9ne2AKLw6y7UWAtWvr4xB1u93Qb3tG0lyOciqkzPBOQ5oMB0fIGeE4q8YoGHKgOPb-YMmixSzQ-yJnw3F0HQINSP2oectDDVCQf-w__",
+        title: "Khutti",
+        artist: "Diljit Dosanjh, Saweetie",
+        duration: '2:12',
+        cover_image_url: "https://i.scdn.co/image/ab67616d0000b27388b591944b021192c6c7abb7",
     },
     {
-        name: "Made Your Mark",
-        artist: "Estella Boersma",
-        duration: 3.24,
-        cover: "https://s3-alpha-sig.figma.com/img/66a5/fb4a/dba97d0cfdc40b0a75b72f80a40c30df?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=fKVw7YT-kye5LZruH5msITL5-sMv8-0IggBwMpxw8wz~3LBx1yIYEZyyWC~01GsdmlSoTXn1UxvwGvcWUI8tVTlqLVrzLAinXElww9VoclocZJ05WzCMtTpOsGA5LCOjYzmlZgvyEQj9s0-1OSfiTagYQloakjmA4ZMtg7K9s~AjeZ5OoWWZ6fEHKuY9AlOo1EfEtpwcQW1SSHdtkg20Qc4950qTrPwuC43yIl6XDnVgk0CoT6RCPxgt0Sys3UY882QH57DuEfa8I-I5JVFDf5cbuJdjCm57RDk8At-dUPsvG5QogYRNcW5zStrBJI~y8XyZvDASBJqphfihyw9JZA__",
+        title: "Jagga Jatt",
+        artist: "Ikka, Diljit Dosanjh, Badshah",
+        duration: '3:44',
+        cover_image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkOJL0fMJpEaNZx8U8ikQis8PG6OHolv4M8A&s",
     },
     {
-        name: "Solipsism",
-        artist: "Estella Boersma",
-        duration: 3.24,
-        cover: "https://s3-alpha-sig.figma.com/img/f6dd/7044/9bba3ac5f118525fb4defe4262360cf2?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=GnMCVaJBqg9nxQxcEAKpqrD2Jnx~E7v-PuHWK5E11-qepbNhNgD44fS9K4tmjCU7Hr0Y8u7jTEcrRAtiDWKBKsU~UIo-4CMwSDUhX2YLIVnhR2YSnPJXANiLfzl~eHPa-vcvz9lRl3cziZwRPEiuS46KCIkgi~l2VAmRREeXi4g7ijh-dqgi0uFddYmRX6azfo80uIbx3I9nW1UKzbr9mUSMRfJYVL4anMqMyw9yx0XBxos9WzeZfMZWy2hr3D67TyRwEnVwU45pvP9F9mK70U4Q7uY5dgPOZi1fx-QQ-EB44v8P0yuGLqK5-R-IlxYv41oAV2FPLB3SlVLgYVGx5A__",
+        title: "Peaches",
+        artist: "Diljit Dosanjh",
+        duration: '3:09',
+        cover_image_url: "https://i.scdn.co/image/ab67616d0000b273010ffee75fd78504689a7d33",
     },
     {
-        name: "Maroon Sweater",
-        artist: "Estella Boersma",
-        duration: 3.24,
-        cover: "https://s3-alpha-sig.figma.com/img/bb93/8e26/a076118cc29175fe2958bc97c7f83e54?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=OWaRGHiITx6VkXrVeu3RuYqLmNKA2iTlfR8XE7X1hRRJLh1nIiE9MUOE8Xrmyd1KQf4jaskRMxYJHqRLxNyjdbwqkviOWeMvGNHcb0WH4SiI73MzMCQm0XGageqNZ46LQRzXC9AiwGaIyviDDLJmSGk1ray7biVWrf2CI1YUKygQp3Uw31mrLek7StKgJ7KSHhgztE5SaD5mlTDqkpbgW-XdYjPVm64BMmmBRJrcTZ6Yq-wORP9RxSGCA9kDGuOFBkchFufeTEaVu5D5-hZ9OIF9HybqkMwDhXBy-0hjyfUmbxv57xhrO~w-Sr1nrX-AeQQlAhKtVp0MS2z-TtsAdA__",
+        title: "Hass Hass",
+        artist: "Diljit Dosanjh, Sia, Greg Kurstin",
+        duration: '2:32',
+        cover_image_url: "https://i.scdn.co/image/ab67616d00001e0274a99276badeec2675a9eaec",
     },
     {
-        name: "Lady",
-        artist: "Estella Boersma",
-        duration: 3.24,
-        cover: "https://s3-alpha-sig.figma.com/img/1d7e/5db0/67136b7c0bf8215dc6b839278fa61f4f?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=bJXbFIybjQTb2l4X6ezjORWxPyXYgnhneLuKacZWUowoBCXcd61srXF9kNXir3CrtcJJ2pLoD945xnA5m8sFfup0DXxPgO468UPZGdL2F9SuzukdPYvDoXAXJbn74d6ruluCz4IQYFF6pSMHMzLY7Sy5cqndjnFaSR8alt7m4cXDsGYFSKeFSQQ9ADLoxFZkVr24izVJR8VaMczVBCrVAIupaEnUHOPK-iEIsM0o0xj6svMq8a8tqc4rSE6mJLGHjJYbeDlAGXyypNvW1oqoE6XQGlepUHGmgM1ngDxUSc8UuHuw7hYTmKidVM8agjB7HLaz4YWMSSQqMDI5mF2V1w__",
+        title: "Mombattiye",
+        artist: "Diljit Dosanjh, Jaani, Bunny",
+        duration: '3:04',
+        cover_image_url: "https://i.scdn.co/image/ab67616d00001e02003c49b506f735e39bff82c2",
     },
     {
-        name: "Yearling",
-        artist: "Estella Boersma",
-        duration: 3.24,
-        cover: "https://s3-alpha-sig.figma.com/img/25d2/04ea/433fa7243fa79155f2dc3418f4e1c05b?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=DD9q73TzXe9TxBfJZj9OIgg0yzDTegy1QdJFu1WBlmXbS8gb5rZyzJW0AVxRqNtMLrFVIad2obbCbwtEhJBxkM~RlWFx0PWes1DFp-CoEdsNeg5Kw8fi7HYVOIhoZY2QkFueWlMTTSjbuGEeFDrKy5LW2UnAfycI6xuibVcJtybFkMsZd-LzK7m-XpS0ExwM9S-srxxZbd9DJb0dox3IEi7jBm~9nCUET8rVVulosRaelMrShu~98m2xke4ETGGJu3APjc0Oj2LN0do3A442eEXAfaMKbk~TsYf~ArLzvDkZpJ25-MyB3nPEdmV348~hCtvMq~Aj-kAEuYVYkrfhYQ__",
+        title: "G.O.A.T",
+        artist: "Diljit Dosanjh, Karan Aujla",
+        duration: '3:43',
+        cover_image_url: "https://i.scdn.co/image/ab67616d0000b273e62ca3548e739bd85eebbbc9",
+    },
+    {
+        title: "High End",
+        artist: "Diljit Dosanjh, Snappy, Rav Hajra",
+        duration: '2:56',
+        cover_image_url: "https://i.scdn.co/image/ab67616d0000b27322b900bc0c168eaabb46086a",
+    },
+    {
+        title: "Kylie & Kareena",
+        artist: "Diljit Dosanjh",
+        duration: '2:47',
+        cover_image_url: "https://m.media-amazon.com/images/M/MV5BYTkxYzdlZDktMTczYS00NzA0LTkxNDMtOTlhYmMzMGMxZGFjXkEyXkFqcGc@._V1_QL75_UY190_CR74,0,190,190_.jpg",
+    },
+    {
+        title: "Clash",
+        artist: "Diljit Dosanjh",
+        duration: '2:56',
+        cover_image_url: "https://i.scdn.co/image/ab67616d0000b273e62ca3548e739bd85eebbbc9",
     },
 ]
 // DUMMY ALBUM DATA
 const albumsData = [
     {
-        name: "Tunnel Vission",
-        artist: "Raftaar, KR$NA, Karma, Deep Kalsi",
-        cover: "https://s3-alpha-sig.figma.com/img/7d48/3c55/9d059cb8231b2d81f479611b9aeb8fad?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=lHbfNuAoyVTsmja~XdwpalrJTFeQvG-HIAJ~BRnVpk5sF71eX0tO4Xx79cBDeEwVl38lCkkD47dmIxsC9iXeZ9uF~Wj6-0rwp5sDa6cUKdytK5lmAtBDQAb8nfbtE1CHoyLLh8bYXx7hssSyXF1U53XO5vuyEcunv0m8a-cmkVGdvtZlqYhi5ThJ0M7SEDsXoOWe-XYR4FjdqkWHEYIrbtSZYDmVdrDLH73neJNGO74FxK6uZU3VHsFe9GaZ8CHNJtFxL8JT4TR-fVrMVziBWlmJvqxOWL9wWoJ0DbzfAu71KOmmMWUcRq9dA~~wvM7nucNfdnzqvzfKdShr7f6TTw__",
+        title: "Ghost",
+        release_date: '2023-10-26T16:54:13.692Z',
+        cover_image_url: "https://i.scdn.co/image/ab67616d0000b273cb2f9520171129a3df7a241a",
     },
     {
-        name: "God Watching Through Birds",
-        artist: "Sikander Khalon, Sky 38, Al, Aghor",
-        cover: "https://s3-alpha-sig.figma.com/img/ec33/ca62/de2d47c7b6dd3040f476699b7d2343dc?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=bWmGZJ9XBqXgPQ9rT-u1zLkIS0fmHraxLbRve62tqhkqMqgqfEQ-jhetIl87RCfG~QIU16gqEarEWFHyFHteOBm3oeMzbmbItjPfRvAblwuR0H~~DIvI8xDztDyBi1ZDnqKsFfW9rDDzfqABgUdyhXlv-1CORRZFO~gi~U-uW~1yjmtuFxGVbe6hTVHGuIbTnIVEL93q-an5CJ8G5QD1V7e0lGC6kU1GvdIQm74wDBracidcdPOg49DiwcmLbCPF7IohkYLPVWVxPkF~3~pRzkiHyrMRFCahzAW0IdqUdVxS7uSfIfa9WsjPsca2o4-w4LEXY3bMAAYBe~URj~QZ9w__",
+        title: "MoonChild Era",
+        release_date: "2024-10-26T16:54:13.692Z",
+        cover_image_url: "https://i.scdn.co/image/ab67616d0000b273ef759d4ae310020a06939e99",
     },
     {
-        name: "Breakfast",
-        artist: "Estella Boersma",
-        cover: "https://s3-alpha-sig.figma.com/img/9183/a935/b56c416baff28d106397b1d0629398e9?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=PFHv4UoR4nPngF6bam0jrCwjAO67nhGuodzWUrUlXwxrcgsJnKe3klT75xszm86nQ3fyLYtvd32VkIlHSewwIMVGV~nEh77kq6z2ZV1L~iHBj9EPdNdRSAmXxt2mtj1P~or4oqpuzV8UEE8CACyQ81J8azrSwBmT6uHcYRmwkjmrcLK3TVP4B-ijxefNNAe6-7Frz9D0934KMmW1xGvvRGRXmEl8wtN4fnBmRHvybGD722hubZN4syBVKr-fbRO~lWLCVQaQnPxt4Jpy8xrZF4OnyL7UyTO7sUbCjXY3XztMO0bcVO7cE6cnSKMYyTKFtd62k6oq-63DsbWp8NGmnA__",
+        title: "G.O.A.T",
+        release_date: "2020-10-26T16:54:13.692Z",
+        cover_image_url: "https://i.scdn.co/image/ab67616d0000b273e62ca3548e739bd85eebbbc9",
     },
     {
-        name: "New Age Filth",
-        artist: "Estella Boersma",
-        cover: "https://s3-alpha-sig.figma.com/img/44db/6770/c2bfff55cc9aadcb2f5ca3cebd96c84c?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=HHVDe1xgKtht1byZpGWJOb1SKF-FEnjbhri~7czE0AgGekIToJraoahOeFOtS24hrEqZwkjaielMwRUDjR9ZN2WoRXJC6TECSFv4Eav3yN-Hq2G60U7qVaqIjQ1IzoUYREUKiG1srCsVS-uo~hfdrxdYjhiRAM3oQke-Gg7SZsQCVFh3uupQ-7ih3a7F~fyzkOx2UzKpUsb9JgImwmHFyDvjikRiGyE-DV4JLnbSjp3bbGf9tfT7xah4Pm3BhVl2wJ5mcZmarEFlAx3pA~dRsgj1JQOpsyTqObmQaxetFRIYwsPFB3TsqmoMAar4h79q7c4hoijJFM7nSIazEA6S8A__",
+        title: "Con.Fi.Den.Tial",
+        release_date: "2018-10-26T16:54:13.692Z",
+        cover_image_url: "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da8447d49ef11062b48af61d2011",
     },
     {
-        name: "Mental Knife",
-        artist: "Estella Boersma",
-        cover: "https://s3-alpha-sig.figma.com/img/c060/7daf/551cce388d63eafebc2c841f3abdb06a?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=dOMeR69bs3~lhT-hgxPmpvSP8hePUy-TTT9OwVfViMA2i-llFYhrEpXUEwEjq9054dpPHjRYz5ZRJmFN2HxKHjhLmjUwOgI7dSYzFZF2LVSULa2GyYR~xlFAkK56AKEjbvW4zVKoXSVXWhnY6CY7LwDHLyVJYpCu8t285RTaP52SAqATJlzUNbQ3vuquRqBgFXki4dtBuzKazKgSkuFcnmK5yxO3FXmvfNLTe~lofrlx9UB4LO5bBjsgVHR2ghhm2ZXGrYFoP7yxSc59IZghslVsB9XGLyr6oLrKhgNiXV~6c20PpH3shsbVJZeLQNJJXGmbuHNS355XQOIAc4EvEA__",
+        title: "Drive Thru",
+        release_date: "2022-10-26T16:54:13.692Z",
+        cover_image_url: "https://i.scdn.co/image/ab67616d0000b273010ffee75fd78504689a7d33",
     },
     {
-        name: "Wake",
-        artist: "Estella Boersma",
-        cover: "https://s3-alpha-sig.figma.com/img/59b7/2dee/18aae40450f99efc93f19bbbb31548db?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=JAbmaApqumIka3-wPjhhYOex6WtAi~WoCMhlJK~3rWAGmFO9JGNNhi0d7IzgsIJ4wJbtXybHmooC712BcOBuBV~ywIGh8J1VtUuMlMyk9CsdNH6tLwEkQW2Ermo2VNZ8qGvrnwrHziD9Z8xjNpThwnds7eZfTzTZo9OLJ4S~y~Cd-erC9FnEJlxMGss6DFaPqE--epTF0rERYQcwiJDU~Uq5aNcccn3zlGwdVlB8bdeu07RW6bOTE3Fq~bBhUphUYcLoRUc8yv~uBiSKjjw0K90XgNd226AeqlWKJSx5-6eVq8NLVOVXIIn9wgNgt7AJWhocGSwTFlKYXzeQQENubQ__",
+        title: "Love Ya",
+        release_date: '2023-10-26T16:54:13.692Z',
+        cover_image_url: "https://m.media-amazon.com/images/M/MV5BNTU4ZDFkYzEtZDYyMy00M2E1LWFkOTktNGQ1ZmM5YmExMzI3XkEyXkFqcGc@._V1_.jpg",
     },
     {
         name: "Culture Scars",
-        artist: "Estella Boersma",
-        cover: "https://s3-alpha-sig.figma.com/img/c237/7898/e42a269d3d9062304a50e1e6aad52642?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=Ta5IJP4HfbH7VKDa2bjlJwm4cBbzJTerQvgnVWIKjzEzgCTDWvF7T-jxZodBbYBGy6BC7cn3ffqKITqfRBDIBRLfQEO0a9T7UhCldopxCqDPItyNzxap9AGCl7rmfrv2q5fsmi45nTUJq4Eq0nff5jq2V~iEGq2t8CE3ugiDhX2W6K-ogGw-B2u5ujnqAJL2MilgZ76KCW5pESeyBl6ubn06Mf6bpj5Rs7Z3Qx5IbPKjKoKBGiP9hUKMoO6T9mKdZL~FImr72xdDeLlEKfllPim6QkpWLtj4khCWermrN1kiZ~1k091Vqhw6aDgiYO2PvCz35E4dUo-5GjOv2FHqeA__",
+        release_date: '2024-10-26T16:54:13.692Z',
+        cover_image_url: "",
     },
     {
         name: "Fake History",
-        artist: "Estella Boersma",
-        cover: "https://s3-alpha-sig.figma.com/img/5529/4222/3449e90fad752a465407e57344c83fd7?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=IQgXxip00-XZjxhLLUnqGjscvO2BWI3IAMaQoGTdPB7YAioMg6Kj2DbSit2J7v2l4SHhBiSMnOHqmzT9x1~5UpI0qMRCtxCCKrhxG5QDGvJu4A7~p~RO8zmZQR3ORq0R4hrMbofLuOPyv3hiqSxUJdQJ~tA6OTfw~CdrVe8Xyk-FHT5Izqbg2zdzYs8oYSKs9gs3hmXosG0J5KhDPHB~SuNwM4UJKOSut6VwihJ~8jsnmtPgzaP114qEen9p9OOB-HrBwpSnEd5X4oVW8CvtgYhdRiRBHivlKSHQIDy4coaMo2TiY9SyYY7NZ8dF3DhJ6pAHnrkpyG3hyoyfO8cSHg__",
+        release_date: '2024-10-26T16:54:13.692Z',
+        cover_image_url: "",
     },
     {
         name: "The Best Light",
-        artist: "Estella Boersma",
-        cover: "https://s3-alpha-sig.figma.com/img/c64b/8253/96b4993c444dc20c4ceaf027e006a70a?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=VOwE5iV1JpneFYTRfxwFIDQ0VbluFRjqK4yfWv6mQAWRV8N50KrEKw-wDvfCg-sxrP8pbz2qsAjrW6c249q69GIh9twSr80iI4k-t76xfM0txG~e3pCbji1kYudIxIyeHeFTEKCcpFOPhMCeIcLarhfOGF1i~oejrN15aS-P9UYibW~PJSc7gLQJ2AX2r6Z-eSabGzUcFEHo-ZyMKtawWrs853hK6aXTd0SARz1X7w68T0ST4LzFZYZ~9EmEwLh0Fu1S-0z9C7xJ525nx6mhRac5soTV3JzZN-e3PhzceqNSancs3jPoGAdp8-6t2LLB4WaQmiGqE~ZkA3bus3eZ~w__",
+        release_date: '2024-10-26T16:54:13.692Z',
+        cover_image_url: "",
     },
     {
         name: "Cat Company",
-        artist: "Estella Boersma",
-        cover: "https://s3-alpha-sig.figma.com/img/a5a2/3dea/5c2292b5120e9f48a1c108d6b019db89?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=o8n8ptKCCZxdSHwKRnG~wtwmqJ5VC8SbgmFkPVtbbG6Ff8u7Y6NkfpzVZz5iz3TXitoJxeeHUKsTR1VD-V9Sr-UUeOn7LalXLPkGqYqAYt9w4HXsIVLoL7s4tw~fFebf-UEPKBYGKYlSm6YsNAQVz5s5oY1Q3uVmiP2PjtiOJj7Qj8mik00P1m-NAYCOrsasFQtc~e-ecnWU0w282~i1kv12xpRiZY7~y2FT3hr7SpkrZebFf17OpcdKbm8cqC7uZjBPTwoqqslzBTvj37xspUCBfCUGAFf3-jLSlSkNNgAzk9s4L8ZJCIo4nMyL9v9p6Y2mvQiDfi1aTVt1AXSQlQ__",
+        release_date: "Estella Boersma",
+        cover_image_url: "",
     },
     {
-        name: "Outside",
-        artist: "Estella Boersma",
-        cover: "https://s3-alpha-sig.figma.com/img/5a14/238e/4d51dd0ef8c62c4b32744faae67352ee?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=BsyF2Y8otRJQ91Vrv80Vq9GwJyGtzbtKy6XITyCCkKc8Kg53gIiYX~L9joYLgqUNta8Lg~8lUMFtvLnXJEpIqc~lGVacaf54JhFdHN~KT~yzpyiUzlVBop4ecp2dPi2JFVLNxh7EEhojLvkNnJECsxRSH9aD-qOQJtTy8GgJd8V5W7-8tp64-l4s2UX91ErwbAPcx~-DPX0v~i1cSYT~HVUTF-ZI4So7JSI-RrgJDDfg5gWK7Ajid-cBmWgyzYtFlkuk6wfMbNNCfvDPBGVtS2jtnOA9IGVBTheXhw~MVFmVdnJTpHifPBmqGRyaYpOR82K34no7GT5-1~CbKKUPAw__",
+        title: "Outside",
+        release_date: '2024-10-26T16:54:13.692Z',
+        cover_image_url: "",
     },
     {
-        name: "Leaves and Roots",
-        artist: "Estella Boersma",
-        cover: "https://s3-alpha-sig.figma.com/img/e5aa/b9fb/7f00bdb1ffa4c92aa021e73fe224eff2?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=MVQY8Om4lBup1-Hgeq2~kyNZUxqPSW63QaU1Zr~a1kdeEDteqs7ZnhMyBHOSBeRl3kmiYjtRPB~sjtawzK2DvLVXYjBv59q9AdOiogVvJdSY3zPenfLef9in9q0cBv9mHakb4ELprVQt2gbBraBYRUp2d5f50wQMC2mqqKg6OmqV03LqRoPrAFLbYW5axx8-aznGeNurWu1czvf3fUAymzCpd3T6DNaATvJ0wJRkHV-jdS6oJZC88R8CIMTzFXbdtbhZbyUG1QZHOtxePHYXvtZWi4WEC65I5PmknDDFOvPNlEYsuOmJI1urHuqPQpx5OfH0ObmG6RiaxhcGrAIMIQ__",
+        title: "Leaves and Roots",
+        release_date: '2024-10-26T16:54:13.692Z',
+        cover_image_url: "",
     },
 ]
 // DUMMY BEATS DATA
 const beatsData = [
     {
-        name: "Beats 1",
+        title: "Beats 1",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/3f5d/b8e2/ffebae1a8f9c4439cbb0690103ff4ac3?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=hH6q-3-DIC3nDmae9A0m9v0o6PEp9NenvrGlppxaBhPkwhRX3lj5NHvvjvZuaWHgWN1QdbqHYx2UJ4-VWH6gWiQoCJZUEDD4MQjwVTJ-r7am~09s0PCwZBN4CDneEjHkUT8MK2KnUUQAG7uq68dJXuEO1RkFbI1WAdTTNLoy~FZTvYdlDzLpDjtRaYVxqH2G6CKW8JUtAGK5DdSMbkqpZwJ~8s6viRcRLTI8RNv7kqjcwxUaC4I2gu6q~zogmTA1kOllX7G-T6wWc8TdlrU~xyxgvyBF6hC7YCBjoP~5Dcd5WNG9MlYSSHh1YRO5uk9BBf8j6pWdNcagwziYFd10sQ__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/3f5d/b8e2/ffebae1a8f9c4439cbb0690103ff4ac3?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=hnGQ4yjMILuQ7zbf-nP7Je2-rIsUntlraboWcIcIBW1lBfV7w2BXJzQslBXa0YnN2T4G9lU6j~S8CDxfkT~pyW9UYEugFT~vHLpl0HrPrlw1MvCm5WBTyiI5C9fS10O9gXQ8BUZc-B01y4QxHWURb05Z9TWD-9wAhPh1H-UkjIpaQqaG8xaz5ZUgUYWzc3VTXiEl7PEeKYJINZ7txk-32BDOI3H6gBqXrsR4~3Wv~JUnmZXWzXs6qAbrxUOe6ck82nJWhr0tLK7K3DbEwUMh9MJXASU6O83nuqS9KMen-mhIftVVG7GdCwl4KEdtxml7W6VUrQoAvsYis8T7mWex3g__',
     },
     {
-        name: "Beats 2",
+        title: "Beats 2",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/7e18/683a/fad940bfff8bb9508cc38820519d54c6?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=a9d4eEhHWZcVBASsx5AXorumgd-ViX4CkmDMnf71c-lZEl~68PQ4Ql8RRU8gwdq7Zr~fJ-AREq9B3mB8iTEWfW2cJIGQ9UiJOSjSQzVGEus90Mn3ygrrHYU6S8Z9aya0FmzL8I4COfBMIRGddCY0MZHBHaf~-~-hXn-aR2C1Y45pZ21c2nNS4hXceFx2mCdASBpS62bh~H3i~ooGTDUmYmGKmDpXSqrYbCytYbLbuZStxsn2HG~N0qvRDycomd5J0QiOLBYGZSSTOLYwTqufvMfVyM0fg6xV062pdpVjuRzS-2SZoPxCxNQogpwVYcZCs7tHDVqUhYCN-o7DKvaJqw__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/7e18/683a/fad940bfff8bb9508cc38820519d54c6?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=bTem3TSW1iRORErmDMfXlTv2o4asBtOfkwk3rt~sc7VJlluqo8MzWOsPxR1uZ7W6SXSoDdJV50LSFJtoFABLiw00T9subuiCpoRCl7MldH-N01C8UWfUoK3D~UGo93CngHbEJioPVVqD9iWFRxr4oiP68dUQDscJ6Uv-Mq0-6mzno0nUsUEgxr412hNmGUmVV-uDez9eEnHKKWDt~egEjdTyqIadFsRWxHhFyxuTalAm1x-ooCJGbmn6U5Nmbmw78Txnd6on1Jp~6-ompYYF15v2PHBNldhS81u4ELQZwbvOxyuwrQNplHKy92ecgIaW5ljaYSxPVQSabOUGjkWqFQ__',
     },
     {
-        name: "Beats 3",
+        title: "Beats 3",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/91fb/0a68/e73e1d530ba0cc7c6a4a9bf5ca52ae79?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=odKTSorJZPuC1iExtZo1uOdeYMNy~tftBpOmiX2x6090KuACpnqxpluGacD057AT9OAGDnmZ9TrdbPtkXw86SMfozkZnWbhz~wErUy1G7mwvyGkoGSBoOoQYqnTpIvSWhAJqcahLgeHbDrc06mA65WzqAXs9yajy~l6pQzUB30y~SjAbvclrYQAige4xAut3UIHYBICtdWsq83TCPrHaVMc~p5Po7JH4yjlrX~nZ3nvkeWVZapjADi-VxHk1UB-yOQhId5hCtgfONvb4sgPQc4mWFXS8G4B102El4taWHpEIUlDxhcGDSQywCW-CUd8G2u-Cx7SJ1ZLwr08RucbX2Q__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/91fb/0a68/e73e1d530ba0cc7c6a4a9bf5ca52ae79?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=O6d2y7Spc-QBTAnDQRLe-3OMPTDCuJovmIv~9W-cPFRM~~Eo0RjoARyiSiOXqg9jVE~NvsT85LCnH7Mh5d9qtOEGVzYW80w63dQ98-vPDOEw92OptQFZnCAgD5KKYmAHQGdpSLPRvM0MGZ7yTuU2zYFTz9IBVWJ29dOwwAqFiP4O8dT8u9YJTUNWDDE2UqdkmoggAAJXVMRJgd3JoMh7v661z85ZQKCa3wsx7lpm7NB9XR72Nsr6KX1q2MwXASYFK1iC9VFXSKwCzvUsBtigCZqB3Uu~dl4fiRWpezqg9gj4fmHP3Ii0XUX535rou6zb8ICozTYx7mRmkXgeMT2HLQ__',
     },
     {
-        name: "Beats 4",
+        title: "Beats 4",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/91fb/0a68/e73e1d530ba0cc7c6a4a9bf5ca52ae79?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=odKTSorJZPuC1iExtZo1uOdeYMNy~tftBpOmiX2x6090KuACpnqxpluGacD057AT9OAGDnmZ9TrdbPtkXw86SMfozkZnWbhz~wErUy1G7mwvyGkoGSBoOoQYqnTpIvSWhAJqcahLgeHbDrc06mA65WzqAXs9yajy~l6pQzUB30y~SjAbvclrYQAige4xAut3UIHYBICtdWsq83TCPrHaVMc~p5Po7JH4yjlrX~nZ3nvkeWVZapjADi-VxHk1UB-yOQhId5hCtgfONvb4sgPQc4mWFXS8G4B102El4taWHpEIUlDxhcGDSQywCW-CUd8G2u-Cx7SJ1ZLwr08RucbX2Q__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/2ee3/9999/a479d216b786ad065af14c3234d66baa?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=D~4S27vvqhgxj53vjQ0Al-m7IeuMgUI4XcwZN4KMP9qhZ5qaylniikU8MWH0X-fUWDwj0wF89~JUi4noZbI8UnoSY5F7G1tMeapca9KINkYyzL5NzTLtSNniPO6RmGSVUCU5eCoVgpA8AlWwkp3a9ryArop7KEDlIioENgG0Oo4Pzkgt3GqYyaDPYlxqwucVpYz13IHiCo8Tn-q6K17pMq1BR8ZtFf0vFRLD3Zo88PNv~K-mNtNRsMbMGE-QbaoeH51WLvqoxGZ48ydoqdmUqWChRAWyDrDb6bGmBL2bL2XrcbBT4EOkeVO-~e~86D9CaWA7agh5scX3l2OlLh~2mw__',
     },
     {
-        name: "Beats 5",
+        title: "Beats 5",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/0f73/35d7/f5da85bde7096559f3b7cad6e0c502f0?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=GCruBOwa7RAKypKT8uRY~XZMGLwgTuwqkal7oTfxbeoLCP~ajaTMgWq2N8JhwrwmSIdgrIryPkrYRbxeaj7WtG6aTLmErbE2JcKKxvAlDG7fgjYs4GhoWOiMbZOTZBjMQ9Wz4xC8SXdrAXgv-qsEcDMHggP7kQfq4OUyvq3cLGo01oI1E0S1yz~TtE9ya9U0ILKJ0xsdhleVttps4Byqqh4RqfzFPrQ~YPgSbRZyBkrMd-~kgJ-aUTgYj4ruEdn6D7cPhAiNQULaA4NPtC33GGXZt7HjRnWsEvFF9rb5dxaS8p~xaSHZxk8yNX0A7PIZPioFjvMpVtyj2L-X0QShow__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/0f73/35d7/f5da85bde7096559f3b7cad6e0c502f0?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=J5ecfx9AWzSjV5GNnnLRD2pT2Xu-v8HNb2Ti8bYFJrdx9HciEKcXVA8rFovfDIoK7j4R35hV3p4A23ZJ9GcjKEky22zqCpsIwcrOAFEQcHiHUqAX7RPLInstDfa4~S0i8bI4KxFgJe~ebpHU4Hep0wCIS6BP5Wb0ifuK92AVz2-v4e~jPvBOGD~uCmhGOGh-fKpp9g8VfZlesDZpF4cj0rkuC5JMkKZYHV7N~dyF-MeAq-v4uC-E3CR1O2z-C3T1W~p0sIwDRlF6brJo12Wn9c-ScJ3Fo6R9WmLixndhMBEfX68LBM-GYS3Rvq0F0mIJlR68S5yxHjPSwyRrBf3gVw__',
     },
     {
-        name: "Beats 6",
+        title: "Beats 6",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/4eb5/b46c/6a0e7948859b1ba7d0d09169e4e28a45?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=NJZrZlMot7v~kuP~Gftzvg19tL63Tulr4To0QJ3X7NBrdX20IC-VFcP8i-Z3QdlaLCsjqM7vbQeMUpaBd7b~T9DgE9tshbdnEj405vNaJ8BWLASxmDpu7jg6IlOMrQLvpTGPKLVe7zETb-PqBGMnNMuWSLl5~qqUNpapbWpjIC3vav776V6wDfEOyxcdFq08cnVCh9Mc2ZUfcC5ClCanHccOUDW4HY6wjMV6RPl3VWRr91mshlo9Ua0hrXVSmOy43meRYxsTp8K2UwOha63nb4E6CBNLoFvmHSwMB9~NL6y7s3DrJ4v9L5O8IJJ04GnMwmNRlFHbG4yUqzCeWxS09g__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/4eb5/b46c/6a0e7948859b1ba7d0d09169e4e28a45?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=WzeHb4aguDMy2CZc~JkM1VRFvduXdEcXxrwQFaXQiyVGN2EHutFqfLX-K4xR6xxrMwdk1Ge1n-CPztCs74ApDyqrRBM9zpZWjGhUulaNstSLD8uCdfuo1eh1jzOUNdOUZM2xScbFNyFKASKvpgDVEZcQVRjEjR19BirlXctnXfoxVKZsvjyzWuZiNQ9A~XzU2cNTBKh~8N6UVYra3AHHbP1tISYzylptNmYoGvh~DyCzX1j0j237zUPuAxRdzI54XwzE9NxYZMkrMfPCLQA1vyd2ZpvJ63HQpdgMqKVmoAjdRjwLvFHv6RI1tsvv~5Hidkv5BdqRl6erJqwQiE5tHg__',
     },
     {
-        name: "Beats 7",
+        title: "Beats 7",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/a63b/1c5a/cf127bb7e9d013695a8278988aacc08a?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=A0kOMwzTsM4wdo0wULQMt6eqHRS9mduRh~Vyz7UyfRU5XFIqY-sp30pSnGj-ViP1I~SdEqth7QHzjBSmFXVYmo6rniwTBpeULT2bPlIjOjsIcM8i6FemUXZSYVWXZ1CR7PoD3jOpI6jKumSSxTXc7i-FuscrHWlO8ZyojB1uYLEf7a08RTisT8yCrvQU7PeaJFQq7jl74VA9Esi5Nb-H5LZnyQi--rLcjkpNM7moMLTTBYuxK9MRqNU0ZzE7Iqq6G2gjH2MjGbS8wJLM2bXI9KeRKeb2DzVq6mvC-IsPs3GfIVK4yBuWXzLHltYDpk28t8-DRCAG~xjhZT9D7hC3ug__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/a63b/1c5a/cf127bb7e9d013695a8278988aacc08a?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=GcIh4Tv4dw5W3JyIPjE~WWlkvUB7RIxLQjKY~JmZrRaJ38XAS0jyhNy7AaKhqv~BGdzXf~LYb8T5Aw302vIrUjuHFdirtOD-0AAk6pGsnU9Op3~C7aD~fRK20XiM-hH20qpYVj-2pKgJ8uzcPLuHdkff15BrdehdmhXui~zuZsGy6UQbliXykjqhKKwWu77Te65Vm2~9LwbSJPXgoDiF82IddMID3KYm3CvlS64zKY8vfJcKMfW7z6KeUk2-796G9gJv~UdED6cqUPwl7XslaLJgN1vzbDSbwcW8aqvVDdSlMjKoqFO6ETXFmdaaBItlDRCG7t0PpRAAL7uBFLqrnA__',
     },
     {
-        name: "Beats 8",
+        title: "Beats 8",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/6190/e587/4c0f9faeab9fb4f399eb7056ce8a088c?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=bKy-IA~dTbQ38kUhmuOvvplw2nZKFKDPfJFb~MuM0mL8rhfwuNlDAPt7ucPMzNLipgc0obyuHgdfKbYdwankK3oAH62LQDB2XbjDBZFXvXeXApaFcuaH~lBoZwJ72QHmVBnrCgY7~RCduJ17vBE8SJC2CNlNCJ0y13bLH0TNpG9Ejv4gpLZea7FkfYFshBxBVHODlmKeqFk8ifr3tRalPGMaXgw8t~6HcUf4xuLshGO8tKHeukp5FghvxhPBHjf1MDx7MBdzUNJDwM5mGv6ZOu1E2iV5eGuI6UTmJHM1gRfnLKHD9a4lGljgV7j74aqie8YWUTUXgacofm879nn9qQ__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/6190/e587/4c0f9faeab9fb4f399eb7056ce8a088c?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=AiAhb6bVE9aGYNbv9uOPLjhN3c-D8scYpw1EehyayVsNbrurM9iPPGxFr9sVqsWAdmOKCZE56NY5yNOipNktM3pZnIILTbYX1woiC2M7Jwni0Kplra6yiqMyfELOk2swYfZxJfzHck3F8fVOYf7hgp2SgCtArEc2DGCb1oP91O4ZqamOFDPXVXK5iQSi6GERtnipETjl--2En5YOy-LmxZxOB7U09iUMk0vFXwOXLrtqJSZD-PrAqhj32fDgaiiDvC5m3ZjRZlftWxEZZoxriBLjT~TTTlJK80cJO9fHX26n9zncB~Gcrd18YGjCgcBS03OW9ZYf0iL9mI0tBxEWew__',
     },
 ];
 // DUMMY SOUNDS DATA
 const soundsData = [
     {
-        name: "Sound Kit 1",
+        title: "Sound Kit 1",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/65d3/636b/ca6e7d6b7a3bdec78925c186472c47c4?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=ahVBIxJ~fez3jFKV79WBZPsnt~krDvGyELAT0pPVWcv9AzR7RMnvspZAbnEtHH0tH6zZYaPWsM9hbzQIzCPLhiJdt5Mm4iz-a2v2ajjCftufV31gl5AE1oKgSY02CXZMiyrL8eES3dl1FfhqwYDrG17TbY3JhoWD2MBzSAwnBd61LqNAGGt88jz6S96RlA5NC4oVY7KRjOMHOIMLB16GIBZcuEAL7BhbMeLu82Lr8vHi0B62VuYOiSW4UeEyuYw43sm76yoS1d17P25TUG1apUO7sO6fo05a~fm9RUVnjV6yiaX6149Nl9zxEgadWf02-hjVvNV9qWMPHek7NQr8zQ__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/65d3/636b/ca6e7d6b7a3bdec78925c186472c47c4?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=FLrJXUyVGVPFE~fXe6gGKXb-82AhhTKIe-rT1ZSs9S-EzTaxQUMWbb8JlHor30utMVetPgw-g~SO8tSUc6X-WQIyQTI6rDOnDjaK-EwQBhr6JhM6eASvEdaofEeeYj1qLUlsmFKMHmTAH3v6cOIYfQokHyd5-AOLDDA~q45XxnJRxNdGCVsIfuOVUHcOJJ2LtGJCe~07mv3HIWMsUDwA4K4PHM~-QAZqdT5ogNKvAzSnOTNvBcgyUWth9A-tabpfwyAV3iOdxuDJrFG3z8JOQdRuES3573icgJ9HrQ2Px24PavBa7koj2NQnkU5GrDBqtCz~sWMJbZX-2pUg58ACqA__',
     },
     {
-        name: "Sound Kit 2",
+        title: "Sound Kit 2",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/edf6/696d/196076f343bc47cf277b71bbaf622c2b?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=MEmCdnQmrTS1Lj1t0GgwKeJHXVEKRURWF8UDdu6rTkLKLhwETSDd0-9MgsPYEg4XquewDBEHa7ZE5-CgdfDV5yTImngutwx1PZtdP33YNUcZKRenxEtC3HxcXqD4AuSUgaPhBLsDNOlDzwezDedwClEJAkYcy6eYLMa~avTNDFGvIUgIk7wQquTU2PTysSNw1sdioa6zP1GbVBjZYPTeAWBNc9EqH-VjeNJy1qYl7oaNKBezgHoEeRq3vtnuTVpvj8NPhDFg1jd554rFPdWV~0k3qUb7mnmcRONixEtqE7OYqX5WSdwDofdmg5sekhwfETkxr6jxdYS5mB-o5LnMLQ__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/edf6/696d/196076f343bc47cf277b71bbaf622c2b?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=G4Yoilgnx6Df6zaaWrY2bzTEXdENb0MUpOo-SbNmLxVRq7im4O8pK1iZjeXBSMo75j40AkiDGW1xctiu9dhNgraSZwR806oD0wBfkwS21HMp~LPyuLV09ttsP43JdxH7UC4wlxerdS9tiaJn63tr53rlRHVdXbdn1JA1oWGsqh2f6uccGzlTClRvxgEN3Lqj5NpZVysEJAbqUJJ8HG0yz5tIBzlggcQXuiuJcEA7jvAX899Ap~L5C9k~mJOayUpkiI8RVrL~~ky4F5WNN8tbOxuTRINZu6VjtUATQNUCFXlc4fHe0-mcehqQ7U1s0MbVHUpV67NnQ~PRD1ORyFgz5w__',
     },
     {
-        name: "Sound Kit 3",
+        title: "Sound Kit 3",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/2c0c/0708/6a3aaba78b8e1cb88166c9c0f2cff835?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=poAXV9tAZ~gF318P~l2BbQ4Y8uadYQrJKh74qV9Mv7UZ0nxRZapAdBDkqWFqeGmiGhTE1Nnjjq4RclfDvQlHBBrSn-ZpKor0OB4xqhF8OsOEdUCWMwwD7Ay5g7sW82utyq4sp5-jwNa9ZbpqAy8HxJ2Z9~qrcq2h~OnRty78W9OHjLHph26UsxwbppXnzOvM2dNrUWSSvwLvoRv~TUYVYu0n323XtQ03vQUMD71CTQlTLP43SpPM6C2X6WphlTTi2AgUG9lFfyyvxTQcHQxRgc3I91TbTpuu5rr-0LECOuI3x5pVdtzctEq8HaRXwWPXzWdfg5ySKg7LcUOY1nWkXQ__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/2c0c/0708/6a3aaba78b8e1cb88166c9c0f2cff835?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=TuT~u4SOf~Q-xc04vigwE6Jn12G7PKXPhjx2pwZ7EX4Xrprfmy9rkceybQfshVEd7WqKRhfH55LpDe-pin5EAojRoubJ9M7VZAGiVz6kn69OVPKR3nemOJJ35gCT9rb-spBN87Z87x4lnGm~59~L2Sqha97mgKW-lsTRke6cFQEd3LSnevzmfAQEYvixrV9btN4HQX1c7IRAQA~sldjPxA7oE4jcRKaKv3yPTFIwSzk6t4YzZao1AzLug0BQBEFT-3OfqFHBBBCyihgse7F6cQ54N37MXbTm26yX3GO01NfzX~RRLm3mWmLo5BBoBZxz1brrlAHJ9rkgF5oRTxOxHg__',
+    },
+    {
+        title: "Sound Kit 4",
+        price: 30,
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/eb89/d6af/aa4ebdc767a10c328a449217719b2af9?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=Y~9hoaPKyxr4oSQ8FGPwo9Un2YqAgiM~rdSCQQfOHDjftCn6KlwTG5zAVv2k6WWPDXHdL-4wwWay74R~AFOdxvxCHOinfxltRyFpRT3lrOfKiJURmK8U3Q0Dd6A4JlHu8QvE4cURfQc9OQbTsfQUOLCxLX9Befk2hxc2cVQhbecL8IxexFSgxxPapZ8yEJxCpmKYyzwPY6AJHX3FuO5ifDn4X6Uz8CoxQ9dgIM0biLOzwbmWQXjAcz-ggYPq5sqpL9XpVBXjGGXw1fGl97JnkRHUtx8MIJlJgNH0CHEUcDVbKLaM9u91kKI8RAMk46OfRq4-~UdOfIVPZzYDxrExzQ__',
+    },
+    {
+        title: "Sound Kit 5",
+        price: 30,
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/3ec9/cf55/97c532dd362d662d8c32addda504e36f?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=QmCrmp5Pen0NZq0IYJiq-wPmepRbB2RqQFNnJVAAypdFludEKdliKT1eyTYANHEeX-PJwhbZhKVwkVZIRMg0YLxFcxZEhwcIHh1EjmHeDG2FxZMfvPZvFS7I~G-xF9LI0dXYZsdFZutWzq65HJFBhEaGaajsAp-Gtuk2k5gJqKGt1Ci1NOY4ScRJhrWjGBeaXxihuLC4jUOnH0E~2Z6yAkMnTvCkR738R877SsCbVmOJ-CqAupWp2ERz52GO-qS54iiehsfGuU9cJM9OA1V2etT7NF9dP8WnQbtrGb2EUUYL288JaXw~Qx-3ZOUGtbFT2iZV5l~Jkw72YpRgygJvMw__',
+    },
+    {
+        title: "Sound Kit 6",
+        price: 30,
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/992e/1a7d/7f3d6dfb35d1ba49720db1c7dcbd8e9c?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=RNfMII1712oMNuQJZz8~SSOfJBWeH-BTSW9~TOY5xZ~KZldZiho2iqnKMcxuDQ0V4i-u1PMyf9YRSK7jQ2shF99KkoNJGx~zPi~Bfib30rvdvHcP-wPV31PI-vnDlSW8~mzRJOSXzy8Cra6eTYKXgeftNZlqFYX~Ah9XaF7cKH3Bl5AfhJ8Ztp7ynXzcYVbxZQibiX5zGf3Xmvo28x3At4BcrTuCXsV0nv6fMCMvrAqU-byU~VUiia6apuJ6mo4VKvWgGg9AtOSH49nbM1qp0UchXf2DNubOEZtiu7aDsk-VmJoU67~wtwNqjKtNU8MiEgdpTKZnDBGenaloMeFMdg__',
     },
 
     {
-        name: "Sound Kit 4",
+        title: "Sound Kit 7",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/eb89/d6af/aa4ebdc767a10c328a449217719b2af9?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=Q9DpvLN7X4oYEJbxZviCUecHQT0ASWyWxQk2TXdh1KuFhJ8Z-Z5E~r0UeqxVjL~chxC~bu5YITg4taZO3HUtda37D6BEK~RfznpH3lUjOxMtUvM5kDrgeWHk8~e2IEzogRqSGwaoCdGk8PlUDudcXGROfeoIjytbdEMUm9Iqj1CkATAgFz-FF0ycOF3HaNdSk~WhaYcmQvan2NZzPwr2qlgF2FL8TRGYCNcBBAyE98avunrHkupEaFyZp3q5Klz7X7oVuL2W3DaLAdpxUsWOjIcbreuYGgmWz2uT5mWZlfh823dKmhUgvyMvgaNiviqPtEScWMM0iNz0FI~zo4CZqQ__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/ffe5/52ef/ff8a49d8f3d3b27767f56df4b104337f?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=Grhyoi~YwIYcy-X~K0NEdUWAuLfxRbt7kuvAe3xdI71xzExGS1ouWN930DHPiuouz~U~feHQ3PlPHl~wXoORj4js~WLcMtEUgFGNIooyAS7ukti9skmJu3mSvwseIrnTeixo1PuH3H5OqO4sH5swzX7adJvbzQlPpsBHKwAa6tCyTtpJsIi47r3yWSazml2CCzvvAXF68aJqhYjWNnMBJoe9NgZrKL7T8BtnHV-RpsoV3Nw8wybJB7TsE4VgFhPd9n4PAmCecRh9xZ3SzuI~5DZwXiEmaIgEwJr7qrvXcpOZ~VTQMzqTqgtLAUYUMUO6vG61Z0RJewSK0DYL3FLoBw__',
     },
     {
-        name: "Sound Kit 5",
+        title: "Sound Kit 8",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/3ec9/cf55/97c532dd362d662d8c32addda504e36f?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=I8UWTsEAyYG-3QrMx~Fuoiw1mu5UsjIdH2JN3TH81xlBwaogheFboWICO5-BG~Y5jNnrZog8yYpuhud~gZxrlXkklvfp-tE8MyDGZ~G-mXfmjaAY0qvppXIb1mSXmnaoqY~GC2KC8kS64rTetafs3~FhiIUbXSqXJdpwdG1zTMJ-uZJwrKjOLvoeohbECc7C4qcb4qIhW4T890HxXrdky9HigUyH7GfGwH2f8cDraMosFL51rZvQO5zikLdOXs5NwKzf4kY6zFU7LANAwyU3tOmgPKm2E-gbAbSDQGa7vwiL8QXSjLbquhEii1ngS3RTuNY1GyZU08OCxkve6-2egw__",
-    },
-    {
-        name: "Sound Kit 6",
-        price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/992e/1a7d/7f3d6dfb35d1ba49720db1c7dcbd8e9c?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=FlXSPeHGi1Of6tw3m7unjRNN5SAiAyB9L-Kb5g8rMb~jG4nsA2yDmExkeVsdolBHHXfZPc8KOj5mZtIdRU2ccDMXWgxWsCAMHPmlDJfQXLHl~jahwXM-JdPrvtzaKG2vHg21yfrjCxLDAUTYF6j-LDdOl2Uqb9-44tC64TR7wn15uc1pGvYvwI4726eHh69DHA3OFfOgE5CVFAkegGPl0C4ukgeA9O9LmDxKolZrR4pP0HvnW0wFowYlsr-cmJXlIcrTmB~PRO58sQ1RdVzr8oAMI4Inj~8wFK3dpDIYVB2dcJmwoO6H-GAPw5NZ5K3VZUqS3tX7QmqJARk0VnS0aA__",
-    },
-
-    {
-        name: "Sound Kit 7",
-        price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/ffe5/52ef/ff8a49d8f3d3b27767f56df4b104337f?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=p-jHCiU8xAVTyDKTXPZO52Rm0NRwoRhS652vjvVn52zdu-EhMdTcu95PlfW~LBmOKEwQdtmAjM9x7yASNMoudN1E0BkDx0O2hfo1LWkwP2WMFeTZEHmLZwQVM7jZb5jmFRTO67dSCcascKgXiJGLB6aGz7F3ykjzKptqC4bOINm0O3DwmTnKqmgZUWx9tVUbJJhiwIaCulN-cdYwir~QTGepGeIvhTAZsy~A~-VMtuTaEeRUGOlFhvJ0gvspVc8qiJjT~mySFVuFQB4-pTj1GB~pWMtuzzdJQDmxx4HTPX7P8dBXi4qtZi1Y6u38nQ1EoYwR53-UC~q-ztcWd84zNg__",
-    },
-    {
-        name: "Sound Kit 8",
-        price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/ee36/4a40/3f306befeea4d06c18d353d0759f8942?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=Ob5d2MQq~Lmx3SjQW7poYdQOgUKwMz2w5rRk8Szl8MX-QayfTwIXUljIP9CByJ44mRLN84~kB84jigl9Am7wUZwXsH8-L~tCYP9DDHE~YTipKVVY8satyvKS2QqWmDL~50vdoaA4RnkG23yevXOU2y3qbc7CHOJPQNIXMXhdFZQtHoO2A7B-kWhtJVZ5rhp2Cx~VyeL5F~JlQVs4YKb97icRszMn~D-5VgbuNwQle2tzcZx2vKbQuapgwe5McOS7gtG1ZynsGkaqN6D-OI-gRBxeqcM6312SRkJyy7EhxrN9qDfXS1REak6hwH1j9FWX9N26F3a1sMetNvWZapguFQ__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/ee36/4a40/3f306befeea4d06c18d353d0759f8942?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=dX--wnbUZzrFxYJNQV1ykzNPWganQYflkvhr8sEEazL1qPSdS41k0ynJUrjrTZD5jW467OHkXPPVbDOId73srhpgj-x2gb8B3yKwPJmXmBV7BLjFZl7BY7SYPzptxN2jqygXOrRr0ANt3x4UgFAZenqO-Ppy8UN7O8Ucfv5prqhjlVYbxjcO0NVCjXtk1B65ksakmaAIwGsdc3Pxt3JkPwjjbjlfLnQK9C7sh~M2694DpdfgWKxCKEp5PDq6cjgcSjBI3zcf4W4IUDUfmGnwgeLqs51jhgtB8MoiQwSx8~BYOfGnMH2cLFXLI-YMLG3MSKDu9xEoMmIx0rX~RtuK-g__',
     },
 ]
 // DUMMY PRESETS DATA
 const presetsData = [
     {
-        name: "Preset 1",
+        title: "Preset 1",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/6711/f55d/f124481db193ef9e2265176b8ec872ba?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=Pv7uXyD0-ninQ9k3-Bn~Q~YHE5Zr5j4ql8IIfDjP~zQZu7ODi4hSuMS1LB4YzBghlVQZbppTYQgcG1qTrk1a5jQO61EySxid-JG6QPegzz~0loYTX5ZE4xTC6O2S~bQ3W8bMzvvdBhC50zQLHS~y4pehss928VXI0hhAT-wQHQxOpqeGrixUlaQztrr1fkPDwMtyRVhOXirYq2jTB5cUzjUqZExqJSPgbkFr8aWi1a3ZoupxUWK8ullx8Q09iG4DW1-qJiy7TBWO6zxbRvJED9rn3-G9B8XIF21~SMafhsq4HReO1CszBPJUl7B1Jr~~rQZRt~UAwzxG6HstMqqtbA__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/6711/f55d/f124481db193ef9e2265176b8ec872ba?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=EMftmw68CNzQkLaV6zjWoJSxfk3RYjbjog9Jy-s2SST3Z7bpSQyxqc7Och0bU62~Z5IuqAZ3tBASZi2jSWW0RWKMDaleQukPVE8DTxtxG7xsec~GSgC4ruJ8YAs3uKm9u9~Sm3VF2gFHL5rxE46svz9JVdZxVabBgP0aecd5oTFtWspa83v0KkWsRcD1zTc68efsWe5ZdtTeDceHXgDQhaHg7DpL0njF4kjbK0550QbHgiirAKwnm4eMSFGjJpZ6MEF8tJgqpwHQ~Dy2ajFIgZiRgeqbWL9aw7FsblUVtE~ellW56c2i6hlPG7Ydcy5GspPZ9mYOYJsHKtURSPLWDw__',
     },
     {
-        name: "Preset 2",
+        title: "Preset 2",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/f0b9/1533/5920573f8bbe3144656525ae5d7c855d?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=BUQBluXcDbmQ4eC~QVo75UJya~tqiscQ-m4xW973WYN6ycEpQsSGOd9AGTWNMab4BM-MNHNtSzXYKG7Y0BEz6ef1EZQVBYbyleG0Wh~L0VroJhWw2X545~BgYpgMoDZETCDPUCBtbVrFNcto4VrvDwAl3Qa-C2EN56GwZYNddehnQZNiiOq1ZR29Ws3bO~OiWlKQPs3VHDL3kA04FxC18Lh41oSWyoBIn~WDtF60DIkn4PCmFHSvetm1pME2ArFStdBRwsXNoLw4cbpj0baS~GXWRL3ns5aiREGR6HKTAM7vSyw95upIxrWdNpiD8Rwgnh77dr3H9z~rNjFoScZyDw__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/f0b9/1533/5920573f8bbe3144656525ae5d7c855d?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=E-Cg0Z8AnpLD51CLiKTaH81FxyUlH5wjeqIOKCJsppJ5obxs9xPApT23V6pJHnLuB8x-ImY2ewzjLy3tKLQVB~h8lDE5jpJ~3eEX4zrVR4WaqXFIRMw-MRr294yB~X5da~bJJo0-OOG9xi-fKm3Y6EtStCWosXmz4dwI1cmUpHsaYZ3hBOIJ5RMTGYC6jBx16JzeY4qmGBXck2ok0U-2uL8yuNzIMQh6URbZxnIGqidySy3i9FK2JxMqadA6LKzNlL1zZuAuJY32teNFk3FALZKOnbjsMAk6KIin57V1bAvFjgmb5TJZ2s1nzZ5dxBhzLnUaMwlrvkRGHLMvhwVYyA__',
     },
     {
-        name: "Preset 3",
+        title: "Preset 3",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/3e31/c9d9/1393edc517a22b0bdc17fa3aa9608314?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=O8XH0m3llABvTCTxbg9KLVnbk7NadcbXkg2aEV1~qddKSQq7ojbWw-nKoA4HCKIxOFNgFlHHodFh5ssL-FHdTKmrlaxz2wbMZWuDhdwO6eyMHbuoI3KuhezrZ9ZaSShG9wh-lybgO1NTWsxhjZhqKHr0jhXQBiuYPsHp-PmDxcwZkcoc95zyNsVGuh2CI8Te~O1KakqQb4nrjEqiwvTp8Ur83r30lRq9T-6V~ys4mePg1o6n7jnSmXKXzCllLU54i3ZIOjChlcBUwQ9UepVp1BYUHRVdwH-xXDlcqW-E0AGIgGQzCsp3~miLwOQqETBW8~xZoEmxangNpq9rU~2bEg__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/3e31/c9d9/1393edc517a22b0bdc17fa3aa9608314?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=Tqw6f1g6mgVvfkAvou3naR1eZAiAvEmlHGzLd5Vrk9VxNPQlfzd-Oc4JiujqFjvELrlvPgikQE89D-hGL2nLVBOA9tfKg0cKnq2~4eWuSXQOvS0abQFy7liE4740gUVWLGorFX0Snfyf5FT4GNkyafxFlfmhl0EzblSTvkxn3zQgOgEFVbpdbTYjPaBmAwp1BMYld9hE29A5jNoB1zyn9LCmriK4q8bLwUGXKk7gbUaSJjfY5tTz8vK0EcLFAILrY6j7VGD4V-JrFnv8q6tkeF86FYLsDmqPkioqHvPZW~v0BuTOyEweKyOVlLeCH0kcti7NaofSEhTMSkYS1YTU8g__',
     },
     {
-        name: "Preset 4",
+        title: "Preset 4",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/3e0c/d395/7535a1eeddf49d6352d9d45d77f45c40?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=ORzG-HZIATIUY-unthKv6EQaX4xFwGCvkhmge5qdBBzK5w-aRfC9ctkBD6QZ3eexY2s2rPKvRF5cckpPpVcG0CnnbmMx6Is2QYPUFvkiryWAj9-HIspBnMcWTNtlYYZLtEqOZvTRtA6VamZ~yxGvI0YXrrS6XswK~q9q3BUW0JYpr0ux-ht-MYRL3yHeJefF2cdiCQ3n~H7oix9ZDA9EyvuRvh0eF0vflfRyApOk05Gy22gnv3VxD6ppxflJUdaDNoLuEGpng8HIVeW5fa2oSmGq2gLnk0fDkF1bDpn~TPfvoGCq5wPzPLFdmPtVOUo-fOjPIuLGPvtrrw6EQShZAw__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/3e0c/d395/7535a1eeddf49d6352d9d45d77f45c40?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=e4-vqP-YGq0b0VKdrUA7~VypBOdnwBZGEM7gTnHbNgiyBIYOcslApL~6w1iCHH2ofra-DgVDyXlRlgTHhl1yh5-llB1pPMfoa921wKR1UUuWdAyHzBt4zt4GD~xRv~3wNRQBYeJ7B~xRBIhvun99nt9Qzsw81xfuZHcT3yiXuXULS3rBMk5NwwBhjwvqB8JzjuVBC~UPdU8H56jHAk3NJ6asnN7hPKrH4iOgqs4STEJTXbG1fiRhdnAI9m2g0zLmUzSZyMrY1pvofmiCEh~wCiH4Lt8FOSiyO1wHHPGYXlaR0weoUvB-SGVz7mNiunG9ja85-i2kqETiZir7Uaai4w__',
     },
     {
-        name: "Preset 5",
+        title: "Preset 5",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/4990/7145/df16cca441bfdc13f57d34a72ec6f47c?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=lHj4JrM-iJblgZp0WDL5OHOECxdPRfSg4m7XJxMnD66-RaP3NMKjmr1rNtohEn2pzPGuzpmdpcOlm6UytQGqZ5wENXgGUZSh0GDxElXVUltoxNhjjBoA4Y2buUghMZLxlDkSp4x8PNgls5CUNgS1~nyxn~aOJOtWSqaH4ALn9r~ZiRWnLTosL1y5Kh3vo-Av7eBhSlSM~OGdOz03GcTSEw9jckiIJKZoIu7qwqKaP6F7ksGvQQYt~-swsHsaURiAStY5lgHAEQBDbbzcV8Djf-0wCHjBXmkzp5tvg1ASyWqS9~pZvDxI2N9NOhIGXOo-ZZg5AGZqJxDjc14qlNh9RA__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/4990/7145/df16cca441bfdc13f57d34a72ec6f47c?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=TjiV-cuTolJKLqqf8Nd2Z-7zcg9p8xihsz-XUgGxKWCSWfexZg6brV6k4C~l5PUZyr8gwKGJMeSxr6Ssm2qdhH0WRCWMPfJ60z3v9jZnnCcqQdHqol5VJrHk3D7~e9NWO-H9PSlP-XfYJNXqpUnNuGelfwI5fhSf8l06AP69xTTUFz9FvLJd2mHk2Nb0tIJG0THcqpuirMxoX3QaOYIM6xKC2mMXGu2ixzAfLB6nOM42MWQW6YDgsIT9-cp4RBi~eEdOlBd0xcyzeF~0XJse0pmarNSezgi-Nkb5HAY2DBi0tmCksgP6O0SrcFF0ggHHsBHEiPt4Xxq~ikWCUC-sYA__',
     },
     {
-        name: "Preset 6",
+        title: "Preset 6",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/d8f6/a79d/5214f3b2c45cf2bb23e1b90d5b88e422?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=A5Vis48aliVRdpgxVgAH-YPLWHI~PHHNlI5bfZzRTJxMyJ2SJ2NtHJTlxWkFFxS3K6AyawueoPMeGslvfbnCXXi6x2Sj95J6VWcq7wRrM0E9zgH3YPYjeByw-yC4M3jRJsDW1KP63d2YQxjXWm8Evkb8BI9cw7yZZm69dgVuHbOyYmadNg4ajiYDXqBxzemIV5bnxEseuWwyxVNEDgIaM3HOexr1TG0J2Dp9V4~pXQvhcsODbq2C93AwXR28kw6wbqNtRvC~ce8UY-YRITdx0atvINJTCQ3kZl2C5jOCnxG6O4E8z-Jjo6F0hqfzVGwd0rAfrClNJ0UGCKXCOTbuLQ__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/d8f6/a79d/5214f3b2c45cf2bb23e1b90d5b88e422?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=OqxL3AIy8vD0qUn2RqMkwBR3aqTf~AM0RIEzPBPhZYzFUQWh~HzwxDfBo5lcioWSh3JH8jLwmYymkF4BhHhlh0ml1sNUTWqmD5QMr1BKNue1cTxRQX0geEXMGmHmZ2CQVNhFhZIcEjaRaSoe-zhM~kqPYndGJVwIofQ-FUhLnNIbdujD1qlm6nvLqbVTuxpe9bXwMgsob0FoOwtNVlxPAj15~-ANMpvySyG-7vDmUD4xd8iqJXRbSFghJCzrzbxL2CuV631NqMKynOZn7NN~-XTTR51VvyHyrLLhsgZC6~ISirD7uLfT8dGkIIdIqOO~tyFeL3G9V3Cvcn2XDZGmBA__',
     },
     {
-        name: "Preset 7",
+        title: "Preset 7",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/73b7/cc0f/bae44fd92feef80806d4226a0c187b75?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=ce3SsCK8QvKxQEGU1xiRRsWCt8aJ5gdIBIr0Cs99gGdTvSvbc-8vZwXRacqtzr7t-VlrrIcUpkcOMJTumyXo9nJp76vpLZzEGuCvCWe7HR6EClf1Qn4IxijT8lxZt6wCxCvLeuq3d2DPOuAtFRCUT37dK-91fi0SMsYu-mRBouTxQJUB0fl4cYyt00JqXqtA55mx4f48Xvww2A0ZsoUR9Z09GVPZvI7Nw36xEZ34242UnUwtpY~cxdY0jH1in~0z35mKahTNGAurx-pRBUSDRQNn8KPi8sG32NjKdTjuV~1rp9aF8bNrZPVvCFGAP6~vBDEJYuG5GyI7fkvSr6Yszw__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/73b7/cc0f/bae44fd92feef80806d4226a0c187b75?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=aet7VuIPdvxio9tq0yrK4g890CmpSIRsxLnDuivBiLIycLGOUOf4ZjsEWU1piPGPbFK841gZB6sR~lpkU9a0oIMbbA-VyzL2w9sfwLTDzzNuzqOb0A7w2T5c0XAsNe8bb3HrDzjAP7yrIHsz0gPBcPQHwqVdt1V7kbs9Z46F9H2mqy2VSIWuR-dWe99M85td194UAC7ef~MkK17XKtZV3s-BPMxcZWL49-0cJ1JYSZSzVOkT204U0J6PICEe-OgfO61MRkQage0aoomTbpbEYjuUtb17T3~jwpOz73K~0CgvyHfrrQs9bC6rj3TH7d3ehn0SBkyOl95ftnmUWjDhEg__',
     },
     {
-        name: "Preset 8",
+        title: "Preset 8",
         price: 30,
-        cover: "https://s3-alpha-sig.figma.com/img/b97e/7614/71dcb662650ee2f2781e85a9b975de5d?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=Rf9IrFN3Du0k7TPOimSdylJkoaLh6hYFBy0KZo9wSvwXgXQHOdoQlIDf415WJe1ZpejD59ur1XmR7jJb3Cd~-obdpsGT7UjsUMdb0JlU0-z88hyELSVfJZ7di6ZY6ZC0E36ibIwikhMrZI-9K4QPzcQlDONMP8JYcijgKperIwvGrdKxLuOlc~hjVWxGVCYWeOJ7ETcPPnpsbtto~Aa7W7L5O22KkS7zojQqIwMSRJ0oobTRufxNZRObRCDPm0NSd9gujbGyb-~w9ATio1PZCgJ0VMycW-6554QuGSjBftxriGfbEoKLVy2ImDh82OZbxWJ~dkT4lIG22r3SmMqxRA__",
+        cover_image_url: 'https://s3-alpha-sig.figma.com/img/b97e/7614/71dcb662650ee2f2781e85a9b975de5d?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=O5lUrQDYNfrTe8wUT3sU4dSSmFVWoGlu9LqyENnaii17wv9f0z1yA~9YatDSn~ma0tism8-dwYwCLfrs~-Bi1W~n-r3kMvtFFDq2mIoIcWHXUkZIRpc5c3iy7as2-5Ty7P0jsSsHLTfhUfe9T~CELlkpn7kQbzeswNmT~l-~3nAJ9unnRczyJumM9v-qQDJnHeqa53-1~GKCngMSohr1WGVsBSWNRYUi7uR1xuZ1Zj6GfYKQ2HU2bpXrqz1~cUIwHBgpMhOi0-QRFrzgd6z6sblFOldTVKY1tNCCQcnxdI~1xOesUg9gw9k8FdCcMoQ6RUbecLGdNVACbvj3CfSDHg__',
     },
 ]
 
-const Music = () => {
-    // STATE FOR SHOW ALL THE TOP TRACKS
-    const [showAllTracks, setShowAllTracks] = useState(false);
-    // STATE FOR SHOW ALL THE ALBUNS
-    const [showAllAlbums, setShowAllAlbums] = useState(false);
-    // STATE FOR SHOW ALL THE BEATS
-    const [showAllBeats, setShowAllBeats] = useState(false);
-    // STATE FOR SHOW ALL THE SOUND KITS
-    const [showAllSounds, setShowAllSounds] = useState(false);
-    // STATE FOR SHOW ALL THE PRESETS
-    const [showAllPresets, setShowAllPresets] = useState(false);
+// PLACEHOLDER FOR SEARCH INPUT
+const searchPlaceholders = ["Search for tracks", "Search for albums", "Search for beats", "Search for sounds", "Search for presets"];
 
-    // STATE TO CONTROL SELECTION MODE
-    const [isSelectingTracks, setIsSelectingTracks] = useState(false);
-    const [isSelectingAlbums, setIsSelectingAlbums] = useState(false);
-    const [isSelectingBeats, setIsSelectingBeats] = useState(false);
-    const [isSelectingSounds, setIsSelectingSounds] = useState(false);
-    const [isSelectingPresets, setIsSelectingPresets] = useState(false);
-
-    const [selectedItems, setSelectedItems] = useState([]);
-
-    // STATE TO CONTROL DELETE CONFIRMATION MODAL
+const Music = ({ name, isSelfProfile }) => {
+    const [isSelecting, setIsSelecting] = useState({
+        tracks: false,
+        albums: false,
+        beats: false,
+        sounds: false,
+        presets: false
+    });
+    const [showAll, setShowAll] = useState({
+        tracks: false,
+        albums: false,
+        beats: false,
+        sounds: false,
+        presets: false
+    });
     const [showDeleteModal, setShowDeleteModal] = useState(false);
-
-    const [tracks, setTracks] = useState(tracksData);
-    const [albums, setAlbums] = useState(albumsData);
-    const [beats, setBeats] = useState(beatsData);
-    const [sounds, setSounds] = useState(soundsData);
-    const [presets, setPresets] = useState(presetsData);
+    const [selectedItems, setSelectedItems] = useState([]);
+    const [loading, setLoading] = useState({ tracks: true, albums: true, beats: false, sounds: false, presets: false });
     const [modalContent, setModalContent] = useState({
-        type: '', // 'TRACKS', 'ALBUMS', 'BEATS', 'SOUND KITS', 'PRESETS'
+        type: '',
         text: '',
         description: '',
     });
 
-    // GET THE TRACKS TO DISPLAY: IF `showAllTracks` IS TRUE SHOW ALL, ELSE SHOWONLY THE FIRST 5 
-    const displayedTracks = showAllTracks ? tracks : tracks.slice(0, 5);
+    const [albums, setAlbums] = useState([]);
+    const [tracks, setTracks] = useState([]);
+    const [beats, setBeats] = useState(beatsData);
+    const [sounds, setSounds] = useState(soundsData);
+    const [presets, setPresets] = useState(presetsData);
+    const [isFetchingMore, setIsFetchingMore] = useState(false);
+    const opacity = useRef(new Animated.Value(0)).current;
+    const lastAlbumKeyRef = useRef(null);
+    const lastTrackKeyRef = useRef(null);
+    const [searchText, setSearchText] = useState('');
+    const [currentPlaceholder, setCurrentPlaceholder] = useState(searchPlaceholders[0]);
+    const albumsRef = useRef([]);
+    const tracksRef = useRef([]);
 
-    // SELECT / DESELECT ITEM HANDLER (FOR BOTH TRACKS AND ALBUMS)
-    const handleSelectItem = (item) => {
-        if (selectedItems.includes(item)) {
-            setSelectedItems(selectedItems.filter((i) => i !== item));
-        } else {
-            setSelectedItems([...selectedItems, item]);
+
+    // FETCH ALL DATA FOR TRACKS, ALBUMS, BEATS, SOUNDS AND PRESETS
+    const fetchData = useCallback(async (isInitialFetch = false) => {
+        try {
+            setLoading((prev) => ({ ...prev, tracks: true, albums: true }));
+            const artistId = await tokenManager.getUserId();
+
+            // Fetch albums
+            const albumsResponse = await ArtistService.fetchAlbums(artistId, lastAlbumKeyRef.current);
+            if (albumsResponse.albums && Array.isArray(albumsResponse.albums)) {
+                albumsRef.current = isInitialFetch
+                    ? albumsResponse.albums
+                    : [...albumsRef.current, ...albumsResponse.albums];
+                setAlbums([...albumsData]);
+                lastAlbumKeyRef.current = albumsResponse.lastEvaluatedKey;
+            }
+
+            // Fetch tracks
+            const tracksResponse = await ArtistService.fetchTracks(artistId, lastTrackKeyRef.current);
+            if (tracksResponse.tracks && Array.isArray(tracksResponse.tracks)) {
+                tracksRef.current = isInitialFetch
+                    ? tracksResponse.tracks
+                    : [...tracksRef.current, ...tracksResponse.tracks];
+                setTracks([...tracksData]);
+                lastTrackKeyRef.current = tracksResponse.lastEvaluatedKey;
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        } finally {
+            setLoading((prev) => ({ ...prev, tracks: false, albums: false }));
+            setIsFetchingMore(false);
+            if (isInitialFetch) {
+                Animated.timing(opacity, {
+                    toValue: 1,
+                    duration: 500,
+                    useNativeDriver: true,
+                }).start();
+            }
         }
+    }, []);
+
+    // FETCH DATA ON SCREEN MOUNT
+    useEffect(() => {
+        fetchData(true);
+    }, [fetchData]);
+
+
+    // TOGGLE THE SELECT AND UNSELECT MODE FOR DELETE
+    const handleToggleSelectMode = (type) => {
+        setIsSelecting((prev) => ({
+            ...prev,
+            [type]: !prev[type],
+        }));
+        setSelectedItems([]); // Clear selected items when switching to select mode
     };
 
-    // DELETE SELECTED ITEMS
-    const handleDelete = () => {
-        if (modalContent.type === 'albums') {
-            const updatedAlbums = albums.filter((album) => !selectedItems.includes(album));
-            setAlbums(updatedAlbums);
-        } else if (modalContent.type === 'tracks') {
-            const updatedTracks = tracks.filter((track) => !selectedItems.includes(track));
-            setTracks(updatedTracks);
-        } else if (modalContent.type === 'beats') {
-            const updatedBeats = beats.filter((beat) => !selectedItems.includes(beat));
-            setBeats(updatedBeats);
-        } else if (modalContent.type === 'sounds') {
-            const updatedSounds = sounds.filter((sound) => !selectedItems.includes(sound));
-            setSounds(updatedSounds);
-        } else if (modalContent.type === 'presets') {
-            const updatedPresets = presets.filter((preset) => !selectedItems.includes(preset));
-            setPresets(updatedPresets);
-        }
+    // CLEAR SELECTION AND EXIT SELECT MODE
+    const handleClearSelection = () => {
         setSelectedItems([]);
-        setIsSelectingTracks(false);
-        setIsSelectingAlbums(false);
-        setIsSelectingBeats(false);
-        setIsSelectingSounds(false);
-        setIsSelectingPresets(false);
-        setShowDeleteModal(false);
+        setIsSelecting({ tracks: false, albums: false, beats: false, sounds: false, presets: false });
     };
 
-    // TITLE FORMATTER
-    const textFormatter = (text, number) => {
-        if (text.length > number) {
-            return text.slice(0, number) + '...';
-        } else {
+    // HANDLE 'EXIT' ACTION TO RESET SELECTION AND SHOW LIMITED ITEMS
+    const handleExit = (type) => {
+        setSelectedItems([]); // Clear selected items
+        setShowAll((prev) => ({ ...prev, [type]: false })); // Exit "Show All" mode
+        setIsSelecting({ tracks: false, albums: false, beats: false, sounds: false, presets: false }); // Exit selection mode
+    };
+
+    // HANDLE TOGGLE SHOW ALL FOR DISPLAY ALL THE DATA
+    const handleToggleShowAll = (type) => {
+        setShowAll((prev) => ({ ...prev, [type]: !prev[type] }));
+        setIsSelecting((prev) => ({ ...prev, [type]: false }));
+        if (!showAll[type]) setSearchText(''); // Clear search text when opening search
+    };
+
+    // FUNCTION TO DETECT SELECTED ITEM
+    const handleSelectItem = (type, item) => {
+        if (isSelecting[type]) {
+            // Allow only one item to be selected at a time
+            setSelectedItems((prev) =>
+                prev.includes(item) ? [] : [item]
+            );
+        }
+    };
+
+    // HANDLE FUNCTION TO DELETE SELECTED ITEM
+    const handleDeleteSelectedItems = (type) => {
+        if (selectedItems.length === 0) {
+            Alert.alert('No Selection', `Please select a ${type.slice(0, -1)} to delete.`);
+            return;
+        }
+        setModalContent({
+            type,
+            text: `Delete selected ${type.slice(0, -1)}?`,
+            description: `Do you really want to delete the selected ${type.slice(0, -1)}? This can't be undone.`,
+        });
+        setShowDeleteModal(true);
+    };
+
+    // GET YEAR FROM ALBUMS CREATED_AT FIELD 
+    function handleGetYearFromDate(dateString) {
+        const date = new Date(dateString);
+        return date.getFullYear();
+    }
+
+    // FUNCTION TO FORMAT THE TEXT LENGTH
+    const handleFormatText = (text, maxChars) => {
+        if (text.length <= maxChars) {
             return text;
+        } else {
+            return text.slice(0, maxChars) + '...';
         }
     }
 
-    // MODAL LOGIC FOR DYNAMIC CONTENT
+    // HANDLE FUNCTION TO CONFIRM DELETED SELECTED ITEM
+    const handleConfirmDeleteSelectedItem = async () => {
+        const itemType = modalContent.type;
+        try {
+            if (selectedItems.length === 1) {
+                const itemId = selectedItems[0][`${itemType.slice(0, -1)}_id`];
+                if (itemType === 'albums') {
+                    await ArtistService.deleteAlbum(itemId); // Call deleteAlbum for albums
+                    setAlbums((prev) => prev.filter((item) => item.album_id !== itemId));
+                } else {
+                    await ArtistService.deleteTrack(itemId); // Call deleteTrack for tracks
+                    setTracks((prev) => prev.filter((item) => item.track_id !== itemId));
+                }
+                setIsSelecting((prev) => ({ ...prev, [itemType]: false }));
+                setSelectedItems([]);
+            } else {
+                Alert.alert('Selection Error', `Please select only one ${itemType.slice(0, -1)} to delete.`);
+            }
+        } catch (error) {
+            console.error(`Failed to delete selected ${itemType.slice(0, -1)}:`, error.message);
+        } finally {
+            setShowDeleteModal(false);
+        }
+    };
+
+    // HANDLE FUNCTION FOR CANCEL SEARCH BUTTON
+    const handleCancelSearch = (type) => {
+        setSelectedItems([]); // Clear selected items
+        setShowAll((prev) => ({ ...prev, [type]: false })); // Exit "Show All" mode
+        setIsSelecting({ tracks: false, albums: false, beats: false, sounds: false, presets: false }); // Exit selection mode
+    };
+
+    // SHOW DELETE MODAL UI
     const renderDeleteModal = () => (
         <Modal
             visible={showDeleteModal}
-            transparent={true}
+            transparent
             animationType="slide"
             onRequestClose={() => setShowDeleteModal(false)}
         >
             <View style={styles.modalContainer}>
                 <View style={styles.modalContent}>
                     <Image source={require('../../assets/images/ArtistProfile/delete.png')} style={styles.deleteImage} />
-                    <Text style={styles.modalText}>
-                        {modalContent.text || 'Delete this selection?'}
-                    </Text>
-                    <Text style={styles.modalTextDesc}>
-                        {modalContent.description || 'Do you really want to delete this selection? This can’t be undone.'}
-                    </Text>
+                    <Text style={styles.modalText}>{modalContent.text || 'Delete this selection?'}</Text>
+                    <Text style={styles.modalTextDesc}>{modalContent.description || 'Do you really want to delete this selection? This can’t be undone.'}</Text>
                     <View style={styles.modalActions}>
                         <TouchableOpacity onPress={() => setShowDeleteModal(false)} style={styles.cancelButton}>
                             <Text style={styles.buttonText}>No, Keep it.</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            onPress={handleDelete}
+                            onPress={handleConfirmDeleteSelectedItem}
                             style={[styles.deleteButton, selectedItems.length === 0 && styles.disabledDelete]}
                             disabled={selectedItems.length === 0}
                         >
@@ -380,458 +498,373 @@ const Music = () => {
         </Modal>
     );
 
+    useEffect(() => {
+        const placeholderInterval = setInterval(() => {
+            setCurrentPlaceholder(prev => {
+                const currentIndex = searchPlaceholders.indexOf(prev);
+                const nextIndex = (currentIndex + 1) % searchPlaceholders.length; // Loop back to the first
+                return searchPlaceholders[nextIndex];
+            });
+        }, 2500);
 
+        return () => clearInterval(placeholderInterval); // Cleanup the interval on unmount
+    }, []);
+
+    // SHOW TRACKS, ALBUMS, BEATS, SOUNDS, PRESETS LAYOUT
+    const renderItemsSection = (type, data, title) => {
+        // Filter the data based on the search text for all types
+        const filteredData = data.filter(item =>
+            item.title && item.title.toLowerCase().startsWith(searchText.toLowerCase())
+        );
+
+        // Determine how much data to display based on showAll flag
+        const displayedData = showAll[type] ? filteredData : type === 'tracks' ? filteredData.slice(0, 5) : filteredData.slice(0, 6);
+
+        // Determine the render item function based on the type
+        const getRenderItem = () => {
+            switch (type) {
+                case 'beats':
+                    return renderBeatItem;
+                case 'sounds':
+                    return renderSoundItem;
+                case 'presets':
+                    return renderPresetItem;
+                case 'albums':
+                    return renderAlbumItem;
+                default:
+                    return renderTrackItem;
+            }
+        };
+
+        // Check if the initial data fetch is complete or if data is actually unavailable
+        const isDataUnavailable = data.length === 0 && !loading[type];
+
+        return (
+            <View style={styles.section}>
+                {showAll[type] && (
+                    <View style={[styles.searchContainer]}>
+                        <View style={styles.searchBox}>
+                            <Feather name="search" color="#FFFFFF" size={22} style={{ paddingHorizontal: 10 }} />
+                            <TextInput
+                                placeholder={currentPlaceholder}
+                                placeholderTextColor="#CECECE"
+                                style={styles.searchInput}
+                                value={searchText}
+                                onChangeText={setSearchText}
+                            />
+                            {searchText.length > 0 && (
+                                <TouchableOpacity onPress={() => setSearchText('')} style={{ paddingHorizontal: 10 }}>
+                                    <FontAwesome6 name="times-circle" size={16} color="#FFFFFF" />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                        <TouchableOpacity onPress={() => handleCancelSearch(type)}>
+                            <Text style={styles.cancelText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+                <View style={styles.header}>
+                    <Text style={styles.sectionTitle}>{title}</Text>
+                    <View style={styles.actionButtons}>
+                        {!isSelecting[type] ? (
+                            <>
+                                {showAll[type] ? (
+                                    <>
+                                        <TouchableOpacity onPress={() => handleExit(type)}>
+                                            <Text style={styles.showAll}>Exit</Text>
+                                        </TouchableOpacity>
+                                        {isSelfProfile && (
+                                            <TouchableOpacity onPress={() => handleToggleSelectMode(type)}>
+                                                <Text style={styles.editText}>Edit</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </>
+                                ) : (
+                                    <TouchableOpacity onPress={() => handleToggleShowAll(type)}>
+                                        <Text style={styles.showAll}>Show All</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </>
+                        ) : selectedItems.length > 0 ? (
+                            <>
+                                <TouchableOpacity onPress={() => handleClearSelection(type)}>
+                                    <Text style={styles.cancelText}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => handleDeleteSelectedItems(type)}>
+                                    <Text style={styles.deleteText}>Delete</Text>
+                                </TouchableOpacity>
+                            </>
+                        ) : (
+                            <TouchableOpacity onPress={() => handleClearSelection(type)}>
+                                <Text style={styles.cancelText}>Cancel</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </View>
+
+                {isDataUnavailable ? (
+                    <View style={styles.noDataContainer}>
+                        <Text style={styles.noDataText}>No {title} Available</Text>
+                    </View>
+                ) : displayedData.length === 0 && searchText ? (
+                    <View style={styles.notFoundContainer}>
+                        <Text style={styles.notFound}>Couldn't find</Text>
+                        <Text style={styles.notFoundQuery}>"{searchText}"</Text>
+                        <Text style={styles.notFoundQuerySmall}>Try searching again using a different spelling or keyword</Text>
+                    </View>
+                ) : ['beats', 'sounds', 'presets'].includes(type) ? (
+                    showAll[type] ? (
+                        <FlatList
+                            data={displayedData}
+                            renderItem={getRenderItem()}
+                            keyExtractor={(item, index) => item.id || index.toString()}
+                            numColumns={2}
+                            contentContainerStyle={styles.beatGrid}
+                            showsVerticalScrollIndicator={false}
+                            scrollEnabled={false}
+                        />
+                    ) : (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            {displayedData.map((item, index) => (
+                                <View key={item.id || index} style={styles.squareItem}>
+                                    <Image
+                                        source={item.cover_image_url ? { uri: item.cover_image_url } : require('../../assets/images/ArtistProfile/defaultArtCover.png')}
+                                        style={styles.squareImage}
+                                    />
+                                    <Text style={styles.title} numberOfLines={2}>{item.title || 'Untitled'}</Text>
+                                    <Text style={styles.price}>${item.price || 'free'}</Text>
+                                </View>
+                            ))}
+                        </ScrollView>
+                    )
+                ) : type === 'albums' ? (
+                    showAll[type] ? (
+                        <FlatList
+                            data={displayedData}
+                            renderItem={renderAlbumItem}
+                            keyExtractor={(item, index) => item.id || index.toString()}
+                            numColumns={3}
+                            contentContainerStyle={styles.albumGrid}
+                            showsVerticalScrollIndicator={false}
+                            scrollEnabled={false}
+                        />
+                    ) : (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            {displayedData.map((album, index) => (
+                                <View key={album.id || index} style={styles.albumItem}>
+                                    <Image
+                                        source={album.cover_image_url ? { uri: album.cover_image_url } : require('../../assets/images/ArtistProfile/defaultArtCover.png')}
+                                        style={styles.albumImage}
+                                    />
+                                    <Text style={styles.albumTitle} numberOfLines={2}>{album.title || 'Untitled Album'}</Text>
+                                    <Text style={styles.albumReleaseDate}>{handleGetYearFromDate(album.release_date)}</Text>
+                                </View>
+                            ))}
+                        </ScrollView>
+                    )
+                ) : (
+                    <View>
+                        {displayedData.map((item, index) =>
+                            type === 'tracks' ? renderTrackItem({ item, index }) : null
+                        )}
+                    </View>
+                )}
+            </View>
+        );
+    };
+
+    // SHOW TRACK ITEM UI
+    const renderTrackItem = ({ item, index }) => (
+        <TouchableOpacity
+            key={item.track_id || index}
+            style={[styles.trackItem, selectedItems.includes(item) && styles.selectedItem]}
+            onPress={() => handleSelectItem('tracks', item)}
+        >
+            {selectedItems.includes(item) && (
+                <View style={styles.checkTrackIconContainer}>
+                    <Feather name="check" size={18} color="black" style={styles.checkIcon} />
+                </View>
+            )}
+            <View style={styles.trackOrder}>
+                <Text style={styles.trackCount}>{index + 1}</Text>
+                <Image
+                    source={
+                        item.cover_image_url
+                            ? { uri: item.cover_image_url }
+                            : require('../../assets/images/ArtistProfile/defaultArtCover.png')
+                    }
+                    style={styles.trackImage}
+                />
+            </View>
+            <View style={styles.trackInfo}>
+                <Text style={styles.trackTitle}>{handleFormatText(item.title || 'Unknown', 30)}</Text>
+                <Text style={styles.artist}>{handleFormatText(item.artist || name, 30)}</Text>
+            </View>
+            <Text style={styles.trackDuration}>{item.duration || '3:24'}</Text>
+            <Image source={item.cover_image_url && require('../../assets/images/ArtistProfile/play.png')} style={styles.play} />
+        </TouchableOpacity>
+    );
+
+    // SHOW ALBUM ITEM UI
+    const renderAlbumItem = ({ item: album }) => (
+        <TouchableOpacity
+            key={album.album_id}
+            style={[styles.albumGridItem, selectedItems.includes(album) && styles.selectedItem]}
+            onPress={() => handleSelectItem('albums', album)}
+        >
+            {selectedItems.includes(album) && (
+                <View style={styles.checkAlbumIconContainer}>
+                    <Feather name="check" size={18} color="black" style={styles.checkIcon} />
+                </View>
+            )}
+            <View style={styles.albumCoverContainer}>
+                <Image
+                    source={album.cover_image_url ? { uri: album.cover_image_url } : require('../../assets/images/ArtistProfile/defaultArtCover.png')}
+                    style={styles.albumImage}
+                />
+            </View>
+            <Text style={styles.albumTitle} numberOfLines={2}>{album.title || 'Untitled Album'}</Text>
+            <Text style={styles.albumReleaseDate}>{handleGetYearFromDate(album.release_date)}</Text>
+        </TouchableOpacity>
+    );
+
+    // SHOW BEAT ITEM UI
+    const renderBeatItem = ({ item: beat }) => (
+        <TouchableOpacity
+            key={beat.title} // Use title as key if beat_id is missing
+            style={[styles.gridItem, selectedItems.includes(beat) && styles.selectedItem]}
+            onPress={() => handleSelectItem('beats', beat)}
+        >
+            {selectedItems.includes(beat) && (
+                <View style={styles.checkIconContainer}>
+                    <Feather name="check" size={18} color="black" style={styles.checkIcon} />
+                </View>
+            )}
+            <View style={styles.squareCoverContainer}>
+                <Image
+                    source={beat.cover_image_url ? { uri: beat.cover_image_url } : require('../../assets/images/ArtistProfile/defaultArtCover.png')}
+                    style={styles.dataImage}
+                />
+            </View>
+            <Text style={styles.title} numberOfLines={2}>{beat.title || 'Untitled Beat'}</Text>
+            <Text style={styles.price}>${beat.price || 'free'}</Text>
+        </TouchableOpacity>
+    );
+
+    // SHOW SOUND ITEM UI
+    const renderSoundItem = ({ item: sound }) => (
+        <TouchableOpacity
+            key={sound.sound_id}
+            style={[styles.gridItem, selectedItems.includes(sound) && styles.selectedItem]}
+            onPress={() => handleSelectItem('sounds', sound)}
+        >
+            {selectedItems.includes(sound) && (
+                <View style={styles.checkIconContainer}>
+                    <Feather name="check" size={18} color="black" style={styles.checkIcon} />
+                </View>
+            )}
+            <View style={styles.squareCoverContainer}>
+                <Image
+                    source={sound.cover_image_url ? { uri: sound.cover_image_url } : require('../../assets/images/ArtistProfile/defaultArtCover.png')}
+                    style={styles.dataImage}
+                />
+            </View>
+            <Text style={styles.title} numberOfLines={2}>{sound.title || 'Untitled Beat'}</Text>
+            <Text style={styles.price}>${sound.price || 'free'}</Text>
+        </TouchableOpacity>
+    );
+
+    // SHOW PRESER ITEM UI
+    const renderPresetItem = ({ item: preset }) => (
+        <TouchableOpacity
+            key={preset.preset_id}
+            style={[styles.gridItem, selectedItems.includes(preset) && styles.selectedItem]}
+            onPress={() => handleSelectItem('presets', preset)}
+        >
+            {selectedItems.includes(preset) && (
+                <View style={styles.checkIconContainer}>
+                    <Feather name="check" size={18} color="black" style={styles.checkIcon} />
+                </View>
+            )}
+            <View style={styles.squareCoverContainer}>
+                <Image
+                    source={preset.cover_image_url ? { uri: preset.cover_image_url } : require('../../assets/images/ArtistProfile/defaultArtCover.png')}
+                    style={styles.dataImage}
+                />
+            </View>
+            <Text style={styles.title} numberOfLines={2}>{preset.title || 'Untitled Beat'}</Text>
+            <Text style={styles.price}>${preset.price || 'free'}</Text>
+        </TouchableOpacity>
+    );
 
     return (
-        <ScrollView style={styles.container}>
-            {/* TOP TRACK SECTION */}
-            <View style={styles.section}>
-                <View style={styles.header}>
-                    <Text style={styles.sectionTitle}>top tracks</Text>
-                    {/* Actions for Tracks */}
-                    {!isSelectingTracks && (
-                        <View style={styles.actionButtons}>
-                            {showAllTracks && (
-                                <TouchableOpacity onPress={() => setIsSelectingTracks(true)}>
-                                    <Text style={styles.selectText}>Select</Text>
-                                </TouchableOpacity>
-                            )}
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setShowAllTracks(!showAllTracks);
-                                    setSelectedItems([]);
-                                }}>
-                                <Text style={styles.showAll}>
-                                    {showAllTracks ? 'Exit' : 'Show all'}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+        <ScrollView
+            style={styles.container}>
 
-                    {isSelectingTracks && (
-                        <View style={styles.actionButtons}>
-                            <TouchableOpacity onPress={() => setIsSelectingTracks(false)}>
-                                <Text style={styles.cancelText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setModalContent({
-                                        type: 'tracks',
-                                        text: 'Delete selected tracks?',
-                                        description: 'Do you really want to delete the selected tracks? This can’t be undone.',
-                                    });
-                                    setShowDeleteModal(true);
-                                }}
-                                disabled={selectedItems.length === 0}
-                            >
-                                <Text style={[styles.deleteText, selectedItems.length === 0 && styles.disabledDelete]}>Delete</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+            <Animated.View style={{ opacity }}>
+                {renderItemsSection('tracks', tracks, 'Tracks')}
+                {renderItemsSection('albums', albums, 'Albums')}
+                {renderItemsSection('beats', beats, 'Beats')}
+                {renderItemsSection('sounds', sounds, 'Sounds')}
+                {renderItemsSection('presets', presets, 'Presets')}
+                {renderDeleteModal()}
+            </Animated.View>
+            {isFetchingMore && (
+                <View style={styles.loadingMoreContainer}>
+                    <ActivityIndicator size="large" color={Colors.white} />
                 </View>
-
-                {/* Track List */}
-                <View>
-                    {displayedTracks.map((track, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            style={[
-                                styles.trackItem,
-                                selectedItems.includes(track) && styles.selectedItem
-                            ]}
-                            onPress={() => isSelectingTracks && handleSelectItem(track)}
-                        >
-                            {selectedItems.includes(track) && (
-                                <View style={[styles.checkIconContainer, {
-                                    top: 14,
-                                    left: 50,
-                                }]}>
-                                    <Feather name="check" size={18} color="black" style={styles.checkIcon} />
-                                </View>
-                            )}
-                            <View style={styles.trackOrder}>
-                                <Text style={styles.trackCount}>{index + 1}</Text>
-                                <Image source={{ uri: track.cover }} style={styles.trackImage} />
-                            </View>
-                            <View style={styles.trackInfo}>
-                                <Text style={styles.trackTitle}>{textFormatter(track.name, 26)}</Text>
-                                <Text style={styles.artist}>{textFormatter(track.artist, 40)}</Text>
-                            </View>
-                            <Text style={styles.trackDuration}>{track.duration}</Text>
-                            <Image source={require('../../assets/images/ArtistProfile/play.png')} style={styles.play} />
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            </View>
-
-            {/* ALBUMS SECTION */}
-            <View style={styles.section}>
-                <View style={styles.header}>
-                    <Text style={styles.sectionTitle}>albums</Text>
-                    {/* Action Buttons */}
-                    {!isSelectingAlbums && (
-                        <View style={styles.actionButtons}>
-                            {showAllAlbums && (
-                                <TouchableOpacity onPress={() => setIsSelectingAlbums(true)}>
-                                    <Text style={styles.selectText}>Select</Text>
-                                </TouchableOpacity>
-                            )}
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setShowAllAlbums(!showAllAlbums);
-                                    setSelectedItems([])
-                                }}>
-                                <Text style={styles.showAll}>{showAllAlbums ? 'Exit' : 'Show all'}</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {isSelectingAlbums && (
-                        <View style={styles.actionButtons}>
-                            {/* Cancel Button */}
-                            <TouchableOpacity onPress={() => setIsSelectingAlbums(false)}>
-                                <Text style={styles.cancelText}>Cancel</Text>
-                            </TouchableOpacity>
-                            {/* Delete Button */}
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setModalContent({
-                                        type: 'albums',
-                                        text: 'Delete selected albums?',
-                                        description: 'Do you really want to delete the selected albums? This can’t be undone.',
-                                    });
-                                    setShowDeleteModal(true);
-                                }}
-                                disabled={selectedItems.length === 0}
-                            >
-                                <Text style={[styles.deleteText, selectedItems.length === 0 && styles.disabledDelete]}>Delete</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                </View>
-
-                {/* Album List */}
-                {showAllAlbums ? (
-                    <View style={styles.albumGrid}>
-                        {albums.map((album, index) => (
-                            <TouchableOpacity
-                                key={index}
-                                style={[
-                                    styles.albumGridItem,
-                                    selectedItems.includes(album) && styles.selectedItem, // Highlight selected item
-                                ]}
-                                onPress={() => isSelectingAlbums && handleSelectItem(album)}
-                            >
-                                {selectedItems.includes(album) && (
-                                    <View style={styles.checkIconContainer}>
-                                        <Feather name="check" size={18} color="black" style={styles.checkIcon} />
-                                    </View>
-                                )}
-                                <View style={styles.squareImage}>
-                                    <Image source={{ uri: album.cover }} style={styles.albumGridImage} />
-                                </View>
-                                <Text style={styles.albumTitle}>{textFormatter(album.name, 20)}</Text>
-                                <Text style={styles.artist}>{album.artist}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                ) : (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {albums.slice(0, 6).map((album, index) => (
-                            <View key={index} style={styles.albumItem}>
-                                <View style={styles.squareImage}>
-                                    <Image source={{ uri: album.cover }} style={styles.albumImage} />
-                                </View>
-                                <Text style={styles.albumTitle}>{textFormatter(album.name, 18)}</Text>
-                                <Text style={styles.artist}>{textFormatter(album.artist, 26)}</Text>
-                            </View>
-                        ))}
-                    </ScrollView>
-                )}
-            </View>
-
-            {/* BEATS SECTION */}
-            <View style={styles.section}>
-                <View style={styles.header}>
-                    <Text style={styles.sectionTitle}>beats</Text>
-                    {!isSelectingBeats && (
-                        <View style={styles.actionButtons}>
-                            {showAllBeats && (
-                                <TouchableOpacity onPress={() => setIsSelectingBeats(true)}>
-                                    <Text style={styles.selectText}>Select</Text>
-                                </TouchableOpacity>
-                            )}
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setShowAllBeats(!showAllBeats);
-                                    setSelectedItems([]);
-                                }}>
-                                <Text style={styles.showAll}>
-                                    {showAllBeats ? 'Exit' : 'Show all'}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {isSelectingBeats && (
-                        <View style={styles.actionButtons}>
-                            <TouchableOpacity onPress={() => setIsSelectingBeats(false)}>
-                                <Text style={styles.cancelText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setModalContent({
-                                        type: 'beats',
-                                        text: 'Delete selected beats?',
-                                        description: 'Do you really want to delete the selected beats? This can’t be undone.',
-                                    });
-                                    setShowDeleteModal(true);
-                                }}
-                                disabled={selectedItems.length === 0}
-                            >
-                                <Text style={[styles.deleteText, selectedItems.length === 0 && styles.disabledDelete]}>Delete</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                </View>
-
-                {showAllBeats ? (
-                    <View style={styles.beatGrid}>
-                        {beats.map((beat, index) => (
-                            <TouchableOpacity
-                                key={index}
-                                style={[
-                                    styles.beatGridItem,
-                                    selectedItems.includes(beat) && styles.selectedItem,
-                                ]}
-                                onPress={() => isSelectingBeats && handleSelectItem(beat)}
-                            >
-                                {selectedItems.includes(beat) && (
-                                    <View style={[styles.checkIconContainer, {
-                                        top: 5,
-                                        left: 120,
-                                    }]}>
-                                        <Feather name="check" size={18} color="black" style={styles.checkIcon} />
-                                    </View>
-                                )}
-                                <View style={styles.squareImage}>
-                                    <Image source={{ uri: beat.cover }} style={styles.coverImage} />
-                                </View>
-                                <View style={styles.textContainer}>
-                                    <Text style={styles.presetTitle}>{textFormatter(beat.name, 20)}</Text>
-                                    <Text style={styles.price}>${beat.price}</Text>
-                                </View>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                ) : (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {beats.slice(0, 6).map((beat, index) => (
-                            <View key={index}>
-                                <View style={styles.squareImage}>
-                                    <Image source={{ uri: beat.cover }} style={styles.coverImage} />
-                                </View>
-                                <Text style={styles.presetTitle}>{textFormatter(beat.name, 20)}</Text>
-                                <Text style={styles.price}>${beat.price}</Text>
-                            </View>
-                        ))}
-                    </ScrollView>
-                )}
-            </View>
-
-            {/* SOUND KITS SECTION */}
-            <View style={styles.section}>
-                <View style={styles.header}>
-                    <Text style={styles.sectionTitle}>sound kits</Text>
-                    {!isSelectingSounds && (
-                        <View style={styles.actionButtons}>
-                            {showAllSounds && (
-                                <TouchableOpacity onPress={() => setIsSelectingSounds(true)}>
-                                    <Text style={styles.selectText}>Select</Text>
-                                </TouchableOpacity>
-                            )}
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setShowAllSounds(!showAllSounds);
-                                    setSelectedItems([]);
-                                }}>
-                                <Text style={styles.showAll}>
-                                    {showAllSounds ? 'Exit' : 'Show all'}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {isSelectingSounds && (
-                        <View style={styles.actionButtons}>
-                            <TouchableOpacity onPress={() => setIsSelectingSounds(false)}>
-                                <Text style={styles.cancelText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setModalContent({
-                                        type: 'sounds',
-                                        text: 'Delete selected sounds?',
-                                        description: 'Do you really want to delete the selected sounds? This can’t be undone.',
-                                    });
-                                    setShowDeleteModal(true);
-                                }}
-                                disabled={selectedItems.length === 0}
-                            >
-                                <Text style={[styles.deleteText, selectedItems.length === 0 && styles.disabledDelete]}>Delete</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                </View>
-
-                {showAllSounds ? (
-                    <View style={styles.soundKitGrid}>
-                        {sounds.map((sound, index) => (
-                            <TouchableOpacity
-                                key={index}
-                                style={[
-                                    styles.soundKitGridItem,
-                                    selectedItems.includes(sound) && styles.selectedItem,
-                                ]}
-                                onPress={() => isSelectingSounds && handleSelectItem(sound)}
-                            >
-                                {selectedItems.includes(sound) && (
-                                    <View style={[styles.checkIconContainer, {
-                                        top: 5,
-                                        left: 120,
-                                    }]}>
-                                        <Feather name="check" size={18} color="black" style={styles.checkIcon} />
-                                    </View>
-                                )}
-                                <View style={styles.squareImage}>
-                                    <Image source={{ uri: sound.cover }} style={styles.coverImage} />
-                                </View>
-                                <View style={styles.textContainer}>
-                                    <Text style={styles.presetTitle}>{textFormatter(sound.name, 20)}</Text>
-                                    <Text style={styles.price}>${sound.price}</Text>
-                                </View>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                ) : (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {sounds.slice(0, 6).map((sound, index) => (
-                            <View key={index}>
-                                <View style={styles.squareImage}>
-                                    <Image source={{ uri: sound.cover }} style={styles.coverImage} />
-                                </View>
-                                <Text style={styles.presetTitle}>{textFormatter(sound.name, 20)}</Text>
-                                <Text style={styles.price}>${sound.price}</Text>
-                            </View>
-                        ))}
-                    </ScrollView>
-                )}
-            </View>
-
-            {/* PRESETS SECTION */}
-            <View style={styles.section}>
-                <View style={styles.header}>
-                    <Text style={styles.sectionTitle}>presets</Text>
-                    {!isSelectingPresets && (
-                        <View style={styles.actionButtons}>
-                            {showAllPresets && (
-                                <TouchableOpacity onPress={() => setIsSelectingPresets(true)}>
-                                    <Text style={styles.selectText}>Select</Text>
-                                </TouchableOpacity>
-                            )}
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setShowAllPresets(!showAllPresets);
-                                    setSelectedItems([]);
-                                }}>
-                                <Text style={styles.showAll}>
-                                    {showAllPresets ? 'Exit' : 'Show all'}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {isSelectingPresets && (
-                        <View style={styles.actionButtons}>
-                            <TouchableOpacity onPress={() => setIsSelectingPresets(false)}>
-                                <Text style={styles.cancelText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setModalContent({
-                                        type: 'presets',
-                                        text: 'Delete selected presets?',
-                                        description: 'Do you really want to delete the selected presets? This can’t be undone.',
-                                    });
-                                    setShowDeleteModal(true);
-                                }}
-                                disabled={selectedItems.length === 0}
-                            >
-                                <Text style={[styles.deleteText, selectedItems.length === 0 && styles.disabledDelete]}>Delete</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                </View>
-
-                {showAllPresets ? (
-                    <View style={styles.presetGrid}>
-                        {presets.map((preset, index) => (
-                            <TouchableOpacity
-                                key={index}
-                                style={[
-                                    styles.presetGridItem,
-                                    selectedItems.includes(preset) && styles.selectedItem,
-                                ]}
-                                onPress={() => isSelectingPresets && handleSelectItem(preset)}
-                            >
-                                {selectedItems.includes(preset) && (
-                                    <View style={[styles.checkIconContainer, {
-                                        top: 5,
-                                        left: 120,
-                                    }]}>
-                                        <Feather name="check" size={18} color="black" style={styles.checkIcon} />
-                                    </View>
-                                )}
-                                <View style={styles.squareImage}>
-                                    <Image source={{ uri: preset.cover }} style={styles.coverImage} />
-                                </View>
-                                <View style={styles.textContainer}>
-                                    <Text style={styles.presetTitle}>{textFormatter(preset.name, 20)}</Text>
-                                    <Text style={styles.price}>${preset.price}</Text>
-                                </View>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                ) : (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {presets.slice(0, 6).map((preset, index) => (
-                            <View key={index}>
-                                <View style={styles.squareImage}>
-                                    <Image source={{ uri: preset.cover }} style={styles.coverImage} />
-                                </View>
-                                <Text style={styles.presetTitle}>{textFormatter(preset.name, 20)}</Text>
-                                <Text style={styles.price}>${preset.price}</Text>
-                            </View>
-                        ))}
-                    </ScrollView>
-                )}
-            </View>
-
-            {/* Render the Modal */}
-            {renderDeleteModal()}
-        </ScrollView >
+            )}
+        </ScrollView>
     );
 };
 
 export default Music;
+
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         paddingHorizontal: 10,
     },
+    loadingContainer: {
+        flex: 1,
+        backgroundColor: '#121212',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     section: {
         marginVertical: 5,
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 24,
+        marginHorizontal: 24,
+        marginVertical: 10,
+    },
+    searchBox: {
+        flex: 1,
+        backgroundColor: '#2A2A2A',
+        flexDirection: 'row',
+        alignItems: 'center',
+        overflow: 'hidden',
+        borderRadius: 10,
+        height: 35,
+    },
+    searchInput: {
+        color: 'white',
+        paddingHorizontal: 10,
+        fontSize: 15,
+        flex: 1,
+    },
+    cancelText: {
+        color: Colors.white,
+        textAlign: 'center',
+        fontSize: 12,
+        fontWeight: '600',
+        lineHeight: 20,
+        marginLeft: 10,
     },
     header: {
         flexDirection: 'row',
@@ -849,7 +882,6 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         lineHeight: 18,
         textTransform: 'uppercase',
-        // marginTop: 2,
     },
     actionButtons: {
         flexDirection: 'row',
@@ -862,16 +894,47 @@ const styles = StyleSheet.create({
         fontFamily: 'Open Sans',
         fontSize: 12,
         fontStyle: 'normal',
-        fontWeight: '400',
+        fontWeight: '800',
         lineHeight: 18,
+        opacity: 0.7
+    },
+    editText: {
+        color: Colors.white,
+        marginLeft: 15,
+        fontFamily: 'Open Sans',
+        fontSize: 12,
+        fontStyle: 'normal',
+        fontWeight: '800',
+        lineHeight: 18,
+        opacity: 0.7
     },
     deleteText: {
         color: 'red',
+        fontFamily: 'Open Sans',
         fontSize: 12,
+        marginLeft: 15,
+        fontStyle: 'normal',
+        fontWeight: '800',
+        lineHeight: 18,
+        opacity: 0.7
     },
     cancelText: {
         color: Colors.white,
+        fontFamily: 'Open Sans',
         fontSize: 12,
+        fontStyle: 'normal',
+        fontWeight: '800',
+        lineHeight: 18,
+        opacity: 0.7
+    },
+    exitText: {
+        color: Colors.white,
+        fontFamily: 'Open Sans',
+        fontSize: 12,
+        fontStyle: 'normal',
+        fontWeight: '800',
+        lineHeight: 18,
+        opacity: 0.7
     },
     selectText: {
         color: Colors.white,
@@ -881,16 +944,38 @@ const styles = StyleSheet.create({
     selectedItem: {
         position: 'relative'
     },
-    checkIconContainer: {
+    checkTrackIconContainer: {
         position: 'absolute',
-        top: -4,
-        left: 80,
-        backgroundColor: '#28A745',
-        borderRadius: 24,
-        padding: 6,
+        bottom: 40,
+        left: 72,
+        backgroundColor: Colors.themeColor,
+        borderRadius: 12,
+        padding: 4,
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 1,
+        zIndex: 30,
+    },
+    checkAlbumIconContainer: {
+        position: 'absolute',
+        top: 0,
+        right: 16,
+        backgroundColor: Colors.themeColor,
+        borderRadius: 12,
+        padding: 4,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10,
+    },
+    checkIconContainer: {
+        position: 'absolute',
+        top: 8,
+        right: 22,
+        backgroundColor: Colors.themeColor,
+        borderRadius: 12,
+        padding: 4,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10,
     },
     checkIcon: {
         color: Colors.white,
@@ -911,6 +996,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 20,
+    },
+    disabledText: {
+        color: Colors.white,
+        opacity: 0.5,
     },
     trackCount: {
         color: '#F9F6EE',
@@ -939,7 +1028,7 @@ const styles = StyleSheet.create({
     trackTitle: {
         color: Colors.white,
         fontFamily: 'Open Sans',
-        fontSize: 14,
+        fontSize: 15,
         fontStyle: 'normal',
         fontWeight: '600',
         lineHeight: 18,
@@ -947,7 +1036,7 @@ const styles = StyleSheet.create({
     artist: {
         color: Colors.white,
         fontFamily: "Open Sans",
-        fontSize: 10,
+        fontSize: 12,
         fontStyle: 'normal',
         fontWeight: 600,
         lineHeight: 14,
@@ -962,126 +1051,155 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         lineHeight: 14,
     },
+    noDataContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 30,
+    },
+    noDataText: {
+        color: Colors.white,
+        fontFamily: 'Open Sans',
+        fontSize: 18,
+        fontWeight: '700',
+        textAlign: 'center',
+    },
+    notFoundContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 30,
+    },
+    notFound: {
+        color: Colors.white,
+        fontFamily: 'Open Sans',
+        fontSize: 20,
+        fontWeight: '800',
+        textAlign: 'center',
+    },
+    notFoundQuery: {
+        color: Colors.themeColor,
+        fontFamily: 'Open Sans',
+        fontSize: 16,
+        textAlign: 'center',
+        fontWeight: '800',
+        marginVertical: 4,
+    },
+    notFoundQuerySmall: {
+        color: Colors.white,
+        fontFamily: 'Open Sans',
+        fontSize: 12,
+        textAlign: 'center',
+        fontStyle: 'normal',
+        fontWeight: '400',
+        opacity: 0.7,
+    },
     play: {
         position: 'absolute',
         top: 15,
         left: 56
     },
+    asection: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+    },
+
     albumGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
         paddingHorizontal: 10,
+        paddingBottom: 20,
     },
     albumGridItem: {
         width: '30%',
         marginVertical: 10,
+        marginHorizontal: 5.5,
         alignItems: 'center',
+        padding: 4,
     },
-    albumItem: {
-        alignItems: 'center',
+    albumCoverContainer: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        overflow: 'hidden',
         justifyContent: 'center',
-        marginHorizontal: 8,
+        alignItems: 'center',
     },
     albumImage: {
-        marginHorizontal: -1,
         width: 150,
         height: 150,
         borderRadius: 80,
+        marginHorizontal: 8,
     },
-    albumGridImage: {
-        marginHorizontal: -1,
-        width: 100,
-        height: 100,
-        borderRadius: 80,
+    titleYearContainer: {
+        alignItems: 'center',
+        marginTop: 4,
+        width: '100%',
     },
     albumTitle: {
         color: Colors.white,
-        fontFamily: 'Open Sans',
+        textAlign: 'center',
         fontSize: 14,
-        fontStyle: 'normal',
         fontWeight: '600',
-        lineHeight: 18,
+        marginTop: 4,
+        marginHorizontal: 8,
+        width: 150,
     },
-    beatGrid: {
+    albumReleaseDate: {
+        color: '#fff',
+        textAlign: 'center',
+        fontSize: 12,
+        opacity: 0.7,
+        marginTop: 2,
+    },
+    actionButtons: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-around',
+        alignItems: 'center',
     },
-    textContainer: {
+    selectedItem: {
+        opacity: 0.6,
+    },
+    gridItem: {
+        width: '45%',
+        marginBottom: 16,
+        marginHorizontal: 14,
+    },
+    squareCoverContainer: {
+        width: 150,
+        height: 150,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    squareItem: {
+        width: 110,
+        marginHorizontal: 18,
+        marginRight: 28,
+    },
+    squareImage: {
+        width: 130,
+        height: 130,
+        marginBottom: 5,
+    },
+    dataImage: {
         width: '100%',
-        marginRight: 24,
-        alignItems: 'flex-start',
+        height: '100%',
+        resizeMode: 'cover',
     },
-    beatGridItem: {
-        width: '45%',
-        alignItems: 'center',
-    },
-    presetGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-around',
-    },
-    presetGridItem: {
-        width: '45%',
-        alignItems: 'center',
-    },
-    coverItem: {
-        margin: 26,
-        marginLeft: 16,
-        margin: 'auto',
-        width: 116,
-    },
-    soundKitGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-around',
-        // paddingHorizontal: 10,
-    },
-    soundKitGridItem: {
-        width: '45%',
-        alignItems: 'center',
-    },
-    coverImage: {
-        height: 146,
-        width: 146,
-        borderRadius: 14,
-        marginRight: 20,
-    },
-    presetTitle: {
+    title: {
         color: Colors.white,
-        fontFamily: "Open Sans",
+        textAlign: 'left',
         fontSize: 14,
-        fontStyle: 'normal',
-        fontWeight: '400',
-        lineHeight: 20,
-        marginLeft: 22,
+        fontWeight: '600',
+        marginTop: 4,
     },
     price: {
         color: Colors.white,
-        fontFamily: "Open Sans",
         fontSize: 14,
-        fontStyle: 'normal',
-        fontWeight: '400',
-        lineHeight: 20,
-        marginLeft: 22,
-        marginBottom: 10,
-        opacity: 0.7,
+        marginTop: 4,
+        fontWeight: '700',
+        textAlign: 'left',
+        opacity: 0.7
     },
-    soundKitItem: {
-        alignItems: 'center',
-        marginRight: 20,
-    },
-    presetItem: {
-        alignItems: 'center',
-        marginRight: 20,
-    },
-    squareImage: {
-        borderRadius: 10,
-        marginBottom: 5,
-        marginLeft: 20,
-        textAlign: 'center',
-    },
+
     modalContainer: {
         flex: 1,
         justifyContent: 'center',

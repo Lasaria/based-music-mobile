@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions, Animated, Image } from 'react-native';
 import { AntDesign, Entypo } from '@expo/vector-icons';
-import { LineChart } from 'react-native-chart-kit';
 import { Colors } from '../../constants/Color';
 
 const Dashboard = () => {
@@ -89,7 +88,7 @@ const Dashboard = () => {
                             >
                                 <Text style={styles.itemText}>{item.label}</Text>
                                 {selectedRange === item.value && (
-                                    <Entypo name="check" size={16} color="#4EEC66" />
+                                    <Entypo name="check" size={16} color={Colors.themeColor} />
                                 )}
                             </TouchableOpacity>
                         ))}
@@ -110,25 +109,16 @@ const Dashboard = () => {
                         <Text style={styles.cardValue}>{item.value}</Text>
                         <View style={styles.cardChangeContainer}>
                             <Image source={item.positive ? require('../../assets/images/ArtistProfile/rankingUpArrow.png') : require('../../assets/images/ArtistProfile/rankingDownArrow.png')} />
-                            <Text style={[styles.cardChange, { color: item.positive ? '#10984C' : '#FF034F' }]}>{item.change}</Text>
+                            <Text style={[styles.cardChange, { color: item.positive ? '#5ce65c' : '#FF034F' }]}>{item.change}</Text>
                         </View>
                     </TouchableOpacity>
                 ))}
             </ScrollView>
 
             {/* LINE CHART */}
-            <LineChart
-                data={chartData[selectedRange]}
-                width={Dimensions.get("window").width - 28}
-                height={220}
-                chartConfig={{
-                    backgroundColor: "#000",
-                    backgroundGradientFrom: "#232323",
-                    backgroundGradientTo: "#363636",
-                    color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                }}
-                style={styles.chart}
-            />
+            <View style={styles.chartContainer}>
+                <Text style={{ fontSize: 30, fontWeight: '900', textAlign: 'center', color: Colors.white, marginVertical: 20, }}>LINE CHART</Text>
+            </View>
 
             {/* RANKING SECTION */}
             <Text style={styles.sectionTitle}>Rankings</Text>
@@ -143,7 +133,7 @@ const Dashboard = () => {
                         <Text style={styles.cardValue}>{item.location}</Text>
                         <View style={styles.cardChangeContainer}>
                             <Image source={item.positive ? require('../../assets/images/ArtistProfile/rankingUpArrow.png') : require('../../assets/images/ArtistProfile/rankingDownArrow.png')} />
-                            <Text style={[styles.cardChange, { color: item.positive ? '#10984C' : '#FF034F' }]}>{item.change}</Text>
+                            <Text style={[styles.cardChange, { color: item.positive ? '#5ce65c' : '#FF034F' }]}>{item.change}</Text>
                         </View>
                     </TouchableOpacity>
                 ))}
@@ -160,12 +150,16 @@ const styles = StyleSheet.create({
     },
     dropdownContainer: {
         marginBottom: 20,
-        zIndex: 1, 
+        zIndex: 1,
     },
     dropdown: {
+        display: 'flex',
+        width: 364,
+        padding: 18,
         borderRadius: 14,
+        margin: 'auto',
         backgroundColor: '#232323',
-        padding: 12,
+        gap: 10,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -174,10 +168,11 @@ const styles = StyleSheet.create({
         color: 'white',
     },
     dropdownList: {
-        backgroundColor: '#333',
+        backgroundColor: '#25272D',
         overflow: 'hidden',
         borderRadius: 8,
         marginTop: 5,
+        marginHorizontal: 12,
     },
     item: {
         padding: 10,
@@ -204,7 +199,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 5,
     },
     activeCard: {
-        backgroundColor: '#8B54FF',
+        backgroundColor: Colors.themeColor,
     },
     cardTitle: {
         color: Colors.white,
@@ -230,6 +225,7 @@ const styles = StyleSheet.create({
     },
     cardChange: {
         fontSize: 14,
+        fontWeight: '900'
     },
     chart: {
         marginVertical: 20,

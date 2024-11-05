@@ -58,6 +58,14 @@ const events = [
     },
 ];
 
+const formatText = (text, maxChars) => {
+    if (text.length <= maxChars) {
+        return text;
+    } else {
+        return text.slice(0, maxChars) + '...';
+    }
+}
+
 const EventCard = ({ event }) => (
     <TouchableOpacity style={styles.eventCard} onPress={{ /* TODO GO TO EVENT SCREEN */ }}>
         <View style={styles.dateContainer}>
@@ -65,9 +73,9 @@ const EventCard = ({ event }) => (
             <Text style={styles.when}>{event.date.split(' ')[1]}</Text>
         </View>
         <View style={styles.eventInfo}>
-            <Text style={styles.city}>{event.city}</Text>
+            <Text style={styles.city}>{formatText(event.city, 24)}</Text>
             <Text style={styles.venue}>
-                {event.time} • {event.venue}
+                {formatText(event.time, 18)} • {formatText(event.venue,18)}
             </Text>
             <View style={styles.attendeesContainer}>
                 {/* STACKED ATTENDEES PROFILE IMAGES */}
@@ -124,8 +132,8 @@ const styles = StyleSheet.create({
     },
     manageEvents: {
         display: 'flex',
-        width: 343,
-        padding: 10,
+        width: 364,
+        padding: 18,
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 14,
@@ -184,19 +192,18 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         color: Colors.white,
         fontFamily: 'Open Sans',
-        fontSize: 22,
+        fontSize: 18,
         fontStyle: 'normal',
-        fontWeight: '600',
+        fontWeight: '700',
         lineHeight: 28,
     },
     venue: {
         overflow: 'hidden',
         color: '#ACACAC',
         fontFamily: 'Open Sans',
-        fontSize: 16,
+        fontSize: 12,
         fontStyle: 'normal',
-        fontWeight: '700',
-        lineHeight: 20,
+        fontWeight: '600',
     },
     attendeesContainer: {
         flexDirection: 'row',
@@ -237,15 +244,15 @@ const styles = StyleSheet.create({
         lineHeight: 20,
     },
     ticketButton: {
-        backgroundColor: Colors.primary,
-        paddingHorizontal: 15,
+        backgroundColor: Colors.themeColor,
+        paddingHorizontal: 18,
         paddingVertical: 10,
-        borderRadius: 14,
+        borderRadius: 24,
     },
     ticketButtonText: {
         color: Colors.white,
         fontFamily: 'Open Sans',
-        fontSize: 16,
+        fontSize: 14,
         fontStyle: 'normal',
         fontWeight: '700',
         lineHeight: 20,

@@ -68,4 +68,5 @@ const createAxiosRequest = async ({ url, method, body, isAuthenticated = true })
 export const axiosPost = (config) => createAxiosRequest({ ...config, method: 'POST' });
 export const axiosGet = (config) => createAxiosRequest({ ...config, method: 'GET' });
 export const axiosPatch = (config) => createAxiosRequest({ ...config, method: 'PATCH' });
+export const axiosDelete = (config) => createAxiosRequest({ ...config, method: 'DELETE' });
 

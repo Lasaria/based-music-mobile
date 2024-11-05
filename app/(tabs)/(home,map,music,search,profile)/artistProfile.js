@@ -1,17 +1,10 @@
-import { Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import { ActivityIndicator, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, Vibration, View } from 'react-native';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { router, useNavigation } from 'expo-router';
 import { Colors } from '../../../constants/Color';
-import { Ionicons, Entypo, EvilIcons, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome6, Feather } from '@expo/vector-icons';
 import Animated, {
-  interpolate,
-  runOnJS,
-  useAnimatedRef,
-  useAnimatedStyle,
-  useScrollViewOffset,
-  useSharedValue,
-  withSpring,
-  withTiming,
+  interpolate, runOnJS, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue, withSpring, withTiming,
 } from 'react-native-reanimated';
 import { Dimensions } from 'react-native';
 import Music from '../../../components/ArtistProfile/Music';
@@ -22,47 +15,57 @@ import { ArtistService } from '../../../services/artistService';
 import { tokenManager } from '../../../utils/tokenManager';
 import * as ImagePicker from 'expo-image-picker';
 import MusicPlayer from '../../../components/MusicPlayer';
-import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import EditProfilePhotosScreen from '../../../components/ArtistProfile/EditProfilePhotosScreen';
 
 // SERVER URL
-const serverURL = 'http://localhost:3000';
+// const serverURL = 'http://localhost:3000';
+const serverURL = `http://${process.env.EXPO_PUBLIC_IP_ADDRESS}:3000`;
+
 // DEVICE ACTUAL WIDTH
 const { width } = Dimensions.get('window');
 // CONSTANT VALUE FOR IMAGE HEIGHT
-const IMG_HEIGHT = 340;
+const IMG_HEIGHT = 400;
+// TABS 
+const tabs = ['Music', 'Events', 'Posts', 'Dashboard'];
+// PLACEHOLDER FOR SEARCH INPUT
+const searchPlaceholders = ["Search for tracks", "Search for albums", "Search for beats"];
+
+// DEFAULT AVATAR
+const DEFAULT_PROFILE_IMAGE = 'https://i.sstatic.net/dr5qp.jpg';
+const DEFAULT_COVER_IMAGE = 'https://flowbite.com/docs/images/examples/image-2@2x.jpg';
+
 
 const ArtistProfileScreen = () => {
-  // ANIMATION STATES
-  const scrollRef = useAnimatedRef();
-  const scrollOffset = useScrollViewOffset(scrollRef);
-  const translateY = useSharedValue(0);
-  const overlayOpacity = useSharedValue(1); // For fading out overlay
-  // DEFINE ALL TABS OPTONS
-  const tabs = ['Music', 'Events', 'Posts', 'Dashboard'];
-  // STATE FOR SELECTED TAB
-  const [selectedTab, setSelectedTab] = useState('music');
-  // SHARED VALUE FOR ANIMATION
-  const tabTransition = useSharedValue(0);
-  // FOR NAVIGATION BETWEEN SCREENS
-  const navigation = useNavigation();
-
   // ARTIST PROFILE STATES
   const [artistData, setArtistData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [avatarUri, setAvatarUri] = useState();
+  const [avatarUri, setAvatarUri] = useState('');
   const [coverImageUri, setCoverImageUri] = useState();
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
   const [genre, setGenre] = useState('');
   const [location, setLocation] = useState('');
-  const [modalVisible, setModalVisible] = useState(false);
-
-
-  // STATE FOR EDIT MODE
+  const [loading, setLoading] = useState(true);
+  const [selectedTab, setSelectedTab] = useState('music');
+  // const [searchText, setSearchText] = useState('');
+  // const [showSearch, setShowSearch] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-
-  // CHECK DESCRIPTION VHARACTER LIMIT
   const [remainingChars, setRemainingChars] = useState(25);
+  const [currentPlaceholder, setCurrentPlaceholder] = useState(searchPlaceholders[0]);
+  const [index, setIndex] = useState(0);
+  const [showEditPhotosScreen, setShowEditPhotosScreen] = useState(false);
+  const [photos, setPhotos] = useState([]);
+  const [artistId, setArtistId] = useState(null); // State to store the artistId
+  const [isSelfProfile, setIsSelfProfile] = useState(false);
+
+  const [isOptionsModalVisible, setOptionsModalVisible] = useState(false);
+
+  // Function to open modal
+  const openOptionsModal = () => setOptionsModalVisible(true);
+
+  // Function to close modal
+  const closeOptionsModal = () => setOptionsModalVisible(false);
+
 
   // CACHE ALL THE VALUES
   const [originalName, setOriginalName] = useState('')
@@ -70,50 +73,47 @@ const ArtistProfileScreen = () => {
   const [originalProfileImage, setProfileImage] = useState('')
   const [originalCoverImage, setCoverImage] = useState('')
 
-  // ENTER EDIT MODE
-  const handleEnterEditMode = () => {
-    setOriginalName(name);
-    setOriginalGenre(genre);
-    setProfileImage(avatarUri)
-    setCoverImage(coverImageUri)
-    setIsEditing(true);
-  };
+  // ANIMATION STATES
+  const scrollOffset = useSharedValue(0);
+  const tabTransition = useSharedValue(0);
+  const searchAnimation = useSharedValue(0);
+  const opacity = useSharedValue(1);
+  const scrollHandler = useAnimatedScrollHandler((event) => {
+    scrollOffset.value = event.contentOffset.y;
+  });
 
-  // REVERT CHANGES IF USER CLICK CLOSE BUTTON
-  const handleCloseEditing = () => {
-    setIsEditing(false);
-    setName(originalName);
-    setGenre(originalGenre);
-    setAvatarUri(originalProfileImage);
-    setCoverImageUri(originalCoverImage);
-  };
-  //FUNCTION TO HNADLE LIMIT OF DESCRIPTION CHARACTERS BETWEEN 25.
-  const handleGenreChange = (text) => {
-    if (text.length <= 30) {
-      setGenre(text); // Update genre value
-      setRemainingChars(30 - text.length); // Update remaining characters count
-    }
-  };
+  // FOR NAVIGATION BETWEEN SCREENS
+  const navigation = useNavigation();
 
   // FETCH ARTIST PROFILE FROM THE SERVER
   const fetchArtistProfile = async () => {
     try {
       const userId = await tokenManager.getUserId();
       const response = await ArtistService.getArtistProfile(userId);
+      setArtistId(userId);
 
       if (response) {
         setArtistData(response);
 
+        // Determine if the logged-in user is viewing their own profile
+        const isUserSelfProfile = response.artist_id === userId;
+        setIsSelfProfile(isUserSelfProfile);
+        console.log("Is user viewing their own profile?", isUserSelfProfile); // Log the result for verification
+
+
         // Update variable names to match new schema
-        const profileImageUrl = (response.profile_image_url && response.profile_image_url !== 'Unknown')
-          ? response.profile_image_url
-          : require('../../../assets/images/profile.png');
+        const profileImageUrl = response.profile_image_url;
+
+        // Use default avatar if the profile image is null or invalid
+        const validProfileImageUrl = (profileImageUrl && profileImageUrl !== 'Unknown')
+          ? profileImageUrl
+          : DEFAULT_PROFILE_IMAGE;
 
         const coverImageUrl = response.cover_image_url && response.cover_image_url !== 'Unknown'
           ? response.cover_image_url
-          : require('../../../assets/images/profile.png');
+          : DEFAULT_COVER_IMAGE;
 
-        setAvatarUri(profileImageUrl); // Ensure profile_image_url is valid or use the default avatar
+        setAvatarUri(validProfileImageUrl); // Ensure profile_image_url is valid or use the default avatar
         setCoverImageUri(coverImageUrl);
 
         // Set other fields using new schema
@@ -130,68 +130,74 @@ const ArtistProfileScreen = () => {
       setLoading(false);
     }
   };
+  // ANIMATED STYLE FOR IMAGE FADE-OUT
+  const imageAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {
+          translateY: interpolate(
+            scrollOffset.value,
+            [-IMG_HEIGHT, 0, IMG_HEIGHT, IMG_HEIGHT],
+            [-IMG_HEIGHT / 2, 0, IMG_HEIGHT * 0.75]
+          ),
+        },
+        {
+          scale: interpolate(scrollOffset.value, [-IMG_HEIGHT, 0, IMG_HEIGHT], [2, 1, 1]),
+        },
+      ],
+    };
+  });
 
-  useEffect(() => {
-    fetchArtistProfile(); // Fetch the artist profile when the component is mounted or refreshed
+  // ANIMATED STYLE FOR HEADER BACKGOUND VISIBILITY
+  const headerAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: interpolate(scrollOffset.value, [0, IMG_HEIGHT / 1.5], [0, 1]),
+    };
   }, []);
 
-  // FUNCTION TO IMAGE PICKER AND SELECT PROFILE IMAGE FOR ARTIST PROFILE
-  const openImagePicker = async (source) => {
-    setModalVisible(true);
+  // ANIMATED STYLE FOR ARTIST NAME ON HEADER 
+  const titleAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: interpolate(scrollOffset.value, [IMG_HEIGHT / 1.5, IMG_HEIGHT], [0, 1]),
+    };
+  }, []);
 
-    if (source === 'gallery') {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permissions Required',
-          'Please grant photo library permissions to upload an image.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [2, 1],
-        quality: 0.8,
-      });
-      setModalVisible(false);
+  // EDIT PROFILE INPUT ANIMATION
+  const inputAnimatedStyle = useAnimatedStyle(() => {
+    const inputOpacity = interpolate(scrollOffset.value, [-IMG_HEIGHT, 0], [0, 1], { extrapolateLeft: 'clamp' });
+    const inputScale = interpolate(scrollOffset.value, [-IMG_HEIGHT, 0], [0.6, 1], { extrapolateLeft: 'clamp' });
+    return {
+      opacity: inputOpacity,
+      transform: [{ scale: inputScale }],
+    };
+  });
 
-      if (!result.canceled) {
-        const imageUri = result.uri || (result.assets && result.assets[0].uri);
-        if (imageUri) setAvatarUri(imageUri);
-      }
-    } else if (source === 'camera') {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permissions Required',
-          'Please grant camera permissions to take a photo.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
+  // ICONS FADE-OUT ANIMATION BASED ON SCROLL
+  const iconsAnimatedStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(scrollOffset.value, [0, IMG_HEIGHT / 2], [1, 0], { extrapolateLeft: 'clamp' });
+    return { opacity };
+  });
 
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-      setModalVisible(false);
+  // COMBINED ANIMATION FOR FADE OUT THE TEXT ON PROFILE IMAGE 
+  const combinedAnimatedStyle = useAnimatedStyle(() => {
+    const fadeOutOpacity = interpolate(scrollOffset.value, [-IMG_HEIGHT / 3, 0], [0, 1], { extrapolateRight: 'clamp' });
+    const iconsOpacity = interpolate(scrollOffset.value, [0, IMG_HEIGHT / 2], [1, 0], { extrapolateLeft: 'clamp' });
+    const opacity = fadeOutOpacity * iconsOpacity;
+    const scale = interpolate(scrollOffset.value, [-IMG_HEIGHT, 0], [0.8, 1], { extrapolateRight: 'clamp' });
+    return { opacity, transform: [{ scale }] };
+  });
 
-      if (!result.canceled) {
-        const imageUri = result.uri || (result.assets && result.assets[0].uri);
-        if (imageUri) setAvatarUri(imageUri);
-      }
-    } else if (source === 'default') {
-      const defaultImageUri = Image.resolveAssetSource(require('../../../assets/images/profile.png')).uri;
-      setAvatarUri(defaultImageUri);
-      setModalVisible(false);
-    }
-  };
+  // SEARCH BAR ANIMATION FOR EXPAND ON OPEN
+  const searchBarStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scaleX: searchAnimation.value },
+      { scaleY: searchAnimation.value },
+    ],
+    opacity: searchAnimation.value,
+  }));
 
-  //FUNCTION TO IMAGE PICKER AND SELECT COVER IMAGE FOR ARTIST PROFILE
-  const openCoverImagePicker = async () => {
+  // HANDLE FUNCTION TO OPEN IMAGE PICKER AND SELECT COVER IMAGE FOR ARTIST PROFILE
+  const handleOpenCoverImagePicker = async () => {
     // Request permissions to access the media library
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -285,7 +291,7 @@ const ArtistProfileScreen = () => {
       }
 
       alert('Profile updated successfully!');
-      fetchArtistProfile(); // Refetch to show the updated data
+      // fetchArtistProfile(); // Refetch to show the updated data
 
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -293,404 +299,522 @@ const ArtistProfileScreen = () => {
     }
   };
 
-  // TOP HEADER PART
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerTitle: '',
-      headerTransparent: true,
-      // ARTIST NAME
-      headerBackground: () => (
-        <Animated.View style={[headerAnimatedStyle, styles.header]}>
-          <Animated.Text style={[styles.title, titleAnimatedStyle]}>
-            {name}
-          </Animated.Text>
-        </Animated.View>
-      ),
-      // NOTIFICATION, MESSAGES AND SETTINGS ICONS
-      headerRight: () => (
-        <>
-          <Animated.View style={[styles.bar, iconsAnimatedStyle]}>
-            {isEditing ? (
-              <>
-                <TouchableOpacity style={styles.roundButton} onPress={() => {
-                  handleSaveChanges();
-                  setIsEditing(false);
-                }}>
-                  <Image source={require('../../../assets/images/ArtistProfile/save.png')} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.roundButton} onPress={handleCloseEditing}>
-                  <Image source={require('../../../assets/images/ArtistProfile/close.png')} />
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <TouchableOpacity style={styles.roundButton}>
-                  <Image source={require('../../../assets/images/ArtistProfile/bell.png')} />
-                  <Image source={require('../../../assets/images/ArtistProfile/ellipse.png')} style={styles.badge} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.roundButton} onPress={() => router.push("/artistInboxScreen")}>
-                  <Image source={require('../../../assets/images/ArtistProfile/message.png')} />
-                  <Image source={require('../../../assets/images/ArtistProfile/ellipse.png')} style={styles.badge} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.roundButton} onPress={() => router.push("/settings")}>
-                  <Image source={require('../../../assets/images/ArtistProfile/settings.png')} />
-                </TouchableOpacity>
-              </>
-            )}
-          </Animated.View>
-          <Animated.View style={[styles.halfOutsideIconContainer, buttonAnimatedStyle]}>
-            <TouchableOpacity style={styles.iconButton}>
-              <Entypo name="upload" size={18} color="white" />
-            </TouchableOpacity>
-          </Animated.View>
-        </>
-      ),
-      // BACK BUTTON ICON
-      headerLeft: () => (
-        <TouchableOpacity style={styles.roundButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={22} color={Colors.white} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [isEditing, name, genre, avatarUri, coverImageUri]);
-
-  // ANIMATED STYLE FOR IMAGE FADE-OUT
-  const imageAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        {
-          translateY: interpolate(
-            scrollOffset.value,
-            [-IMG_HEIGHT, 0, IMG_HEIGHT, IMG_HEIGHT],
-            [-IMG_HEIGHT / 2, 0, IMG_HEIGHT * 0.75]
-          ),
-        },
-        {
-          scale: interpolate(scrollOffset.value, [-IMG_HEIGHT, 0, IMG_HEIGHT], [2, 1, 1]),
-        },
-      ],
-    };
-  });
-
-  // ANIMATED STYLE FOR HEADER BACKGOUND VISIBILITY
-  const headerAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: interpolate(scrollOffset.value, [0, IMG_HEIGHT / 1.5], [0, 1]),
-    };
-  }, []);
-
-  // ANIMATED STYLE FOR ARTIST NAME ON HEADER 
-  const titleAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: interpolate(scrollOffset.value, [IMG_HEIGHT / 1.5, IMG_HEIGHT], [0, 1]),
-    };
-  }, []);
-
-  const buttonAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: interpolate(scrollOffset.value, [IMG_HEIGHT / 1.5, IMG_HEIGHT], [0, 1]),
-    };
-  }, []);
-  // ANIMATED STYLE FOR PROFILE IMAGE
-  const profileImageAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: interpolate(scrollOffset.value, [0, 250], [1, 0]), // Smooth fade out
-      transform: [
-        {
-          scale: interpolate(scrollOffset.value, [0, 150], [1, 0.7], { extrapolateRight: 'clamp' }), // Ensure no enlarging, only shrinking
-        },
-      ],
-    };
-  });
-
-  const inputAnimatedStyle = useAnimatedStyle(() => {
-    // The input will start disappearing as the image is stretched
-    const inputOpacity = interpolate(scrollOffset.value, [-IMG_HEIGHT, 0], [0, 1], { extrapolateLeft: 'clamp' });
-    const inputScale = interpolate(scrollOffset.value, [-IMG_HEIGHT, 0], [0.6, 1], { extrapolateLeft: 'clamp' });
-
-    return {
-      opacity: inputOpacity,
-      transform: [
-        {
-          scale: inputScale,
-        },
-      ],
-    };
-  });
-
-  // ICONS FADE-OUT ANIMATION BASED ON SCROLL
-  const iconsAnimatedStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(scrollOffset.value, [0, IMG_HEIGHT / 2], [1, 0], { extrapolateLeft: 'clamp' });
-    return { opacity };
-  });
-
-  const closeWithAnimation = () => {
-    overlayOpacity.value = withTiming(0, { duration: 300 }); // Fade out overlay
-    translateY.value = withTiming(400, { duration: 300 }, () => {
-      // After animation completes, hide modal
-      runOnJS(setModalVisible)(false);
-      translateY.value = 0; // Reset for next opening
-      overlayOpacity.value = 1; // Reset overlay opacity
-    });
+  // ENTER EDIT MODE
+  const handleEnterEditMode = () => {
+    setOriginalName(name);
+    setOriginalGenre(genre);
+    setProfileImage(avatarUri)
+    setCoverImage(coverImageUri)
+    setIsEditing(true);
   };
 
-  const resetPosition = () => {
-    translateY.value = withSpring(0); // Animate back to original position if not dismissed
+  // REVERT CHANGES IF USER CLICK CLOSE BUTTON
+  const handleCloseEditing = () => {
+    setIsEditing(false);
+    setName(originalName);
+    setGenre(originalGenre);
+    setAvatarUri(originalProfileImage);
+    setCoverImageUri(originalCoverImage);
   };
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
-
-  const overlayStyle = useAnimatedStyle(() => ({
-    opacity: overlayOpacity.value, // Animate overlay opacity
-  }));
-
-  // ANIMATED STYLE FOR TABS SMOOTH TRANSITION
-  const getOpacityStyle = (tabIndex) => {
-    return useAnimatedStyle(() => {
-      const opacity = withTiming(tabTransition.value === tabIndex ? 1 : 0, { duration: 1000 });
-      return { opacity };
-    });
-  };
-
-  // HANDLE THE TOGGLE TABS WITH SMOOTH TRANSITION
-  const handleTabToggle = (tab) => {
-    setSelectedTab(tab.toLowerCase());
-    tabTransition.value = withTiming(tabs.indexOf(tab), { duration: 1000 });
-  };
-
-  // HANDLE GESTURE FOR MODAL
-  const handleGesture = (event) => {
-    translateY.value = Math.max(event.nativeEvent.translationY, 0); // Only allow downward movement
-    if (event.nativeEvent.translationY > 300) {
-      closeWithAnimation(); // Trigger smooth close with animation
+  // FUNCTION TO HNADLE LIMIT OF DESCRIPTION CHARACTERS BETWEEN 25.
+  const handleGenreChange = (text) => {
+    if (text.length <= 30) {
+      setGenre(text); // Update genre value
+      setRemainingChars(30 - text.length); // Update remaining characters count
     }
   };
 
+  // TAB SWITCH ANIMATION AND VIBRATION
+  const handleTabToggle = (tab) => {
+    if (tab.toLowerCase() !== selectedTab) {
+      setSelectedTab(tab.toLowerCase());
+      Vibration.vibrate(10); // Short vibration on tab switch
+      tabTransition.value = withTiming(tabs.indexOf(tab) * 80, { duration: 300 }); // Smooth transition based on index
+    }
+  };
+
+  // HANDLE SHOW SEARCH BAR ON SHOW ALL IS CLICKED
+  // const handleShowSearch = (show) => {
+  //   setShowSearch(show);
+  //   if (show) {
+  //     // Expand with a bounce effect
+  //     searchAnimation.value = withSpring(1, {
+  //       damping: 10,
+  //       stiffness: 100,
+  //       overshootClamping: false,
+  //     });
+  //   } else {
+  //     // Shrink smoothly on close
+  //     searchAnimation.value = withTiming(0, { duration: 500 }, () => {
+  //       runOnJS(setShowSearch)(false); // Hide the search bar after animation completes
+  //     });
+  //   }
+  // };
+
+  // FUNCTION TO UPDATE PLACEHOLDER AND RESET OPACITY
+  const handleUpdatePlaceholder = () => {
+    setIndex((prevIndex) => (prevIndex + 1) % searchPlaceholders.length);
+    setCurrentPlaceholder(searchPlaceholders[(index + 1) % searchPlaceholders.length]);
+    opacity.value = withTiming(1, { duration: 300 }); // Fade in
+  };
+
+  // OPEN EDIT PROFILE PHOTOS SCREEN TO PICK REMOVE OR ADD NEW PROFILE IMAGE
+  const openEditProfilePhotosScreen = () => {
+    console.log("Opening EditProfilePhotosScreen");
+    setShowEditPhotosScreen(true);
+  };
+
+  // ADD PHOTO(S) TO OTHER IMAGES UPTO 6
+  const handleAddPhoto = (newPhotoUri) => {
+    setPhotos((prevPhotos) => {
+      const updatedPhotos = [...prevPhotos, { uri: newPhotoUri }];
+      console.log('Updated photos array:', updatedPhotos); // Log the updated array
+      return updatedPhotos;
+    });
+  };
+
+  // REMOVE PHOTO(S)
+  const handleRemovePhoto = (photo) => {
+    // Logic to remove a photo
+    setPhotos((prevPhotos) => prevPhotos.filter((p) => p.uri !== photo.uri));
+  };
+
+  // FETCH THE ARTIST PROFILE WHEN COMPONENT IS MOUNTED OR REFRESHED
+  useEffect(() => {
+    fetchArtistProfile();
+    navigation.setOptions({ headerShown: !loading });
+  }, [avatarUri, loading]);
+
+  // CHANGE PLACEHOLDERS
+  useEffect(() => {
+    const interval = setInterval(() => {
+      opacity.value = withTiming(0, { duration: 300 }, () => {
+        runOnJS(handleUpdatePlaceholder)();
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [index]);
+
+  // TOP HEADER PART
+  useLayoutEffect(() => {
+    if (!loading) {
+      navigation.setOptions({
+        headerTitle: '',
+        headerTransparent: true,
+        // ARTIST NAME
+        headerBackground: () => (
+          <Animated.View style={[headerAnimatedStyle, styles.header]}>
+            <Animated.Text style={[styles.title, titleAnimatedStyle]}>
+              {name}
+            </Animated.Text>
+          </Animated.View>
+        ),
+        // NOTIFICATION, MESSAGES, AND SETTINGS ICONS
+        headerRight: () => (
+          <Animated.View style={[styles.bar, iconsAnimatedStyle]}>
+            {isSelfProfile ? (
+              isEditing ? (
+                <View style={styles.headerButtons}>
+                  <TouchableOpacity style={styles.roundButton} onPress={() => {
+                    handleSaveChanges();
+                    setIsEditing(false);
+                  }}>
+                    <Image source={require('../../../assets/images/ArtistProfile/save.png')} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.roundButton} onPress={handleCloseEditing}>
+                    <Image source={require('../../../assets/images/ArtistProfile/close.png')} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.headerButtons}>
+                  <TouchableOpacity style={styles.roundButton}>
+                    <Image source={require('../../../assets/images/ArtistProfile/bell.png')} />
+                    <Image source={require('../../../assets/images/ArtistProfile/ellipse.png')} style={styles.badge} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.roundButton} onPress={() => router.push("/artistInboxScreen")}>
+                    <Image source={require('../../../assets/images/ArtistProfile/message.png')} />
+                    <Image source={require('../../../assets/images/ArtistProfile/ellipse.png')} style={styles.badge} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.roundButton} onPress={() => router.push("/settings")}>
+                    <Image source={require('../../../assets/images/ArtistProfile/settings.png')} />
+                  </TouchableOpacity>
+                </View>
+              )
+            ) : (
+              // Render the three dots icon when viewing someone else's profile
+              <View style={styles.headerButtons}>
+                <TouchableOpacity style={styles.roundButton} onPress={openOptionsModal}>
+                  <Image source={require('../../../assets/images/ArtistProfile/morehorizontal.png')} />
+                </TouchableOpacity>
+              </View>
+
+            )}
+          </Animated.View>
+        ),
+        // BACK BUTTON ICON
+        headerLeft: () => (
+          <TouchableOpacity style={styles.roundButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={20} color={Colors.white} />
+          </TouchableOpacity>
+        ),
+      });
+    }
+  }, [isEditing, name, genre, avatarUri, coverImageUri, isSelfProfile, loading]);
+
+
+  // FETCH ARTISTS OTHER IMAGES
+  useEffect(() => {
+    const fetchProfileImages = async () => {
+      if (!artistId) return; // Exit if artistId is not available
+      try {
+        const fetchedPhotos = await ArtistService.getProfileImages(artistId);
+
+        // Check if fetchedPhotos is valid, and set photos state accordingly
+        if (Array.isArray(fetchedPhotos) && fetchedPhotos.length > 0) {
+          setPhotos(fetchedPhotos);
+        }
+      } catch (error) {
+        console.log("Error loading profile images:");
+        // Set photos to the default in case of an error
+      }
+    };
+
+    fetchProfileImages();
+  }, [artistId]);
+
+
   return (
     <GestureHandlerRootView>
-      <View style={styles.container}>
-        <Animated.ScrollView
-          contentContainerStyle={{ paddingBottom: 100 }} // Add extra padding to ensure content is not hidden behind MusicPlayer
-          ref={scrollRef}
-          scrollEventThrottle={16}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* COVER IMAGE */}
-          {isEditing ? (
-            <TouchableOpacity onPress={openCoverImagePicker}>
-              <Animated.Image
-                source={{ uri: coverImageUri }}
-                style={[styles.image, imageAnimatedStyle]}
-                resizeMode="cover"
-              />
-              <Animated.View style={[styles.gradientOverlay, imageAnimatedStyle]}>
-                <View style={styles.gradientBackground} />
-              </Animated.View>
+      {/* OPEN EDIT PHOTOS SCREEN */}
+      <Modal
+        visible={showEditPhotosScreen}
+        animationType="slide"
+        onRequestClose={() => setShowEditPhotosScreen(false)}
+      >
+        <EditProfilePhotosScreen
+          artistId={artistId}
+          photos={photos}
+          onSave={handleSaveChanges}
+          onCancel={() => {
+            setShowEditPhotosScreen(false)
+            setIsEditing(false)
+            fetchArtistProfile();
+          }}
+          onAddPhoto={handleAddPhoto}
+          onRemovePhoto={handleRemovePhoto}
+        />
+      </Modal>
+
+      {/* ACTION MODAL FOR BLOCK/REPORT */}
+      <Modal
+        visible={isOptionsModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={closeOptionsModal}
+      >
+        <View style={styles.fullScreenOverlay}>
+          <View style={styles.modalContainer}>
+            <TouchableOpacity onPress={closeOptionsModal} style={styles.topBar}>
+              <View style={styles.closeBar} />
             </TouchableOpacity>
-          ) : (
-            <>
-              <Animated.Image
-                source={{ uri: coverImageUri }}
-                style={[styles.image, imageAnimatedStyle]}
-                resizeMode="cover"
-              />
-              <Animated.View style={[styles.gradientOverlay, imageAnimatedStyle]}>
-                <View style={styles.gradientBackground} />
-              </Animated.View>
-            </>
-          )}
-
-          {/* PROFILE AND INFO OVERLAY */}
-          <Animated.View style={[styles.profileOverlay, profileImageAnimatedStyle, { marginTop: isEditing ? 100 : 180 }]}>
-            {/* ARTIST PROFILE IMAGE */}
-            <View style={styles.avatarContainer}>
-              <Image
-                source={avatarUri ? { uri: avatarUri } : require('../../../assets/images/profile.png')}
-                style={styles.profileImage}
-              />
-              {isEditing && (
-                <TouchableOpacity style={styles.editIconContainer} onPress={openImagePicker}>
-                  <Image source={require('../../../assets/images/ArtistProfile/add.png')} style={styles.editIcon} />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Modal for selecting image source */}
-            <Modal
-              transparent={true}
-              visible={modalVisible}
-              animationType="none" // Set to "none" for instant overlay appearance
-              onRequestClose={() => setModalVisible(false)}
-            >
-              {/* Static Overlay */}
-              <View style={styles.modalOverlay} />
-
-              {/* Animated Modal Content */}
-              <PanGestureHandler onGestureEvent={handleGesture} onEnded={resetPosition}>
-                <Animated.View style={[styles.modalContent, animatedStyle, overlayStyle]}>
-                  <View style={styles.pullIndicator} />
-
-                  <Text style={styles.modalTitle}>Profile</Text>
-
-                  <View style={styles.innerModalContainer}>
-                    <TouchableOpacity style={styles.modalOption} onPress={() => openImagePicker('gallery')}>
-                      <Entypo name="images" size={24} color={Colors.white} style={styles.optionIcon} />
-                      <View style={styles.optionTextContainer}>
-                        <Text style={styles.optionText}>Upload from Gallery</Text>
-                        <Text style={styles.optionSubText}>Choose a photo from your library.</Text>
-                      </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.modalOption} onPress={() => openImagePicker('camera')}>
-                      <FontAwesome name="camera" size={24} color={Colors.white} style={styles.optionIcon} />
-                      <View style={styles.optionTextContainer}>
-                        <Text style={styles.optionText}>Take a Photo</Text>
-                        <Text style={styles.optionSubText}>Capture a new photo with your camera.</Text>
-                      </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={[styles.modalOption, { borderBottomWidth: 0, paddingTop: 15, paddingBottom: 0 }]} onPress={() => openImagePicker('default')}>
-                      <MaterialCommunityIcons name="face-recognition" size={24} color={Colors.white} style={styles.optionIcon} />
-                      <View style={styles.optionTextContainer}>
-                        <Text style={styles.optionText}>Set to Default</Text>
-                        <Text style={styles.optionSubText}>Use default photo. You can change it later.</Text>
-                      </View>
-                    </TouchableOpacity>
-
-                  </View>
-                  <TouchableOpacity style={styles.cancelModalButton} onPress={() => setModalVisible(false)}>
-                    <Text style={styles.cancelModalText}>Cancel</Text>
-                  </TouchableOpacity>
-                </Animated.View>
-              </PanGestureHandler>
-            </Modal>
-
-            {/* ARTIST NAME */}
-            {isEditing ? (
-              <Animated.View style={inputAnimatedStyle}>
-                <TextInput
-                  style={styles.input}
-                  value={name}
-                  autoCorrect={false}
-                  onChangeText={setName}
-                />
-              </Animated.View>
-            ) : (
-              <Text style={styles.artistName}>{name}</Text>
-            )}
-
-            {/* ARTIST DESCRIPTION/GENRE */}
-            {isEditing ? (
-              <Animated.View style={inputAnimatedStyle}>
-                <TextInput
-                  style={[styles.input, { opacity: 0.7, borderColor: Colors.white }]}
-                  value={genre}
-                  autoCorrect={false}
-                  onChangeText={handleGenreChange}
-                  maxLength={30}
-                />
-                <Text style={styles.charCount}>
-                  {remainingChars} / 30
-                </Text>
-              </Animated.View>
-            ) : (
-              <Text style={styles.artistInfo}>{genre}</Text>
-            )}
-
-          </Animated.View>
-
-          {/* BUTTON CONTAINER */}
-          {/* {!isEditing && (
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.uploadButton}>
-                <Entypo name="upload" size={18} color={Colors.white} />
-                <Text style={styles.buttonText}>Upload</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.editProfileButton} onPress={() => {
-                setIsEditing(true)
-                handleEnterEditMode()
+            <View style={styles.optionsContainer}>
+              <TouchableOpacity style={styles.option} onPress={() => {
+                console.log('Block account pressed');
+                closeOptionsModal();
               }}>
-                <EvilIcons name="pencil" size={28} color={Colors.white} />
-                <Text style={styles.buttonText}>Edit Profile</Text>
+                <View style={styles.actionModalIconContainer}>
+                  <Image source={require('../../../assets/images/ArtistProfile/ic_twotone-block.png')} />
+                  <Text style={styles.optionText}>Block account</Text>
+                </View>
               </TouchableOpacity>
-            </View>
-          )} */}
-
-          {/* TAB SELECTION */}
-          <View style={styles.container}>
-            {/* TAB SELECTION */}
-            <View style={styles.trackContainer}>
-              {/* Left Side - Album Art */}
-              <Image
-                source={{ uri: 'https://i.scdn.co/image/ab67616d0000b2733574ce3a15cb5edc6559065e' }}
-                style={styles.artCover}
-              />
-              {/* Center - Latest Song or Album Info */}
-              <View style={styles.songInfoContainer}>
-                <Text style={styles.releaseDate}>Oct 31, 2024</Text>
-                <Text style={styles.songName}>Shukraan</Text>
-                <Text style={styles.trackType}>Latest Track</Text>
-              </View>
-              <Animated.View style={styles.stickyButtonContainer}>
-                <TouchableOpacity style={styles.editButton}
-                  onPress={() => {
-                    setIsEditing(true)
-                    handleEnterEditMode()
-                  }}>
-                  <EvilIcons name="pencil" size={28} color={Colors.white} />
-                  <Text style={styles.editButtonText}>Edit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.uploadButton}>
-                  <Entypo name="upload" size={18} color={Colors.white} />
-                </TouchableOpacity>
-              </Animated.View>
-            </View>
-            <View style={styles.toggleContainer}>
-              {tabs.map((tab) => (
-                <TouchableOpacity
-                  key={tab}
-                  style={[
-                    styles.toggleButton,
-                    selectedTab === tab.toLowerCase() && styles.activeButton,
-                  ]}
-                  onPress={() => handleTabToggle(tab)}
-                >
-                  <Text
-                    style={[
-                      styles.toggleText,
-                      selectedTab === tab.toLowerCase() && styles.activeText,
-                    ]}
-                  >
-                    {tab}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* TAB CONTENT SECTION */}
-            <View style={{ width: '100%', marginTop: -20, }}>
-              <Animated.View style={[getOpacityStyle(0)]}>
-                {selectedTab === 'music' && <Music />}
-              </Animated.View>
-              <Animated.View style={[getOpacityStyle(1)]}>
-                {selectedTab === 'events' && <Events />}
-              </Animated.View>
-              <Animated.View style={[getOpacityStyle(2)]}>
-                {selectedTab === 'posts' && <Posts avatarUri={avatarUri} name={name} />}
-              </Animated.View>
-              <Animated.View style={[getOpacityStyle(3)]}>
-                {selectedTab === 'dashboard' && <Dashboard />}
-              </Animated.View>
+              <View style={styles.divider} />
+              <TouchableOpacity style={styles.option} onPress={() => {
+                console.log('Report pressed');
+                closeOptionsModal();
+              }}>
+                <View style={styles.actionModalIconContainer}>
+                  <Image source={require('../../../assets/images/ArtistProfile/alert-circle.png')} />
+                  <Text style={styles.optionText}>Report</Text>
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
-        </Animated.ScrollView>
+        </View>
+      </Modal>
+      {/* MAIN PROFILE UI CONTENT */}
+      <View style={styles.container}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.white} />
+          </View>
+        ) : (
+          <>
+            <Animated.ScrollView
+              contentContainerStyle={{ paddingBottom: 100 }}
+              onScroll={scrollHandler}
+              scrollEventThrottle={16}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* COVER IMAGE */}
+              {isEditing ? (
+                <TouchableOpacity onPress={handleOpenCoverImagePicker}>
+                  <Animated.Image
+                    source={{ uri: coverImageUri }}
+                    style={[styles.image, imageAnimatedStyle]}
+                    resizeMode="cover"
+                  />
+                  <Animated.View style={[styles.gradientOverlay, imageAnimatedStyle]}>
+                    <View style={styles.gradientBackground} />
+                  </Animated.View>
+                </TouchableOpacity>
+              ) : (
+                <>
+                  <Animated.Image
+                    source={coverImageUri ? { uri: coverImageUri } : require('../../../assets/images/profile1.png')}
+                    style={[styles.image, imageAnimatedStyle]}
+                    resizeMode="cover"
+                  />
+                  <Animated.View style={[styles.gradientOverlay, imageAnimatedStyle]}>
+                    <View style={styles.gradientBackground} />
+                  </Animated.View>
+                </>
+              )}
 
-        {/* Music Player - Fixed at the bottom */}
-        <View style={styles.musicPlayerContainer}>
-          <MusicPlayer />
-        </View >
+              {/* PROFILE AND INFO OVERLAY */}
+              <Animated.View
+                style={[
+                  styles.profileOverlay,
+                  { marginTop: isEditing ? 145 : isSelfProfile ? 180 : 100 },
+                ]}
+              >
+                {/* IF ARTIST IS VIEWING THEIR PROFILE */}
+                {isSelfProfile ? (
+                  <>
+                    {/* ARTIST PROFILE IMAGE */}
+                    <Animated.View style={[styles.avatarContainer, combinedAnimatedStyle]}>
+
+                      <Image
+                        source={{ uri: avatarUri }}
+                        style={styles.profileImage}
+                      />
+
+                      {isEditing && (
+                        <TouchableOpacity
+                          style={styles.editIconContainer}
+                          onPress={openEditProfilePhotosScreen}
+                        >
+                          <Image
+                            source={require('../../../assets/images/ArtistProfile/add.png')}
+                            style={styles.editIcon}
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </Animated.View>
+
+                    {/* ARTIST NAME */}
+                    {isEditing ? (
+                      <Animated.View style={[inputAnimatedStyle, combinedAnimatedStyle]}>
+                        <TextInput
+                          style={styles.input}
+                          value={name}
+                          autoCorrect={false}
+                          onChangeText={setName}
+                        />
+                      </Animated.View>
+                    ) : (
+                      <Animated.Text style={[styles.artistName, combinedAnimatedStyle]}>{name}</Animated.Text>
+                    )}
+
+                    {/* ARTIST DESCRIPTION/GENRE */}
+                    {isEditing ? (
+                      <Animated.View style={[inputAnimatedStyle, combinedAnimatedStyle]}>
+                        <TextInput
+                          style={[styles.input, { opacity: 0.7, borderColor: Colors.white }]}
+                          value={genre}
+                          autoCorrect={false}
+                          onChangeText={handleGenreChange}
+                          maxLength={30}
+                        />
+                        {/* UPTO 30 CHARACTERS ARE ALLOWED */}
+                        <Text style={styles.charCount}>{remainingChars} / 30</Text>
+                      </Animated.View>
+                    ) : (
+                      <Animated.Text style={[styles.artistInfo, combinedAnimatedStyle]}>{genre}</Animated.Text>
+                    )}
+                  </>
+                ) : (
+                  // IF LISTENER IS VIEWING ARTIST PROFILE
+                  <Animated.View style={[styles.otherUserProfileContainer, combinedAnimatedStyle]}>
+                    <View style={styles.profileDetailsContainer}>
+                      <View style={styles.profileDetailsView}>
+                        <View>
+                          <Image
+                            source={avatarUri ? { uri: avatarUri } : require('../../../assets/images/profile.png')}
+                            style={styles.otherUserProfileImage}
+                          />
+                          {/* Artist Name and Handle */}
+                          <Text style={styles.artistName}>{name}</Text>
+                          <Text style={styles.artistHandle}>@{name}</Text>
+                        </View>
+
+                        {/* ARTIST RANKING */}
+                        <View style={styles.artistStats}>
+                          <View>
+                            <Text style={styles.ranking}>#25</Text>
+                            <Text style={styles.location}>DMV</Text>
+                          </View>
+                          <View>
+                            <Text style={styles.ranking}>#8</Text>
+                            <Text style={styles.location}>NOVA</Text>
+                          </View>
+                          <View>
+                            <Text style={styles.ranking}>#2</Text>
+                            <Text style={styles.location}>Arlington</Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* FOLLOWERS COUNT AND STREAMS */}
+                      <View style={styles.followerInfo}>
+                        <View style={styles.followersContainer}>
+                          <Feather name="users" size={16} color={Colors.white} />
+                          <Text style={styles.followers}>321k followers</Text>
+                        </View>
+                        <View style={styles.streamsContainer}>
+                          <Ionicons name="play" size={16} color={Colors.white} />
+                          <Text style={styles.streams}>2.4M streams</Text>
+                        </View>
+                      </View>
+
+                      {/* ARITST SOCIAL HANDLES */}
+                      <View style={styles.socialIconsContainer}>
+                        <TouchableOpacity>
+                          <Image source={require('../../../assets/images/ArtistProfile/entypo-social_instagram.png')} style={styles.icon} />
+                        </TouchableOpacity>
+                        <TouchableOpacity>
+                          <Image source={require('../../../assets/images/ArtistProfile/lineicons_tiktok.png')} style={styles.icon} />
+                        </TouchableOpacity>
+                        <TouchableOpacity>
+                          <Image source={require('../../../assets/images/ArtistProfile/uil_snapchat-square.png')} style={styles.icon} />
+                        </TouchableOpacity>
+                      </View>
+
+                      {/* HEADLINE OR BIO */}
+                      <Text style={styles.headline}>
+                        Headlining this Saturday 10/26/24
+                        <Text style={styles.mentioned}> @roseloungeDC! </Text>
+                        Tickets are selling fast, make sure to get yours. See you there! 🎉
+                      </Text>
+                    </View>
+                  </Animated.View>
+                )}
+              </Animated.View>
+
+              {/* UPLOAD AND EDIT PROFILE BUTTONS FOR ARTIST */}
+              {!isEditing && (
+                <Animated.View style={[styles.buttonContainer, combinedAnimatedStyle]}>
+                  {isSelfProfile ? (
+                    <>
+                      <TouchableOpacity style={styles.uploadButton} onPress={() => router.push("/upload")}>
+                        <Text style={styles.buttonText}>Upload</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.editProfileButton}
+                        onPress={() => {
+                          setIsEditing(true);
+                          handleEnterEditMode();
+                        }}
+                      >
+                        <Text style={styles.buttonText}>Edit Profile</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    // FOLLOW AND MESSAGE BUTTONS FOR LISTENER VIEWING ARTIST PROFILE
+                    <>
+                      <TouchableOpacity style={styles.followButton}>
+                        <Text style={styles.buttonText}>Follow</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.messageButton}>
+                        <Text style={styles.buttonText}>Message</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </Animated.View>
+              )}
+
+              {/* TAB SELECTION */}
+              <View style={styles.container}>
+                {/* SEARCH BAR  */}
+                {/* {showSearch && (
+                  <Animated.View style={[styles.searchContainer, searchBarStyle]}>
+                    <View style={styles.searchBox}>
+                      <Feather name="search" color="#FFFFFF" size={22} style={{ paddingHorizontal: 10 }} />
+                      <TextInput
+                        placeholder={currentPlaceholder}
+                        placeholderTextColor="#CECECE"
+                        style={styles.searchInput}
+                        value={searchText}
+                        onChangeText={setSearchText}
+                      />
+                      {searchText.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearchText('')} style={{ paddingHorizontal: 10 }}>
+                          <FontAwesome6 name="times-circle" size={16} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <TouchableOpacity onPress={() => handleShowSearch(false)}>
+                      <Text style={styles.cancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                )} */}
+
+                {/* SWITCH TABS */}
+                <View style={styles.toggleContainer}>
+                  {tabs.map((tab) => (
+                    <TouchableOpacity
+                      key={tab}
+                      style={[
+                        styles.toggleButton,
+                        selectedTab === tab.toLowerCase() && styles.activeButton,
+                      ]}
+                      onPress={() => handleTabToggle(tab)}
+                    >
+                      <Text
+                        style={[
+                          styles.toggleText,
+                          selectedTab === tab.toLowerCase() && styles.activeText,
+                        ]}
+                      >
+                        {tab}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* TABS CONTENT FOR MUSIC, EVENTS, POSTS, DASHBOARD */}
+                <View style={{ width: '100%', marginTop: -20 }}>
+                  <View key={`${selectedTab}`}>
+                    {selectedTab === 'music' && <Music name={name} isSelfProfile={isSelfProfile} />}
+                  </View>
+                  <View>
+                    {selectedTab === 'events' && <Events />}
+                  </View>
+                  <View>
+                    {selectedTab === 'posts' && <Posts avatarUri={avatarUri} name={name} />}
+                  </View>
+                  <View>
+                    {selectedTab === 'dashboard' && <Dashboard />}
+                  </View>
+                </View>
+              </View>
+            </Animated.ScrollView>
+            <View style={styles.musicPlayerContainer}>
+              <MusicPlayer />
+            </View>
+          </>
+        )}
       </View >
     </GestureHandlerRootView >
   );
@@ -701,7 +825,12 @@ export default ArtistProfileScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#121212',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   image: {
     height: IMG_HEIGHT,
@@ -745,18 +874,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    position: 'absolute',
+    top: -20,
+    right: 0,
+  },
   header: {
     backgroundColor: '#2F2F30',
     height: 100,
     borderColor: 'grey',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingTop: 63,
+    paddingBottom: 20,
   },
   title: {
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginTop: 50,
     color: Colors.white,
   },
   profileOverlay: {
@@ -768,6 +907,13 @@ const styles = StyleSheet.create({
   avatarContainer: {
     position: 'relative',
   },
+  profileImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 24,
+    backgroundRepeat: 'no-repeat',
+    marginBottom: 10,
+  },
   editIconContainer: {
     position: 'absolute',
     left: 50,
@@ -778,7 +924,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   editIcon: {
     width: '100%',
     height: '100%',
@@ -798,13 +943,6 @@ const styles = StyleSheet.create({
     width: 343,
     height: 40,
   },
-  profileImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 24,
-    backgroundRepeat: 'no-repeat',
-    marginBottom: 10,
-  },
   artistName: {
     color: Colors.white,
     textAlign: 'center',
@@ -813,6 +951,21 @@ const styles = StyleSheet.create({
     fontStyle: 'normal',
     fontWeight: '900',
     lineHeight: 26,
+    zIndex: 3,
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  charCount: {
+    color: Colors.white,
+    textAlign: 'right',
+    marginTop: -5,
+    marginHorizontal: 10,
+    fontFamily: 'Open Sans',
+    fontSize: 14,
+    fontStyle: 'normal',
+    fontWeight: '400',
+    lineHeight: 20,
     zIndex: 3,
     textShadowColor: 'rgba(0, 0, 0, 0.7)',
     textShadowOffset: { width: 0, height: 1 },
@@ -830,12 +983,123 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.7)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+    opacity: 0.7
+  },
+  otherUserProfileContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  profileDetailsContainer: {
+    flex: 1,
+    gap: 3,
+  },
+  profileDetailsView: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  otherUserProfileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginRight: 16,
+  },
+  artistHandle: {
+    color: Colors.white,
+    fontFamily: "Open Sans",
+    fontSize: 12,
+    fontStyle: 'normal',
+    fontWeight: '400',
+    lineHeight: 20,
+  },
+  artistStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    gap: 16,
+  },
+  ranking: {
+    color: Colors.white,
+    textAlign: 'center',
+    fontFamily: "Open Sans",
+    fontSize: 18,
+    fontStyle: 'normal',
+    fontWeight: '600',
+    lineHeight: 22,
+  },
+  location: {
+    color: Colors.white,
+    textAlign: 'center',
+    fontFamily: "Open Sans",
+    fontSize: 12,
+    fontStyle: 'normal',
+    fontWeight: '400',
+    lineHeight: 18,
+  },
+  followerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  followersContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  followers: {
+    color: Colors.white,
+    fontFamily: "Open Sans",
+    fontSize: 12,
+    fontStyle: 'normal',
+    fontWeight: '400',
+    lineHeight: 20,
+  },
+  streamsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  streams: {
+    color: Colors.white,
+    fontFamily: "Open Sans",
+    fontSize: 12,
+    fontStyle: 'normal',
+    fontWeight: '400',
+    lineHeight: 20,
+  },
+  socialIconsContainer: {
+    flexDirection: 'row',
+  },
+  icon: {
+    width: 24,
+    height: 24,
+    marginLeft: 0,
+    marginHorizontal: 24,
+  },
+  headline: {
+    color: Colors.white,
+    fontFamily: "Open Sans",
+    fontSize: 12,
+    fontStyle: 'normal',
+    fontWeight: '400',
+    marginBottom: 10,
+  },
+  mentioned: {
+    color: '#8951FF',
+    fontFamily: "Open Sans",
+    fontSize: 12,
+    fontStyle: 'normal',
+    fontWeight: 400,
+    lineHeight: 20,
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-evenly',
     position: 'absolute',
     alignItems: 'center',
+    gap: 10,
     height: 60,
     marginHorizontal: 20,
     width: 353,
@@ -847,25 +1111,14 @@ const styles = StyleSheet.create({
   uploadButton: {
     display: 'flex',
     flexDirection: 'row',
-    width: 167,
+    width: 176,
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
     flexShrink: 0,
-    borderRadius: 25,
-    backgroundColor: '#4554F0',
-  },
-  editProfileButton: {
-    display: 'flex',
-    flexDirection: 'row',
-    width: 167,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexShrink: 0,
-    borderRadius: 25,
-    backgroundColor: '#4554F0',
+    borderRadius: 24,
+    backgroundColor: Colors.themeColor,
   },
   buttonText: {
     color: Colors.white,
@@ -876,6 +1129,72 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 20,
   },
+  editProfileButton: {
+    display: 'flex',
+    flexDirection: 'row',
+    width: 176,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+    borderRadius: 24,
+    backgroundColor: '#1A1A1A',
+    borderWidth: 2,
+    borderColor: Colors.white,
+  },
+  followButton: {
+    display: 'flex',
+    flexDirection: 'row',
+    width: 176,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 0,
+    borderRadius: 24,
+    backgroundColor: Colors.themeColor,
+  },
+  messageButton: {
+    display: 'flex',
+    flexDirection: 'row',
+    width: 176,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+    borderRadius: 24,
+    backgroundColor: '#3C3C3C',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 24,
+    marginVertical: 10,
+  },
+  searchBox: {
+    flex: 1,
+    backgroundColor: '#2A2A2A',
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
+    borderRadius: 10,
+    height: 35,
+  },
+  searchInput: {
+    color: 'white',
+    paddingHorizontal: 10,
+    fontSize: 15,
+    flex: 1,
+  },
+  cancelText: {
+    color: Colors.white,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 20,
+    marginLeft: 10,
+  },
   toggleContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -885,11 +1204,11 @@ const styles = StyleSheet.create({
   toggleButton: {
     paddingVertical: 10,
     paddingHorizontal: 10,
-    borderBottomWidth: 2,
+    borderBottomWidth: 3,
     borderColor: "transparent",
   },
   activeButton: {
-    borderColor: Colors.white,
+    borderColor: Colors.themeColor,
   },
   toggleText: {
     color: 'gray',
@@ -909,30 +1228,69 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 18,
   },
-  contentContainer: {
+  fullScreenOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Dark overlay background
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    width: '100%',
+    height: 265,
+    backgroundColor: '#222',
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+    paddingBottom: 30,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  optionsContainer: {
+    backgroundColor: '#2c2c2c',
+    borderRadius: 12,
+    width: '90%',
+    alignItems: 'center',
+    marginTop: 72,
+    paddingVertical: 8,
+  },
+  actionModalIconContainer: {
     flexDirection: 'row',
-    flexGrow: 1,
+    alignItems: 'center',
+    gap: 10,
   },
-  placeholderText: {
-    fontSize: 18,
-    textAlign: 'center',
-    marginVertical: 50,
-    color: Colors.gray,
+  topBar: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 8,
   },
-  charCount: {
-    color: Colors.white,
-    textAlign: 'right',
-    marginTop: -5,
-    marginHorizontal: 10,
-    fontFamily: 'Open Sans',
-    fontSize: 14,
+  closeBar: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#888',
+    borderRadius: 2.5,
+  },
+  option: {
+    paddingVertical: 15,
+    paddingHorizontal: 18,
+    width: '100%',
+  },
+  optionText: {
+    color: '#FF5151',
+    fontFamily: "Open Sans",
+    fontSize: 16,
     fontStyle: 'normal',
-    fontWeight: '400',
-    lineHeight: 20,
-    zIndex: 3,
-    textShadowColor: 'rgba(0, 0, 0, 0.7)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    fontWeight: '700',
+    lineHeight: 'normal',
+  },
+  divider: {
+    width: '90%',
+    height: 1,
+    backgroundColor: '#423f3f',
+  },
+  closeButton: {
+    marginTop: 20,
+  },
+  closeButtonText: {
+    fontSize: 16,
+    color: Colors.white,
   },
   musicPlayerContainer: {
     position: 'absolute',
@@ -943,187 +1301,5 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderBottomColor: Colors.white,
     marginHorizontal: 5,
-  },
-
-  modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  modalContent: {
-    backgroundColor: '#1C1D22',
-    padding: 20,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    alignItems: 'flex-start',
-    width: '100%',
-    position: 'absolute',
-    bottom: 0,
-    height: 400,
-  },
-  pullIndicator: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#313139',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-    marginTop: -10,
-  },
-  modalTitle: {
-    color: Colors.white,
-    fontFamily: 'Open Sans',
-    fontSize: 20,
-    fontStyle: 'normal',
-    fontWeight: '900',
-    lineHeight: 28,
-    alignSelf: 'center',
-  },
-  innerModalContainer: {
-    backgroundColor: '#27272F',
-    width: '100%',
-    borderRadius: 16,
-    marginTop: 16,
-    padding: 20,
-  },
-  modalOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#3A3A3C',
-    width: '100%',
-  },
-  optionIcon: {
-    marginRight: 15,
-    opacity: 0.7
-  },
-  optionTextContainer: {
-    flexDirection: 'column',
-  },
-  optionText: {
-    color: Colors.white,
-    fontFamily: 'Open Sans',
-    fontSize: 14,
-    fontStyle: 'normal',
-    fontWeight: '600',
-    lineHeight: 22,
-  },
-  optionSubText: {
-    color: Colors.white,
-    fontSize: 10,
-    fontFamily: 'Open Sans',
-    fontStyle: 'normal',
-    fontWeight: '300',
-    opacity: 0.6
-  },
-  cancelModalButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4554F0',
-    borderRadius: 8,
-    height: 50,
-    width: '100%',
-    marginTop: 18,
-  },
-  cancelModalText: {
-    color: Colors.white,
-    fontSize: 14,
-    fontFamily: 'Open Sans',
-    fontStyle: 'normal',
-    fontWeight: '800',
-    lineHeight: 22,
-  },
-
-
-
-
-  trackContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    paddingHorizontal: 26,
-    marginTop: 4,
-    borderRadius: 10,
-  },
-  artCover: {
-    width: 56,
-    height: 56,
-    marginRight: 10,
-  },
-  songInfoContainer: {
-    flex: 1,        // Takes remaining space in the center
-    paddingLeft: 5,
-  },
-  releaseDate: {
-    fontSize: 10,
-    color: '#C0C0C0',
-    fontWeight: '600'
-  },
-  songName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
-    marginVertical: 2,
-  },
-  trackType: {
-    fontSize: 10,
-    color: '#0DBCEE',
-  },
-  stickyButtonContainer: {
-    position: 'absolute',
-    top: 10, // Adjust this value as needed
-    right: 20,
-    flexDirection: 'row',
-    gap: 14,
-  },
-  halfOutsideIconContainer: {
-    position: 'absolute',
-    top: 16, // Position it halfway out of the header
-    right: 5,
-    zIndex: 10,
-  },
-  iconButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#4554F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  uploadButton: {
-    width: 48,
-    height: 50,
-    borderRadius: 24,
-    backgroundColor: '#4554F0',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#1A1A1A',
-    alignItems: 'center',
-    position: 'absolute', // Overlapping position
-    right: 0, // Shifted to overlap on the right side of the upload button
-    top: 0, // Adjust to overlap slightly at the top
-    zIndex: 10, // Ensures it sits above the first button
-  },
-  editButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingRight: 45,
-    flexShrink: 0,
-    width: 130,
-    height: 50,
-    borderRadius: 48,
-    backgroundColor: '#4554F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  editButtonText: {
-    color: Colors.white,
-    textAlign: 'center',
-    fontFamily: 'Open Sans',
-    fontSize: 16,
-    fontStyle: 'normal',
-    fontWeight: '800',
-    lineHeight: 20,
   },
 });

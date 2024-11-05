@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Stack } from 'expo-router';
 
 // function ProfileLayout() {
@@ -13,6 +13,8 @@ import { Stack } from 'expo-router';
 // }
 
 export default function DynamicLayout({ segment }) {
+  const [loading, setLoading] = useState(true);
+
   if (segment === '(home)') {
     return (
       <Stack screenOptions={{ headerShown: false }}>
@@ -53,8 +55,7 @@ export default function DynamicLayout({ segment }) {
         <Stack.Screen name="inbox" options={{ title: 'Inbox' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
         <Stack.Screen name="listenerProfile" options={{ title: 'ListenerProfile' }} />
-        <Stack.Screen name="artistProfile" options={{ title: 'Artist Profile', headerShown: true }} />
-        {/* Add more nested profile screens here */}
+        <Stack.Screen name="artistProfile" options={{ title: 'Artist Profile', headerShown: !loading }} />
       </Stack>
     )
   }

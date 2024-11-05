@@ -8,16 +8,16 @@ const MusicPlayer = () => {
         <View style={styles.container}>
             {/* Album Cover */}
             <Image
-                source={{ uri: 'https://i.scdn.co/image/ab67616d0000b273aad3f4b601ae8763b3fc4e88' }}
+                source={{ uri: 'https://i.scdn.co/image/ab67616d0000b273cb2f9520171129a3df7a241a' }}
                 style={styles.albumCover}
             />
 
             {/* Song Details */}
             <View style={styles.songDetails}>
                 <Text style={styles.songTitle} numberOfLines={1}>
-                    Millionaire
+                    Ghost
                 </Text>
-                <Text style={styles.artistName}>Yo Yo Honey Singh</Text>
+                <Text style={styles.artistName}>Diljit Dosanjh</Text>
             </View>
 
             {/* Play Button */}
@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#A95C68',
+        backgroundColor: '#7a5520',
         borderRadius: 10,
         padding: 10,
     },
