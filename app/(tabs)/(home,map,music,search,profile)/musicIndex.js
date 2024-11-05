@@ -73,9 +73,7 @@ function MusicScreen() {
         isAuthenticated: true,
       });
 
-      setLibraryData((prev) =>
-        resetData ? response.items : [...prev, ...response.items]
-      );
+      setLibraryData(() => (resetData ? response.items : [...response.items]));
       setLastEvaluatedKey(response.lastEvaluatedKey);
       setHasMore(response.hasMore);
     } catch (err) {
@@ -94,20 +92,23 @@ function MusicScreen() {
   }, [userId, contentType]);
 
   const renderLibraryItem = ({ item }) => {
+    const formatDuration = (duration) => {
+      if (!duration) return "0:00";
+      const minutes = Math.floor(duration / 60);
+      const seconds = Math.floor(duration % 60);
+      return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    };
+
     const getSubtitle = () => {
       switch (item.content_type) {
         case "playlist":
-          return `${item.track_count || 0} songs • ${
-            item.total_duration || 0
-          } min`;
+          return `${item.track_count} songs • ${formatDuration(
+            item.total_duration
+          )}`;
         case "song":
-          return `${item.artist_name} • ${Math.floor(item.duration / 60)}:${(
-            item.duration % 60
-          )
-            .toString()
-            .padStart(2, "0")}`;
+          return `${item.artist_name} • ${formatDuration(item.duration)}`;
         case "album":
-          return `${item.artist_name} • ${item.track_count} tracks`;
+          return `${item.artist_name} • ${item.track_count || 0} tracks`;
         case "artist":
           return `${item.total_albums || 0} albums • ${
             item.total_tracks || 0
@@ -121,7 +122,11 @@ function MusicScreen() {
       <View style={styles.libraryItem}>
         <Image
           source={{
-            uri: item.cover_image_url || "https://via.placeholder.com/50",
+            uri:
+              item.cover_image_url ||
+              item.image_url ||
+              "https://via.placeholder.com/50",
+            headers: { "Cache-Control": "max-age=31536000" },
           }}
           style={[
             styles.itemImage,
@@ -129,10 +134,17 @@ function MusicScreen() {
           ]}
         />
         <View style={styles.itemInfo}>
-          <Text style={styles.itemTitle}>{item.title || item.artist_name}</Text>
-          <Text style={styles.itemSubtitle}>{getSubtitle()}</Text>
+          <Text style={styles.itemTitle} numberOfLines={1}>
+            {item.title || item.artist_name || "Untitled"}
+          </Text>
+          <Text style={styles.itemSubtitle} numberOfLines={1}>
+            {getSubtitle()}
+          </Text>
         </View>
-        <TouchableOpacity onPress={() => handlePlay(item)}>
+        <TouchableOpacity
+          onPress={() => handlePlay(item)}
+          style={styles.playButton}
+        >
           <Ionicons
             name={item.content_type === "artist" ? "chevron-forward" : "play"}
             size={24}
