@@ -6,6 +6,12 @@ import {
   TouchableOpacity,
   Text,
   Platform,
+  FlatList,
+  Image,
+  Animated,
+  ScrollView,
+  PanResponder,
+  Button,
 } from "react-native";
 import MapboxGL from "@rnmapbox/maps";
 import { Modalize } from "react-native-modalize";
@@ -13,13 +19,15 @@ import { MapService } from "../../../services/MapService";
 import * as turf from "@turf/turf";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { color } from "react-native-elements/dist/helpers";
+import { Dimensions } from "react-native";
 
 MapboxGL.setAccessToken(
-  "pk.eyJ1IjoibGFzYXJpYSIsImEiOiJjbTJheXV0cjcwNG9zMmxwdnlxZWdoMjc5In0.NoBtaBj9cNvdemNp52pxGQ"
+    "pk.eyJ1IjoibGFzYXJpYSIsImEiOiJjbTJheXV0cjcwNG9zMmxwdnlxZWdoMjc5In0.NoBtaBj9cNvdemNp52pxGQ"
 );
 
-const CACHE_KEY = "mapDataCache";  // Define a cache key
+const CACHE_KEY = "mapDataCache"; // Define a cache key
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const screenHeight = Dimensions.get("window").height;
 
 const MapScreen = () => {
   const [geojsonData, setGeojsonData] = useState(null);
@@ -27,6 +35,26 @@ const MapScreen = () => {
   const [selectedLayer, setSelectedLayer] = useState(null); // For tracking the selected polygon
   const [venuesInPolygon, setVenuesInPolygon] = useState([]); // For tracking the venues inside the polygon
   const modalizeRef = useRef(null); // Ref for controlling the modal
+  const animatedHeight = useRef(new Animated.Value(300)).current; // Initial height for scrollable list
+
+  const panResponder = useRef(
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onPanResponderMove: (e, gestureState) => {
+          // Update height based on the gesture movement
+          const newHeight = screenHeight - gestureState.moveY;
+          animatedHeight.setValue(newHeight);
+        },
+        onPanResponderRelease: (e, gestureState) => {
+          // Snap to closest position based on the release velocity and dy
+          const newHeight = gestureState.dy > 0 ? 300 : 700;
+          Animated.spring(animatedHeight, {
+            toValue: newHeight,
+            useNativeDriver: false,
+          }).start();
+        },
+      })
+  ).current;
 
   const [currentViewport, setCurrentViewport] = useState({
     latitude: 38.8951,
@@ -55,11 +83,6 @@ const MapScreen = () => {
           await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data));
           await AsyncStorage.setItem(`${CACHE_KEY}_timestamp`, now.toString());
         }
-
-        // const data = await MapService.getAllMapData();
-        // setMapData(data)
-        
-
       } catch (error) {
         console.error("Error getting all maps: ", error);
       }
@@ -67,11 +90,6 @@ const MapScreen = () => {
 
     getMaps();
   }, []);
-
-  console.log("MAPDATA0: ", mapData?.data[0]);
-
-  
-
 
   // Hardcoded venue data
   const venueData = [
@@ -253,8 +271,6 @@ const MapScreen = () => {
 
     setGeojsonData(geojson); // Set the GeoJSON data to state
   }, []);
-  //   const hasLineString = geojsonData.features.some(
- 
 
   const handlePolygonPress = (item) => {
     console.log("ITEM: ", item);
@@ -274,11 +290,6 @@ const MapScreen = () => {
     modalizeRef.current?.open();
   };
 
-  // Function to open the modal
-  const openModal = () => {
-    modalizeRef.current?.open();
-  };
-
   const renderMapLayers = () => {
     if (!mapData || !mapData.data) return null;
 
@@ -288,181 +299,196 @@ const MapScreen = () => {
       const outline = JSON.parse(item.outline);
 
       return (
-        <React.Fragment key={index}>
-          {/* FillLayer for polygons */}
-          <MapboxGL.ShapeSource
-            id={`polygon-source-${item.boundary_id}`}
-            shape={polygons}
-            onPress={() => handlePolygonPress(item)} // Capture the polygon press
-          >
-            <MapboxGL.FillLayer
-              id={`polygon-fill-${item.boundary_id}`}
-              minZoomLevel={item.level == 1 ? 0 : 9} // Visible from the lowest zoom level
-                maxZoomLevel={item.level == 1 ? 9 : 22} // Hidden at zoom level 10 and above
-                style={{
+          <React.Fragment key={index}>
+            {/* FillLayer for polygons */}
+            <MapboxGL.ShapeSource
+                id={`polygon-source-${item.boundary_id}`}
+                shape={polygons}
+                onPress={() => handlePolygonPress(item)} // Capture the polygon press
+            >
+              <MapboxGL.FillLayer
+                  id={`polygon-fill-${item.boundary_id}`}
+                  minZoomLevel={item.level == 1 ? 0 : 9} // Visible from the lowest zoom level
+                  maxZoomLevel={item.level == 1 ? 9 : 22} // Hidden at zoom level 10 and above
+                  style={{
                     fillColor: "hsla(260, 100%, 40%, 0.26)",
                     fillOpacity: 0.5,
-                }}
-            />
-          </MapboxGL.ShapeSource>
+                  }}
+              />
+            </MapboxGL.ShapeSource>
 
-          {/* LineLayer for outline */}
-          <MapboxGL.ShapeSource
-            id={`outline-source-${item.boundary_id}`}
-            shape={outline}
-          >
-            <MapboxGL.LineLayer
-              id={`outline-line-${item.boundary_id}`}
-              minZoomLevel={item.level == 1 ? 0 : 9}
-              maxZoomLevel={item.level == 1 ? 9 : 22}
-                style={{
+            {/* LineLayer for outline */}
+            <MapboxGL.ShapeSource
+                id={`outline-source-${item.boundary_id}`}
+                shape={outline}
+            >
+              <MapboxGL.LineLayer
+                  id={`outline-line-${item.boundary_id}`}
+                  minZoomLevel={item.level == 1 ? 0 : 9}
+                  maxZoomLevel={item.level == 1 ? 9 : 22}
+                  style={{
                     lineColor: "purple", // Color of the boundary line
                     lineWidth: 3, // Thickness of the boundary line
-                }}
-            />
-          </MapboxGL.ShapeSource>
-        </React.Fragment>
+                  }}
+              />
+            </MapboxGL.ShapeSource>
+          </React.Fragment>
       );
     });
   };
 
-  const renderModalContent = () => (
-    <View style={styles.modalContent}>
-      <Text style={styles.modalHeader}>Upcoming Events</Text>
-      {/* Add your event data here */}
-      <Text>Throwback Thursday at Kings Theater</Text>
-      <Text>Tomorrow at 8 PM</Text>
-      {/* More event data */}
-    </View>
+  const renderEvent = ({ item }) => (
+      <TouchableOpacity style={styles.eventCard} onPress={() => alert(`Navigating to details of ${item.name}`)}>
+        <View style={styles.eventInfo}>
+          <Text style={styles.eventTitle}>{item.name}</Text>
+          <Text style={styles.eventAddress}>{item.address}</Text>
+        </View>
+      </TouchableOpacity>
   );
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* Search Bar */}
-      <View style={styles.searchBarContainer}>
-        <TextInput placeholder="Search" style={styles.searchBar} />
-      </View>
-      {/* Filter Tabs */}
-      <View style={styles.filterContainer}>
-        <TouchableOpacity style={styles.filterTab}>
-          <Text style={styles.filterText}>Genre</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.filterTab}>
-          <Text style={styles.filterText}>Cost</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.filterTab}>
-          <Text style={styles.filterText}>Distance</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.filterTab}>
-          <Text style={styles.filterText}>Access</Text>
-        </TouchableOpacity>
-      </View>
-      {/* Map */}
-      <MapboxGL.MapView
-        style={styles.map}
-        styleURL="mapbox://styles/lasaria/cm2kucgfu008g01qhd4f9hvhh"
-        glyphsRasterizationOptions={{
-          glyphsUrl: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
-        }}
-      >
-        <MapboxGL.Camera
-          zoomLevel={7}
-          centerCoordinate={[-77.0364, 38.8951]} // Washington DC area
-        />
-
-        {geojsonData && (
-          <MapboxGL.ShapeSource
-            id="venueSource"
-            shape={geojsonData} // Use the GeoJSON data here
-            cluster={true} // Enable clustering
-            clusterRadius={50} // Radius of clustering
-            clusterMaxZoom={14} // Maximum zoom level for clustering
-          >
-            {/* Circle Layer for Clustered Points */}
-            <MapboxGL.CircleLayer
-              id="clusteredPoints"
-              filter={["has", "point_count"]}
-              style={{
-                circleColor: "blue",
-                circleRadius: ["step", ["get", "point_count"], 20, 100, 30],
-                circleOpacity: 0.7,
-              }}
-            />
-
-            {/* Symbol Layer to show Cluster Count */}
-            <MapboxGL.SymbolLayer
-              id="clusterCount"
-              filter={["has", "point_count"]}
-              style={{
-                textField: "{point_count}",
-                textSize: 12,
-                textColor: "#fff",
-                textHaloColor: "#000",
-                textHaloWidth: 1,
-              }}
-            />
-
-            {/* Circle Layer for Individual Points */}
-            <MapboxGL.CircleLayer
-              id="venueCircle"
-              filter={["!", ["has", "point_count"]]}
-              style={{
-                circleColor: "blue",
-                circleRadius: 10,
-                circleOpacity: 0.5,
-              }}
-            />
-
-            {/* Symbol Layer for Venue Names */}
-            <MapboxGL.SymbolLayer
-              id="venueName"
-              filter={["!", ["has", "point_count"]]}
-              style={{
-                textField: ["get", "name"],
-                textSize: 12,
-                textColor: "#fff",
-                textHaloColor: "blue",
-                textHaloWidth: 1,
-                textOffset: [0, 1.5],
-                textAnchor: "top",
-              }}
-            />
-          </MapboxGL.ShapeSource>
-        )}
-
-        {/* DMV Boundary Layer - Visible when zoomed out */}
-        {renderMapLayers()}
-      </MapboxGL.MapView>
-
-      {/* Modal for upcoming events */}
-      <Modalize ref={modalizeRef} snapPoint={300}>
-        <View style={{ padding: 20 }}>
-          <Text style={styles.modalHeader}>
-            {selectedLayer ? `Venues in ${selectedLayer}` : "No area selected"}
-          </Text>
-          {venuesInPolygon && venuesInPolygon.length > 0 ? (
-            venuesInPolygon.map((venue, index) => (
-              <View key={index} style={{ marginBottom: 20 }}>
-                <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-                  {venue.name}
-                </Text>
-                <Text style={{ fontSize: 14 }}>{venue.address}</Text>
-                <Text style={{ fontSize: 14, color: "gray" }}>
-                  Lat: {venue.latitude}, Lon: {venue.longitude}
-                </Text>
-              </View>
-            ))
-          ) : (
-            <Text>No venues available in this area</Text>
-          )}
+      <View style={{ flex: 1 }}>
+        {/* Search Bar */}
+        <View style={styles.searchBarContainer}>
+          <View style={styles.searchBar}>
+            <Image source={require("../../../assets/icon/map/downArrow.png")}
+                   style={{ width: 20, height: 21, marginRight: 10 }} />
+            <TextInput placeholder="Search" placeholderTextColor="white" style={{ flex: 1, color: "white" }} />
+          </View>
         </View>
-      </Modalize>
+        {/* Filter Tabs */}
+        <View style={[styles.filterContainer, { top: Platform.OS === "ios" ? 90 : 140, alignItems: 'flex-start', paddingLeft: 0 }]}>
+          <TouchableOpacity style={styles.buttonStyle}>
+            <Text style={styles.buttonText}>Genre</Text>
+            <Image source={require("../../../assets/icon/map/downArrow.png")} style={styles.downArrowIconImage} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.buttonStyle}>
+            <Text style={styles.buttonText}>Cost</Text>
+            <Image source={require("../../../assets/icon/map/downArrow.png")} style={styles.downArrowIconImage} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.buttonStyle}>
+            <Text style={styles.buttonText}>Distance</Text>
+            <Image source={require("../../../assets/icon/map/downArrow.png")} style={styles.downArrowIconImage} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.buttonStyle}>
+            <Text style={styles.buttonText}>Access</Text>
+            <Image source={require("../../../assets/icon/map/downArrow.png")} style={styles.downArrowIconImage} />
+          </TouchableOpacity>
+        </View>
+        {/* Map */}
+        <MapboxGL.MapView
+            style={styles.map}
+            styleURL="mapbox://styles/lasaria/cm2kucgfu008g01qhd4f9hvhh"
+            glyphsRasterizationOptions={{
+              glyphsUrl: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+            }}
+        >
+          <MapboxGL.Camera
+              zoomLevel={7}
+              centerCoordinate={[-77.0364, 38.8951]} // Washington DC area
+          />
 
-      {/* Button to open modal */}
-      <TouchableOpacity style={styles.button} onPress={openModal}>
-        <Text style={styles.buttonText}>View Upcoming Events</Text>
-      </TouchableOpacity>
-    </View>
+          {geojsonData && (
+              <MapboxGL.ShapeSource
+                  id="venueSource"
+                  shape={geojsonData} // Use the GeoJSON data here
+                  cluster={true} // Enable clustering
+                  clusterRadius={50} // Radius of clustering
+                  clusterMaxZoom={14} // Maximum zoom level for clustering
+              >
+                {/* Circle Layer for Clustered Points */}
+                <MapboxGL.CircleLayer
+                    id="clusteredPoints"
+                    filter={["has", "point_count"]}
+                    style={{
+                      circleColor: "blue",
+                      circleRadius: ["step", ["get", "point_count"], 20, 100, 30],
+                      circleOpacity: 0.7,
+                    }}
+                />
+
+                {/* Symbol Layer to show Cluster Count */}
+                <MapboxGL.SymbolLayer
+                    id="clusterCount"
+                    filter={["has", "point_count"]}
+                    style={{
+                      textField: "{point_count}",
+                      textSize: 12,
+                      textColor: "#fff",
+                      textHaloColor: "#000",
+                      textHaloWidth: 1,
+                    }}
+                />
+
+                {/* Circle Layer for Individual Points */}
+                <MapboxGL.CircleLayer
+                    id="venueCircle"
+                    filter={["!", ["has", "point_count"]]}
+                    style={{
+                      circleColor: "blue",
+                      circleRadius: 10,
+                      circleOpacity: 0.5,
+                    }}
+                />
+
+                {/* Symbol Layer for Venue Names */}
+                <MapboxGL.SymbolLayer
+                    id="venueName"
+                    filter={["!", ["has", "point_count"]]}
+                    style={{
+                      textField: ["get", "name"],
+                      textSize: 12,
+                      textColor: "#fff",
+                      textHaloColor: "blue",
+                      textHaloWidth: 1,
+                      textOffset: [0, 1.5],
+                      textAnchor: "top",
+                    }}
+                />
+              </MapboxGL.ShapeSource>
+          )}
+
+          {/* DMV Boundary Layer - Visible when zoomed out */}
+          {renderMapLayers()}
+        </MapboxGL.MapView>
+
+        {/* Scrollable Event List */}
+        <Animated.View
+            style={[
+              styles.scrollableList,
+              { height: animatedHeight },
+            ]}
+            {...panResponder.panHandlers}
+        >
+          <View style={styles.eventListHeader}>
+            <Text style={styles.eventListTitle}>Upcoming Events</Text>
+          </View>
+          <ScrollView>
+            {venueData.map((venue, index) => (
+                <View key={index} style={styles.eventCard}>
+                  <View style={styles.eventImagePlaceholder}>
+                    <Text style={styles.eventPlaceholderText}>Image</Text>
+                  </View>
+                  <View style={styles.eventDetails}>
+                    <Text style={styles.eventTitle}>{venue.name}</Text>
+                    <Text style={styles.eventAddress}>{venue.address}</Text>
+                    <TouchableOpacity style={styles.learnMoreButton}>
+                      <Text style={styles.learnMoreText}>Learn More</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+            ))}
+          </ScrollView>
+        </Animated.View>
+
+        {/* Added Map Icons */}
+        <TouchableOpacity style={[styles.settingIcon, { left: 320, top: 173 }]}>
+          <Image source={require("../../../assets/icon/map/setting.png")} style={styles.settingIconImage} />
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.arrowIcon, { left: 320, top: 226 }]}>
+          <Image source={require("../../../assets/icon/map/arrow.png")} style={styles.settingIconImage} />
+        </TouchableOpacity>
+      </View>
   );
 };
 
@@ -479,51 +505,148 @@ const styles = StyleSheet.create({
     right: 10,
     zIndex: 10, // Ensure it's above the map
   },
-  searchBar: {
-    height: 40,
-    backgroundColor: "#fff",
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    fontSize: 16,
-  },
-  filterContainer: {
-    position: "absolute",
-    top: Platform.OS === "ios" ? 110 : 130,
-    left: 10,
-    right: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    zIndex: 10,
-  },
 
-  filterTab: {
-    backgroundColor: "#333",
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 5,
+  filterContainer: {
+    marginTop: -30,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    zIndex: 10,
+    marginHorizontal: 10,
   },
-  filterText: {
+  searchBar: {
+    // Search container styling
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    alignItems: "center",
+    padding: 0,
+
+    // Position and size styling
+    width: "100%",
+    height: 55,
+    backgroundColor: "#000000",
+    borderRadius: 15,
+    borderWidth: 1.4,
+    borderColor: "#FFFFFF", // Add white border
+    paddingHorizontal: 10,
+  },
+  buttonStyle: {
+    boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    alignContent: "flex-start",
+    padding: 5,
+    gap: 4,
+    width: 100,
+    height: 28,
+    backgroundColor: "#000000",
+    borderWidth: 1.4,
+    borderColor: "#FFFFFF",
+    borderRadius: 10,
+    flexGrow: 0,
+    marginRight: 6,
+    justifyContent: "space-between",
+  },
+  buttonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    textAlign: "center",
+  },
+  downArrowIconImage: {
+    width: 14,
+    height: 8,
+    resizeMode: "contain",
+  },
+  scrollableList: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#121212",
+    borderTopLeftRadius: 0, // Changed to sharp edges
+    borderTopRightRadius: 0, // Changed to sharp edges
+    paddingTop: 20,
+  },
+  eventListHeader: {
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  eventListTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  eventCard: {
+    flexDirection: "row",
+    padding: 15,
+    marginHorizontal: 15,
+    marginBottom: 15,
+    backgroundColor: "#000000",
+    borderRadius: 5, // To give it a card-like appearance
+    borderWidth: 1.4,
+    borderColor: "#FFFFFF", // White border for cards
+  },
+  eventImagePlaceholder: {
+    width: 80,
+    height: 80,
+    backgroundColor: "#444",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 5,
+    marginRight: 15,
+  },
+  eventPlaceholderText: {
+    color: "#fff",
+    fontSize: 12,
+  },
+  eventDetails: {
+    flex: 1,
+    justifyContent: "space-between",
+  },
+  eventTitle: {
+    fontSize: 18,
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  eventAddress: {
+    fontSize: 14,
+    color: "#bbb",
+  },
+  learnMoreButton: {
+    backgroundColor: "#6A0DAD",
+    borderRadius: 5,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    alignSelf: "flex-start",
+  },
+  learnMoreText: {
     color: "#fff",
     fontSize: 14,
   },
-  button: {
+  mapIcon: {
     position: "absolute",
-    bottom: 20,
-    left: 20,
-    backgroundColor: "blue",
-    padding: 10,
-    borderRadius: 5,
+    backgroundColor: "transparent",
   },
-  buttonText: {
-    color: "white",
-    fontWeight: "bold",
+  settingIcon: {
+    position: "absolute",
+    width: 40,
+    height: 40,
   },
-  modalContent: {
-    padding: 20,
+  settingIconImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "contain",
   },
-  modalHeader: {
-    fontSize: 18,
-    fontWeight: "bold",
+  arrowIcon: {
+    position: "absolute",
+    width: 40,
+    height: 40,
+  },
+  iconImage: {
+    width: 70,
+    height: 70,
   },
 });
 
