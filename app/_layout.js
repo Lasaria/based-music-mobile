@@ -1,10 +1,11 @@
 // app/_layout.js
 import React from "react";
-import { GestureHandlerRootView } from "react-native-gesture-handler"; // Import GestureHandlerRootView
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Tabs, Stack } from "expo-router";
 import { usePathname } from "expo-router";
-import { AudioProvider } from "../contexts/AudioContext"; // Adjust the path as needed
-import AudioPlayer from "../components/audioPlayer"; // Adjust the path as needed
+import { AudioProvider } from "../contexts/AudioContext";
+import { QueueProvider } from "../contexts/QueueContext";
+import AudioPlayer from "../components/audioPlayer";
 
 export default function RootLayout() {
   const pathname = usePathname();
@@ -26,27 +27,29 @@ export default function RootLayout() {
 
   return (
     <AudioProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        {shouldShowTabs ? (
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          </Stack>
-        ) : (
-          // For screens that shouldn't have tabs, use a Stack navigator
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="welcome" />
-            <Stack.Screen name="signIn" />
-            <Stack.Screen name="signUp" />
-            <Stack.Screen name="confirmSignUp" />
-            <Stack.Screen name="forgotPassword" />
-            <Stack.Screen name="resetPassword" />
-            <Stack.Screen name="userTypeChoice" />
-          </Stack>
-        )}
+      <QueueProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          {shouldShowTabs ? (
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            </Stack>
+          ) : (
+            // For screens that shouldn't have tabs, use a Stack navigator
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="welcome" />
+              <Stack.Screen name="signIn" />
+              <Stack.Screen name="signUp" />
+              <Stack.Screen name="confirmSignUp" />
+              <Stack.Screen name="forgotPassword" />
+              <Stack.Screen name="resetPassword" />
+              <Stack.Screen name="userTypeChoice" />
+            </Stack>
+          )}
 
-        {/* Render AudioPlayer globally at the bottom */}
-        <AudioPlayer />
-      </GestureHandlerRootView>
+          {/* Render AudioPlayer globally at the bottom */}
+          <AudioPlayer />
+        </GestureHandlerRootView>
+      </QueueProvider>
     </AudioProvider>
   );
 }

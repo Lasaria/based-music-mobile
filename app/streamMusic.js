@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AudioContext } from "../contexts/AudioContext";
+import { useQueue } from "../contexts/QueueContext";
 import { useRouter } from "expo-router";
 import Slider from "@react-native-community/slider";
 import { StatusBar } from "expo-status-bar";
@@ -55,7 +56,7 @@ const StreamMusic = () => {
     skipForward,
     skipBackward,
   } = useContext(AudioContext);
-
+  const { addToQueue } = useQueue();
   const router = useRouter();
   const [userId, setUserId] = useState(null);
   const [isLike, setIsLike] = useState(false);
@@ -362,11 +363,27 @@ const StreamMusic = () => {
                   <Ionicons name="list" size={24} color="white" />
                   <Text style={styles.modalText}>View playlist</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.modalItem}>
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => {
+                    if (trackInfo) {
+                      addToQueue(trackInfo);
+                      setMessage("Added to queue");
+                      setTimeout(() => setMessage(""), 3000);
+                    }
+                    closeModal();
+                  }}
+                >
                   <Ionicons name="add" size={24} color="white" />
                   <Text style={styles.modalText}>Add to queue</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.modalItem}>
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => {
+                    router.push("/queueList");
+                    closeModal();
+                  }}
+                >
                   <Ionicons name="albums" size={24} color="white" />
                   <Text style={styles.modalText}>View queue list</Text>
                 </TouchableOpacity>
