@@ -20,6 +20,7 @@ import * as turf from "@turf/turf";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { color } from "react-native-elements/dist/helpers";
 import { Dimensions } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 MapboxGL.setAccessToken(
     "pk.eyJ1IjoibGFzYXJpYSIsImEiOiJjbTJheXV0cjcwNG9zMmxwdnlxZWdoMjc5In0.NoBtaBj9cNvdemNp52pxGQ"
@@ -351,30 +352,33 @@ const MapScreen = () => {
         {/* Search Bar */}
         <View style={styles.searchBarContainer}>
           <View style={styles.searchBar}>
-            <Image source={require("../../../assets/icon/map/downArrow.png")}
-                   style={{ width: 20, height: 21, marginRight: 10 }} />
-            <TextInput placeholder="Search" placeholderTextColor="white" style={{ flex: 1, color: "white" }} />
+            <Ionicons name="search" size={22} color="white"/>
+            <TextInput placeholder="Search" placeholderTextColor="gray" style={{ flex: 1, color: "white", marginLeft: "4%" }} />
           </View>
         </View>
         {/* Filter Tabs */}
-        <View style={[styles.filterContainer, { top: Platform.OS === "ios" ? 90 : 140, alignItems: 'flex-start', paddingLeft: 0 }]}>
+        <ScrollView
+            horizontal
+            style={[styles.filterContainer, { top: Platform.OS === "ios" ? 90 : 140, paddingLeft: 0 }]}
+            showsHorizontalScrollIndicator={false}
+        >
           <TouchableOpacity style={styles.buttonStyle}>
             <Text style={styles.buttonText}>Genre</Text>
-            <Image source={require("../../../assets/icon/map/downArrow.png")} style={styles.downArrowIconImage} />
+            <Ionicons name="chevron-down" size={15} color="white" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.buttonStyle}>
             <Text style={styles.buttonText}>Cost</Text>
-            <Image source={require("../../../assets/icon/map/downArrow.png")} style={styles.downArrowIconImage} />
+            <Ionicons name="chevron-down" size={15} color="white" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.buttonStyle}>
             <Text style={styles.buttonText}>Distance</Text>
-            <Image source={require("../../../assets/icon/map/downArrow.png")} style={styles.downArrowIconImage} />
+            <Ionicons name="chevron-down" size={15} color="white" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.buttonStyle}>
             <Text style={styles.buttonText}>Access</Text>
-            <Image source={require("../../../assets/icon/map/downArrow.png")} style={styles.downArrowIconImage} />
+            <Ionicons name="chevron-down" size={15} color="white" />
           </TouchableOpacity>
-        </View>
+        </ScrollView>
         {/* Map */}
         <MapboxGL.MapView
             style={styles.map}
@@ -464,6 +468,7 @@ const MapScreen = () => {
             <Text style={styles.eventListTitle}>Upcoming Events</Text>
           </View>
           <ScrollView>
+            <Text style={styles.eventToday}>Today</Text>
             {venueData.map((venue, index) => (
                 <View key={index} style={styles.eventCard}>
                   <View style={styles.eventImagePlaceholder}>
@@ -482,11 +487,11 @@ const MapScreen = () => {
         </Animated.View>
 
         {/* Added Map Icons */}
-        <TouchableOpacity style={[styles.settingIcon, { left: 320, top: 173 }]}>
-          <Image source={require("../../../assets/icon/map/setting.png")} style={styles.settingIconImage} />
+        <TouchableOpacity  style={[styles.settingIcon, { left: "85%", top: "18%" }]}>
+          <Ionicons name="settings-outline" size={24} color="white" />
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.arrowIcon, { left: 320, top: 226 }]}>
-          <Image source={require("../../../assets/icon/map/arrow.png")} style={styles.settingIconImage} />
+        <TouchableOpacity style={[styles.arrowIcon, { left: "85%", top: "25%" }]}>
+          <Ionicons name="navigate" size={24} color="white" />
         </TouchableOpacity>
       </View>
   );
@@ -494,22 +499,26 @@ const MapScreen = () => {
 
 const styles = StyleSheet.create({
   map: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
+
   searchBarContainer: {
     position: "absolute",
     top: Platform.OS === "ios" ? 60 : 40, // Adjust padding for iOS vs Android
     left: 10,
     right: 10,
     zIndex: 10, // Ensure it's above the map
+
   },
 
   filterContainer: {
     marginTop: -30,
     flexDirection: "row",
-    alignItems: "flex-start",
+
     zIndex: 10,
     marginHorizontal: 10,
   },
@@ -520,6 +529,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
     alignItems: "center",
     padding: 0,
+    paddingLeft: "5%",
 
     // Position and size styling
     width: "100%",
@@ -578,6 +588,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#fff",
   },
+  eventToday: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#fff",
+    paddingHorizontal: 20,
+    marginBottom: 5,
+  },
   eventCard: {
     flexDirection: "row",
     padding: 15,
@@ -633,6 +650,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 40,
     height: 40,
+    backgroundColor: "#000000", // Solid black background
+    borderRadius: 17, // Rounded corners for a square button
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.4, // Add white border
+    borderColor: "#FFFFFF",
   },
   settingIconImage: {
     width: "100%",
@@ -643,7 +666,14 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 40,
     height: 40,
+    backgroundColor: "#000000", // Solid black background
+    borderRadius: 17, // Rounded corners for a square button
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.4, // Add white border
+    borderColor: "#FFFFFF",
   },
+
   iconImage: {
     width: 70,
     height: 70,
