@@ -77,9 +77,14 @@ const SignInScreen = () => {
         router.replace("/homeIndex");
         // router.setParams({ index: 0 })
       }
-    },
-    [navigation]
-  );
+    } catch (error) {
+      console.error('Google Sign-In Error:', error);
+      Alert.alert(
+        "Sign In Error",
+        error.message || "An error occurred during Google sign-in."
+      );
+    }
+  }, [navigation]);
 
   const validateInputs = () => {
     setEmailError("");
