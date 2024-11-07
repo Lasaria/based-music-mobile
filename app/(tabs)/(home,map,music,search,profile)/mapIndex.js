@@ -22,6 +22,7 @@ import { color } from "react-native-elements/dist/helpers";
 import { Dimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+
 MapboxGL.setAccessToken(
     "pk.eyJ1IjoibGFzYXJpYSIsImEiOiJjbTJheXV0cjcwNG9zMmxwdnlxZWdoMjc5In0.NoBtaBj9cNvdemNp52pxGQ"
 );
@@ -40,7 +41,10 @@ const MapScreen = () => {
 
   const panResponder = useRef(
       PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
+        onStartShouldSetPanResponder: (e, gestureState) => {
+          // Only start panResponder if gesture starts at the top bar of the scrollable list
+          return gestureState.y0 < 40;
+        },
         onPanResponderMove: (e, gestureState) => {
           // Update height based on the gesture movement
           const newHeight = screenHeight - gestureState.moveY;
@@ -48,7 +52,7 @@ const MapScreen = () => {
         },
         onPanResponderRelease: (e, gestureState) => {
           // Snap to closest position based on the release velocity and dy
-          const newHeight = gestureState.dy > 0 ? 300 : 700;
+          const newHeight = gestureState.dy > 0 ? 300 : 650;
           Animated.spring(animatedHeight, {
             toValue: newHeight,
             useNativeDriver: false,
@@ -353,32 +357,35 @@ const MapScreen = () => {
         <View style={styles.searchBarContainer}>
           <View style={styles.searchBar}>
             <Ionicons name="search" size={22} color="white"/>
-            <TextInput placeholder="Search" placeholderTextColor="gray" style={{ flex: 1, color: "white", marginLeft: "4%" }} />
+            <TextInput placeholder="Search" placeholderTextColor="gray" style={{ flex: 1, color: "white", marginLeft: "4%", fontSize: 15 }} />
           </View>
         </View>
         {/* Filter Tabs */}
-        <ScrollView
-            horizontal
-            style={[styles.filterContainer, { top: Platform.OS === "ios" ? 90 : 140, paddingLeft: 0 }]}
-            showsHorizontalScrollIndicator={false}
-        >
-          <TouchableOpacity style={styles.buttonStyle}>
-            <Text style={styles.buttonText}>Genre</Text>
-            <Ionicons name="chevron-down" size={15} color="white" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.buttonStyle}>
-            <Text style={styles.buttonText}>Cost</Text>
-            <Ionicons name="chevron-down" size={15} color="white" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.buttonStyle}>
-            <Text style={styles.buttonText}>Distance</Text>
-            <Ionicons name="chevron-down" size={15} color="white" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.buttonStyle}>
-            <Text style={styles.buttonText}>Access</Text>
-            <Ionicons name="chevron-down" size={15} color="white" />
-          </TouchableOpacity>
-        </ScrollView>
+        <View style={{ width: '100%', height: "1%" }}>
+          <ScrollView
+              horizontal
+              style={[styles.filterContainer, { top: Platform.OS === "ios" ? 90 : 140, paddingLeft: 0 }]}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ alignItems: "flex-start" }} // 将 alignItems 放在这里
+          >
+            <TouchableOpacity style={styles.buttonStyle}>
+              <Text style={styles.buttonText}>Genre</Text>
+              <Ionicons name="chevron-down" size={15} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.buttonStyle}>
+              <Text style={styles.buttonText}>Cost</Text>
+              <Ionicons name="chevron-down" size={15} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.buttonStyle}>
+              <Text style={styles.buttonText}>Distance</Text>
+              <Ionicons name="chevron-down" size={15} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.buttonStyle}>
+              <Text style={styles.buttonText}>Access</Text>
+              <Ionicons name="chevron-down" size={15} color="white" />
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
         {/* Map */}
         <MapboxGL.MapView
             style={styles.map}
@@ -462,8 +469,13 @@ const MapScreen = () => {
               styles.scrollableList,
               { height: animatedHeight },
             ]}
-            {...panResponder.panHandlers}
         >
+          <View
+              style={styles.dragHandle}
+              {...panResponder.panHandlers}
+          >
+            <Text style={styles.dragHandleText}>Drag Here</Text>
+          </View>
           <View style={styles.eventListHeader}>
             <Text style={styles.eventListTitle}>Upcoming Events</Text>
           </View>
@@ -471,15 +483,24 @@ const MapScreen = () => {
             <Text style={styles.eventToday}>Today</Text>
             {venueData.map((venue, index) => (
                 <View key={index} style={styles.eventCard}>
+                  <Ionicons name="bookmark-outline" size={24} color="white" style={styles.bookmarkIcon} />
                   <View style={styles.eventImagePlaceholder}>
                     <Text style={styles.eventPlaceholderText}>Image</Text>
                   </View>
                   <View style={styles.eventDetails}>
                     <Text style={styles.eventTitle}>{venue.name}</Text>
                     <Text style={styles.eventAddress}>{venue.address}</Text>
-                    <TouchableOpacity style={styles.learnMoreButton}>
-                      <Text style={styles.learnMoreText}>Learn More</Text>
-                    </TouchableOpacity>
+                    <View style={styles.cardBottomRow}>
+                      <View style={styles.profileImagesContainer}>
+                        <View style={styles.profileImagePlaceholder} />
+                        <View style={styles.profileImagePlaceholder} />
+                        <View style={styles.profileImagePlaceholder} />
+                      </View>
+                      <TouchableOpacity style={styles.learnMoreButton}>
+                        <Text style={styles.learnMoreText}>Learn More</Text>
+                      </TouchableOpacity>
+                    </View>
+
                   </View>
                 </View>
             ))}
@@ -505,7 +526,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-
   searchBarContainer: {
     position: "absolute",
     top: Platform.OS === "ios" ? 60 : 40, // Adjust padding for iOS vs Android
@@ -518,8 +538,7 @@ const styles = StyleSheet.create({
   filterContainer: {
     marginTop: -30,
     flexDirection: "row",
-
-    zIndex: 10,
+    zIndex: 1,
     marginHorizontal: 10,
   },
   searchBar: {
@@ -575,45 +594,62 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: "#121212",
-    borderTopLeftRadius: 0, // Changed to sharp edges
-    borderTopRightRadius: 0, // Changed to sharp edges
     paddingTop: 20,
+
+  },
+  dragHandle: {
+    width: "30%",
+    height: 5,
+    borderRadius: 5,
+    backgroundColor: "#444",
+    alignSelf: "center",
+    marginVertical: 10,
+  },
+
+  dragHandleText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
   eventListHeader: {
     paddingHorizontal: 20,
     marginBottom: 10,
   },
   eventListTitle: {
-    fontSize: 20,
+    fontSize: 29,
     fontWeight: "bold",
     color: "#fff",
   },
   eventToday: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "bold",
     color: "#fff",
     paddingHorizontal: 20,
-    marginBottom: 5,
+    marginBottom: 15,
   },
   eventCard: {
     flexDirection: "row",
-    padding: 15,
+    padding: 50,
     marginHorizontal: 15,
     marginBottom: 15,
     backgroundColor: "#000000",
-    borderRadius: 5, // To give it a card-like appearance
+    borderRadius: 15, // Updated border radius for a more rounded appearance
     borderWidth: 1.4,
     borderColor: "#FFFFFF", // White border for cards
   },
   eventImagePlaceholder: {
-    width: 80,
-    height: 80,
+    width: 110,
+    height: 110, // Updated size for larger image placeholder
     backgroundColor: "#444",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 5,
+    borderRadius: 35,
     marginRight: 15,
+    marginLeft: -30, // Shift the image to the left by adding negative margin
+    marginTop: -20, // Adjusts the top margin, increasing the value moves it down
+    marginBottom: 0, // Adjusts the bottom margin, increasing the value moves it up
   },
+
   eventPlaceholderText: {
     color: "#fff",
     fontSize: 12,
@@ -623,35 +659,62 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   eventTitle: {
-    fontSize: 18,
+    fontSize: 22, // Updated size for a larger title
     color: "#fff",
     fontWeight: "bold",
   },
   eventAddress: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#bbb",
   },
   learnMoreButton: {
     backgroundColor: "#6A0DAD",
     borderRadius: 5,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 25, // Updated padding for a larger button
     alignSelf: "flex-start",
+    marginLeft: 10,
+    marginTop: 15,
   },
+
   learnMoreText: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: 16, // Updated size for larger button text
   },
+  bookmarkIcon: {
+    position: "absolute",
+    top: "30%",
+    right: "5%",
+  },
+  cardBottomRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  profileImagesContainer: {
+    flexDirection: "row",
+  },
+  profileImagePlaceholder: {
+    width: 35, // Placeholder for profile images without using PNG
+    height: 35, // Placeholder for profile images without using PNG
+    borderRadius: 17.5, // Adjusted for placeholder appearance
+    backgroundColor: "#888",
+    marginLeft: -10,
+    marginTop: 15,
+    zIndex: 1,
+  },
+
   mapIcon: {
     position: "absolute",
     backgroundColor: "transparent",
   },
   settingIcon: {
     position: "absolute",
-    width: 40,
-    height: 40,
+    width: 45,
+    height: 45,
     backgroundColor: "#000000", // Solid black background
-    borderRadius: 17, // Rounded corners for a square button
+    borderRadius: 19, // Rounded corners for a square button
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.4, // Add white border
@@ -664,10 +727,10 @@ const styles = StyleSheet.create({
   },
   arrowIcon: {
     position: "absolute",
-    width: 40,
-    height: 40,
+    width: 45,
+    height: 45,
     backgroundColor: "#000000", // Solid black background
-    borderRadius: 17, // Rounded corners for a square button
+    borderRadius: 19, // Rounded corners for a square button
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.4, // Add white border
