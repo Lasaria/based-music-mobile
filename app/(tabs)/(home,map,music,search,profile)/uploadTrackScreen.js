@@ -16,7 +16,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { tokenManager } from "../../../utils/tokenManager";
-import { axiosPost } from "../../../utils/axiosCalls";
+import { Audio } from "expo-av";
 
 const uploadTrackScreen = () => {
   const [title, setTitile] = useState("");
@@ -54,37 +54,41 @@ const uploadTrackScreen = () => {
     setUploadProgress(0);
     setUploadStatus("idle");
     setName("");
+    
     let result = await DocumentPicker.getDocumentAsync({
       type: "audio/*",
       copyToCacheDirectory: false,
       multiple: false,
     });
-
+  
     console.log("songs is: ", result);
-
+  
     if (result.assets && result.assets.length > 0) {
       const file = result.assets[0];
       let trackSize = file.size / (1024 * 1024);
       const allowedTypes = ["audio/mpeg", "audio/mp3", "audio/wav"];
-
-      //validate track type and size
-
+  
       if (!allowedTypes.includes(file.mimeType)) {
-        setName(file.name);
-        setUploadStatus("Error");
-        setError("Invalid file type. Only mp3, mpeg, or wav are allowed.");
+        Alert.alert("Error", "Invalid file type. Only mp3, mpeg or wav are allowed.");
       } else if (trackSize > 10) {
-        setName(file.name);
-        setUploadStatus("Error");
-        setError("File is too large. Must be under 10MB.");
+        Alert.alert("Error", "File is too large. Must be under 10MB.");
       } else {
-        setTrackType(file.mimeType);
-        setName(file.name);
-        trackSize = trackSize.toFixed(2);
-        setSize(trackSize);
-        setTrack(file.uri);
-        setUploadStatus("uploading");
-        startUpload(file.uri);
+        // Check track duration
+        const { sound } = await Audio.Sound.createAsync({ uri: file.uri });
+        const status = await sound.getStatusAsync();
+  
+        if (status.durationMillis < 30000) { // Less than 30 seconds
+          Alert.alert("Error", "Track must be at least 30 seconds long.");
+          sound.unloadAsync(); // Unload sound to free resources
+        } else {
+          setTrackType(file.mimeType);
+          setName(file.name);
+          trackSize = trackSize.toFixed(2);
+          setSize(trackSize);
+          setTrack(file.uri);
+          setUploadStatus("uploading");
+          startUpload(file.uri);
+        }
       }
     }
   };
@@ -114,13 +118,9 @@ const uploadTrackScreen = () => {
       const allowedTypes = ["text/plain"];
 
       if (!allowedTypes.includes(fileType)) {
-        setLyricsName(file.name);
-        setLyricsUploadStatus("Error");
-        setLyricsError("Invalid file type. Only text/plain is allowed.");
+        Alert.alert("Error", "Invalid file type. Only txt files are allowed.");
       } else if (fileSize > 10 * 1024 * 1024) {
-        setLyricsName(file.name);
-        setLyricsUploadStatus("Error");
-        setLyricsError("File is too large. Must be under 10MB.");
+        Alert.alert("Error", "File is too large. Must be under 10MB.");
       } else {
         setLyricsName(file.name);
         setLyricsType(file.mimeType);
@@ -168,15 +168,9 @@ const uploadTrackScreen = () => {
       //validate track type and size
 
       if (!allowedTypes.includes(file.mimeType)) {
-        setCoverName(file.name);
-        setCoverUploadStatus("Error");
-        setCoverError(
-          "Invalid file type. Only png, jpeg, heic or jpg are allowed."
-        );
+        Alert.alert("Error", "Invalid file type. Only png, jpeg, heic or jpg are allowed.");
       } else if (coverSize > 10 * 1024 * 1024) {
-        setCoverName(file.name);
-        setCoverUploadStatus("Error");
-        setCoverError("File is too large. Must be under 10MB.");
+        Alert.alert("Error", "File is too large. Must be under 10MB.");
       } else {
         setCoverName(file.name);
         setCoverType(file.mimeType);
