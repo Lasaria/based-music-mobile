@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -13,13 +13,13 @@ import { useRouter } from "expo-router";
 import { FlatList } from "react-native-gesture-handler";
 import { axiosGet } from "../../../utils/axiosCalls";
 import { tokenManager } from "../../../utils/tokenManager";
-
+import { AudioContext } from "../../../contexts/AudioContext";
+import Toast from "react-native-toast-message";
 const MAIN_SERVER_URL = "http://localhost:3000";
 
 function MusicScreen() {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState("My Library");
-  const [isPlaying, setIsPlaying] = useState(false);
   const [contentType, setContentType] = useState("playlist");
   const [libraryData, setLibraryData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -31,7 +31,16 @@ function MusicScreen() {
   const [isSongs, setIsSongs] = useState(false);
   const [isAlbums, setIsAlbums] = useState(false);
   const [isArtists, setIsArtists] = useState(false);
-
+  const {
+    updateCurrentTrack,
+    isPlaying,
+    togglePlayPause,
+    isPlayerReady,
+    trackInfo,
+    checkSoundStatus,
+    soundRef,
+    currentAudioState,
+  } = useContext(AudioContext);
   // Get user ID on component mount
   useEffect(() => {
     const getUserId = async () => {
@@ -47,7 +56,6 @@ function MusicScreen() {
   }, []);
 
   // Fetch library data
-
   const fetchLibraryData = async (resetData = false) => {
     if (!userId || loading || (!hasMore && !resetData)) return;
 
@@ -98,7 +106,8 @@ function MusicScreen() {
       const seconds = Math.floor(duration % 60);
       return `${minutes}:${seconds.toString().padStart(2, "0")}`;
     };
-
+    const isCurrentTrack = trackInfo?.track_id === item.track_id;
+    const showPlayingState = isCurrentTrack && isPlaying;
     const getSubtitle = () => {
       switch (item.content_type) {
         case "playlist":
@@ -146,27 +155,77 @@ function MusicScreen() {
           style={styles.playButton}
         >
           <Ionicons
-            name={item.content_type === "artist" ? "chevron-forward" : "play"}
+            name={
+              item.content_type === "artist"
+                ? "chevron-forward"
+                : showPlayingState
+                ? "pause"
+                : "play"
+            }
             size={24}
-            color="white"
+            color={isCurrentTrack ? "purple" : "white"}
           />
         </TouchableOpacity>
       </View>
     );
   };
 
-  const handlePlay = (item) => {
+  const handlePlay = async (item) => {
+    const startTime = performance.now(); // Start timing
+    console.log("\n=== HANDLE PLAY START ===");
+    console.log("[handlePlay()] Initial state:", {
+      content_type: item.content_type,
+      track_id: item.track_id,
+      currentTrackInfo: trackInfo,
+      isPlayerReady,
+      soundRef: soundRef.current ? "exists" : "null",
+    });
+
     if (item.content_type === "song") {
-      router.push({
-        pathname: "/streamMusic",
-        params: { trackId: item.track_id },
-      });
+      try {
+        // Check if already loaded
+        if (trackInfo?.track_id === item.track_id && isPlayerReady) {
+          console.log("[handlePlay()] Track already loaded, toggling playback");
+          await togglePlayPause();
+          return;
+        }
+
+        console.log("[handlePlay()] Starting track update");
+        await updateCurrentTrack(item.track_id);
+        console.log("[handlePlay()] Track update complete");
+
+        // Directly toggle playback after updating the track
+        console.log("[handlePlay()] Starting playback");
+        await togglePlayPause();
+      } catch (error) {
+        console.error("[handlePlay()] Error playing track:", {
+          message: error.message,
+          stack: error.stack,
+          state: {
+            isPlayerReady,
+            trackInfo: trackInfo?.track_id,
+          },
+        });
+
+        Toast.show({
+          type: "error",
+          text1: "Playback Error",
+          text2: error.message || "Failed to play track. Please try again.",
+        });
+      }
     } else if (item.content_type === "artist") {
       router.push({
         pathname: "/artistDetail",
         params: { artistId: item.artist_id },
       });
     }
+    const endTime = performance.now(); // End timing
+    console.log(
+      `\n \n \n ----------handlePlay() EXECUTED IN ${
+        endTime - startTime
+      } milliseconds---------- \n \n \n`
+    );
+    console.log("=== HANDLE PLAY END ===\n");
   };
 
   const displayPlaylist = () => {

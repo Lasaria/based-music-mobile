@@ -22,25 +22,6 @@ import { tokenManager } from "../utils/tokenManager";
 const { width, height } = Dimensions.get("window");
 const MAIN_SERVER_URL = "http://localhost:3000";
 
-const decodeJWT = (token) => {
-  try {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map(function (c) {
-          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-        })
-        .join("")
-    );
-    return JSON.parse(jsonPayload);
-  } catch (error) {
-    console.error("[StreamMusic] Error decoding JWT:", error);
-    return null;
-  }
-};
-
 const StreamMusic = () => {
   const {
     isPlaying,
@@ -55,7 +36,10 @@ const StreamMusic = () => {
     setVolume,
     skipForward,
     skipBackward,
+    formatTime,
+    isInitializing,
   } = useContext(AudioContext);
+
   const { addToQueue } = useQueue();
   const router = useRouter();
   const [userId, setUserId] = useState(null);
@@ -65,10 +49,36 @@ const StreamMusic = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [localSliderValue, setLocalSliderValue] = useState(null);
   const [isSeeking, setIsSeeking] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  // Debug status effect
+  useEffect(() => {
+    console.log("StreamMusic Status:", {
+      isPlayerReady,
+      isPlaying,
+      hasTrackInfo: !!trackInfo,
+      trackId: trackInfo?.track_id,
+      audioUrl: trackInfo?.audio_url,
+      error: playerError,
+    });
+  }, [isPlayerReady, isPlaying, trackInfo, playerError]);
+  useEffect(() => {
+    if (!isInitializing && trackInfo) {
+      setIsLoading(false);
+    }
+  }, [isInitializing, trackInfo]);
 
+  // Effect: Fetch User ID
   useEffect(() => {
     const getUserId = async () => {
       try {
+        // First check if userId was passed via navigation
+        const params = router.params || {};
+        if (params.userId) {
+          setUserId(params.userId);
+          return;
+        }
+
+        // Fallback to getting from tokenManager
         const userid = await tokenManager.getUserId();
         setUserId(userid);
       } catch (error) {
@@ -76,12 +86,10 @@ const StreamMusic = () => {
       }
     };
     getUserId();
-  }, []);
+  }, [router.params]);
+  console.log("[User Id Fetch]", userId);
 
-  useEffect(() => {
-    console.log("[StreamMusic] Track Info updated:", trackInfo);
-  }, [trackInfo]);
-
+  // Effect: Check Library Status
   useEffect(() => {
     const checkLibraryStatus = async () => {
       if (!trackInfo) {
@@ -104,25 +112,10 @@ const StreamMusic = () => {
           trackId,
         });
 
-        // Fix 1: Construct URL with query params explicitly
         const response = await axiosGet({
           url: `${MAIN_SERVER_URL}/library/${userId}/check?contentId=${trackId}`,
           isAuthenticated: true,
         });
-
-        // Alternative Fix 2: If using params object
-        /*
-      const response = await axiosGet({
-        url: `${MAIN_SERVER_URL}/library/${userId}/check`,
-        params: {
-          contentId: trackId
-        },
-        paramsSerializer: params => {
-          return `contentId=${params.contentId}`;
-        },
-        isAuthenticated: true,
-      });
-      */
 
         console.log("[StreamMusic] Library check response:", response);
         setIsLike(response.exists);
@@ -139,6 +132,7 @@ const StreamMusic = () => {
     checkLibraryStatus();
   }, [trackInfo, userId]);
 
+  // Function: Handle Like Toggle
   const handleLikeToggle = async () => {
     if (!trackInfo || !userId) {
       setMessage("Cannot modify library: Missing required information");
@@ -193,33 +187,75 @@ const StreamMusic = () => {
     }
   };
 
+  // Function: Toggle Modal Visibility
   const toggleModal = () => setIsModalVisible(!isModalVisible);
   const closeModal = () => setIsModalVisible(false);
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
-  };
-
+  // Function: Handle Slider Value Change
   const handleSliderValueChange = (value) => {
     setIsSeeking(true);
     setLocalSliderValue(value);
   };
 
+  // Function: Handle Slider Sliding Complete
   const handleSlidingComplete = (value) => {
     setIsSeeking(false);
     seekTo(value);
     setLocalSliderValue(null);
   };
 
+  // Function: Navigate to Playlist
   const navigatePlaylist = () => {
     router.push("./playlistScreen");
     closeModal();
   };
+  // Render loading state
+  if (isLoading) {
+    return (
+      <View style={styles.mainContainer}>
+        <StatusBar style="light" />
+        <View style={styles.loadingHeader}>
+          <TouchableOpacity
+            onPress={() => {
+              console.log("Back button pressed");
+              router.back();
+            }}
+            style={[
+              styles.backButton,
+              { backgroundColor: "rgba(255,255,255,0.1)" },
+            ]}
+            activeOpacity={0.7}
+          >
+            <View style={{ padding: 8 }}>
+              <Ionicons name="arrow-back" size={24} color="white" />
+            </View>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="purple" />
+          <Text style={styles.loadingText}>Loading track...</Text>
+        </View>
+      </View>
+    );
+  }
   return (
     <View style={styles.mainContainer}>
       <StatusBar style="light" />
+
+      {/* Debug View */}
+      {__DEV__ && (
+        <View style={styles.debugContainer}>
+          <Text style={styles.debugText}>
+            Ready: {isPlayerReady ? "Yes" : "No"}
+            {"\n"}
+            Playing: {isPlaying ? "Yes" : "No"}
+            {"\n"}
+            Track: {trackInfo?.title || "None"}
+            {"\n"}
+            Error: {playerError ? playerError.message : "None"}
+          </Text>
+        </View>
+      )}
 
       {/* Header */}
       <View style={styles.headerView}>
@@ -260,6 +296,7 @@ const StreamMusic = () => {
         </TouchableOpacity>
       </View>
 
+      {/* Message Display */}
       {message ? (
         <View style={styles.messageContainer}>
           <Text style={styles.messageText}>{message}</Text>
@@ -414,6 +451,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#1c1c1c",
     paddingHorizontal: 20,
   },
+  debugContainer: {
+    position: "absolute",
+    top: 100,
+    left: 20,
+    right: 20,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    padding: 10,
+    zIndex: 999,
+  },
+  debugText: {
+    color: "white",
+    fontSize: 12,
+  },
   headerView: {
     flexDirection: "row",
     alignItems: "center",
@@ -546,6 +596,37 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     marginLeft: 18,
+  },
+  loadingHeader: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    zIndex: 10,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "flex-start",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    // Move up slightly to account for header space
+    marginTop: -50,
+  },
+  loadingText: {
+    color: "white",
+    marginTop: 20,
+    fontSize: 16,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 
