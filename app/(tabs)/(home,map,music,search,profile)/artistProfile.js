@@ -2,9 +2,9 @@ import { ActivityIndicator, Image, Modal, StyleSheet, Text, TextInput, Touchable
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { router, useNavigation } from 'expo-router';
 import { Colors } from '../../../constants/Color';
-import { Ionicons, FontAwesome6, Feather } from '@expo/vector-icons';
+import { Ionicons, Feather } from '@expo/vector-icons';
 import Animated, {
-  interpolate, runOnJS, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue, withSpring, withTiming,
+  interpolate, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue, withTiming,
 } from 'react-native-reanimated';
 import { Dimensions } from 'react-native';
 import Music from '../../../components/ArtistProfile/Music';
@@ -17,10 +17,10 @@ import * as ImagePicker from 'expo-image-picker';
 import MusicPlayer from '../../../components/MusicPlayer';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import EditProfilePhotosScreen from '../../../components/ArtistProfile/EditProfilePhotosScreen';
+import EditProfileScreen from '../../../components/ArtistProfile/EditProfileScreen';
 
 // SERVER URL
-// const serverURL = 'http://localhost:3000';
-const serverURL = `http://${process.env.EXPO_PUBLIC_IP_ADDRESS}:3000`;
+const serverURL = 'http://localhost:3000';
 
 // DEVICE ACTUAL WIDTH
 const { width } = Dimensions.get('window');
@@ -28,8 +28,6 @@ const { width } = Dimensions.get('window');
 const IMG_HEIGHT = 400;
 // TABS 
 const tabs = ['Music', 'Events', 'Posts', 'Dashboard'];
-// PLACEHOLDER FOR SEARCH INPUT
-const searchPlaceholders = ["Search for tracks", "Search for albums", "Search for beats"];
 
 // DEFAULT AVATAR
 const DEFAULT_PROFILE_IMAGE = 'https://i.sstatic.net/dr5qp.jpg';
@@ -38,24 +36,20 @@ const DEFAULT_COVER_IMAGE = 'https://flowbite.com/docs/images/examples/image-2@2
 
 const ArtistProfileScreen = () => {
   // ARTIST PROFILE STATES
-  const [artistData, setArtistData] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [avatarUri, setAvatarUri] = useState('');
   const [coverImageUri, setCoverImageUri] = useState();
   const [name, setName] = useState('');
-  const [bio, setBio] = useState('');
   const [genre, setGenre] = useState('');
   const [location, setLocation] = useState('');
+  const [username, setUsername] = useState('');
+  const [lastUpdatedUsername, setLastUpdatedUsername] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState('music');
-  // const [searchText, setSearchText] = useState('');
-  // const [showSearch, setShowSearch] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [remainingChars, setRemainingChars] = useState(25);
-  const [currentPlaceholder, setCurrentPlaceholder] = useState(searchPlaceholders[0]);
-  const [index, setIndex] = useState(0);
   const [showEditPhotosScreen, setShowEditPhotosScreen] = useState(false);
   const [photos, setPhotos] = useState([]);
-  const [artistId, setArtistId] = useState(null); // State to store the artistId
+  const [userId, setUserId] = useState(null); // State to store the userId
   const [isSelfProfile, setIsSelfProfile] = useState(false);
 
   const [isOptionsModalVisible, setOptionsModalVisible] = useState(false);
@@ -76,8 +70,6 @@ const ArtistProfileScreen = () => {
   // ANIMATION STATES
   const scrollOffset = useSharedValue(0);
   const tabTransition = useSharedValue(0);
-  const searchAnimation = useSharedValue(0);
-  const opacity = useSharedValue(1);
   const scrollHandler = useAnimatedScrollHandler((event) => {
     scrollOffset.value = event.contentOffset.y;
   });
@@ -86,20 +78,19 @@ const ArtistProfileScreen = () => {
   const navigation = useNavigation();
 
   // FETCH ARTIST PROFILE FROM THE SERVER
-  const fetchArtistProfile = async () => {
+  const fetchUserProfile = async () => {
     try {
       const userId = await tokenManager.getUserId();
-      const response = await ArtistService.getArtistProfile(userId);
-      setArtistId(userId);
+      const response = await ArtistService.getUserProfile(userId); // Update function to fetch user profile
+      setUserId(userId);
 
       if (response) {
-        setArtistData(response);
+        setUserData(response);
 
         // Determine if the logged-in user is viewing their own profile
-        const isUserSelfProfile = response.artist_id === userId;
+        const isUserSelfProfile = response.id === userId;
         setIsSelfProfile(isUserSelfProfile);
         console.log("Is user viewing their own profile?", isUserSelfProfile); // Log the result for verification
-
 
         // Update variable names to match new schema
         const profileImageUrl = response.profile_image_url;
@@ -117,19 +108,21 @@ const ArtistProfileScreen = () => {
         setCoverImageUri(coverImageUrl);
 
         // Set other fields using new schema
-        setName(response.name);
-        setBio(response.bio);
-        setGenre(response.genre);
-        setLocation(response.location);
+        setName(response.display_name);
+        setUsername(response.username);
+        setLastUpdatedUsername(response.last_updated_username)
+        setGenre(response.selected_genres);
+        setLocation(response.user_location);
       } else {
-        console.error('No artist data found');
+        console.error('No user data found');
       }
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching artist profile:', error);
+      console.error('Error fetching user profile:', error);
       setLoading(false);
     }
   };
+
   // ANIMATED STYLE FOR IMAGE FADE-OUT
   const imageAnimatedStyle = useAnimatedStyle(() => {
     return {
@@ -162,16 +155,6 @@ const ArtistProfileScreen = () => {
     };
   }, []);
 
-  // EDIT PROFILE INPUT ANIMATION
-  const inputAnimatedStyle = useAnimatedStyle(() => {
-    const inputOpacity = interpolate(scrollOffset.value, [-IMG_HEIGHT, 0], [0, 1], { extrapolateLeft: 'clamp' });
-    const inputScale = interpolate(scrollOffset.value, [-IMG_HEIGHT, 0], [0.6, 1], { extrapolateLeft: 'clamp' });
-    return {
-      opacity: inputOpacity,
-      transform: [{ scale: inputScale }],
-    };
-  });
-
   // ICONS FADE-OUT ANIMATION BASED ON SCROLL
   const iconsAnimatedStyle = useAnimatedStyle(() => {
     const opacity = interpolate(scrollOffset.value, [0, IMG_HEIGHT / 2], [1, 0], { extrapolateLeft: 'clamp' });
@@ -186,15 +169,6 @@ const ArtistProfileScreen = () => {
     const scale = interpolate(scrollOffset.value, [-IMG_HEIGHT, 0], [0.8, 1], { extrapolateRight: 'clamp' });
     return { opacity, transform: [{ scale }] };
   });
-
-  // SEARCH BAR ANIMATION FOR EXPAND ON OPEN
-  const searchBarStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scaleX: searchAnimation.value },
-      { scaleY: searchAnimation.value },
-    ],
-    opacity: searchAnimation.value,
-  }));
 
   // HANDLE FUNCTION TO OPEN IMAGE PICKER AND SELECT COVER IMAGE FOR ARTIST PROFILE
   const handleOpenCoverImagePicker = async () => {
@@ -236,24 +210,29 @@ const ArtistProfileScreen = () => {
     try {
       const userId = await tokenManager.getUserId();
 
-      // Prepare profile data to send to the backend
+      // Log the data being sent
+      console.log('Name before sending:', name); // Add this log
+
       const profileData = {
-        name,
-        bio,
-        genre,
-        location,
+        display_name: name, // Changed from displayName to display_name
+        selected_genres: genre,
+        user_location: location,
+        cover_image_url: coverImageUri,
+        profile_image_url: avatarUri // Changed from mainPhotoUri to match backend
       };
 
-      // Update text fields
-      await ArtistService.updateArtistProfile({
-        artistId: userId,
+      console.log('About to send the following data for update:', profileData);
+
+      const response = await ArtistService.updateUserProfile({
+        userId: userId,
         ...profileData,
       });
+      console.log('Update response:', response);
+
 
       const token = await tokenManager.getAccessToken();  // Get access token for authorization
-
       // Upload profile image if changed
-      if (avatarUri && (!artistData.profile_image_url || avatarUri !== artistData.profile_image_url)) {
+      if (avatarUri && (!userData.profile_image_url || avatarUri !== userData.profile_image_url)) {
         const formData = new FormData();
         formData.append('profileImage', {
           uri: avatarUri,
@@ -272,7 +251,7 @@ const ArtistProfileScreen = () => {
       }
 
       // Upload cover image if changed
-      if (coverImageUri && (!artistData.cover_image_url || coverImageUri !== artistData.cover_image_url)) {
+      if (coverImageUri && (!userData.cover_image_url || coverImageUri !== userData.cover_image_url)) {
         const coverFormData = new FormData();
         coverFormData.append('coverImage', {
           uri: coverImageUri,
@@ -290,9 +269,11 @@ const ArtistProfileScreen = () => {
         });
       }
 
-      alert('Profile updated successfully!');
-      // fetchArtistProfile(); // Refetch to show the updated data
 
+      if (response) {
+        alert('Profile updated successfully!');
+        fetchUserProfile(); // Refresh the profile data
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
       alert('Failed to update profile');
@@ -317,14 +298,6 @@ const ArtistProfileScreen = () => {
     setCoverImageUri(originalCoverImage);
   };
 
-  // FUNCTION TO HNADLE LIMIT OF DESCRIPTION CHARACTERS BETWEEN 25.
-  const handleGenreChange = (text) => {
-    if (text.length <= 30) {
-      setGenre(text); // Update genre value
-      setRemainingChars(30 - text.length); // Update remaining characters count
-    }
-  };
-
   // TAB SWITCH ANIMATION AND VIBRATION
   const handleTabToggle = (tab) => {
     if (tab.toLowerCase() !== selectedTab) {
@@ -332,31 +305,6 @@ const ArtistProfileScreen = () => {
       Vibration.vibrate(10); // Short vibration on tab switch
       tabTransition.value = withTiming(tabs.indexOf(tab) * 80, { duration: 300 }); // Smooth transition based on index
     }
-  };
-
-  // HANDLE SHOW SEARCH BAR ON SHOW ALL IS CLICKED
-  // const handleShowSearch = (show) => {
-  //   setShowSearch(show);
-  //   if (show) {
-  //     // Expand with a bounce effect
-  //     searchAnimation.value = withSpring(1, {
-  //       damping: 10,
-  //       stiffness: 100,
-  //       overshootClamping: false,
-  //     });
-  //   } else {
-  //     // Shrink smoothly on close
-  //     searchAnimation.value = withTiming(0, { duration: 500 }, () => {
-  //       runOnJS(setShowSearch)(false); // Hide the search bar after animation completes
-  //     });
-  //   }
-  // };
-
-  // FUNCTION TO UPDATE PLACEHOLDER AND RESET OPACITY
-  const handleUpdatePlaceholder = () => {
-    setIndex((prevIndex) => (prevIndex + 1) % searchPlaceholders.length);
-    setCurrentPlaceholder(searchPlaceholders[(index + 1) % searchPlaceholders.length]);
-    opacity.value = withTiming(1, { duration: 300 }); // Fade in
   };
 
   // OPEN EDIT PROFILE PHOTOS SCREEN TO PICK REMOVE OR ADD NEW PROFILE IMAGE
@@ -382,20 +330,9 @@ const ArtistProfileScreen = () => {
 
   // FETCH THE ARTIST PROFILE WHEN COMPONENT IS MOUNTED OR REFRESHED
   useEffect(() => {
-    fetchArtistProfile();
+    fetchUserProfile();
     navigation.setOptions({ headerShown: !loading });
   }, [avatarUri, loading]);
-
-  // CHANGE PLACEHOLDERS
-  useEffect(() => {
-    const interval = setInterval(() => {
-      opacity.value = withTiming(0, { duration: 300 }, () => {
-        runOnJS(handleUpdatePlaceholder)();
-      });
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [index]);
 
   // TOP HEADER PART
   useLayoutEffect(() => {
@@ -415,33 +352,20 @@ const ArtistProfileScreen = () => {
         headerRight: () => (
           <Animated.View style={[styles.bar, iconsAnimatedStyle]}>
             {isSelfProfile ? (
-              isEditing ? (
-                <View style={styles.headerButtons}>
-                  <TouchableOpacity style={styles.roundButton} onPress={() => {
-                    handleSaveChanges();
-                    setIsEditing(false);
-                  }}>
-                    <Image source={require('../../../assets/images/ArtistProfile/save.png')} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.roundButton} onPress={handleCloseEditing}>
-                    <Image source={require('../../../assets/images/ArtistProfile/close.png')} />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.headerButtons}>
-                  <TouchableOpacity style={styles.roundButton}>
-                    <Image source={require('../../../assets/images/ArtistProfile/bell.png')} />
-                    <Image source={require('../../../assets/images/ArtistProfile/ellipse.png')} style={styles.badge} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.roundButton} onPress={() => router.push("/artistInboxScreen")}>
-                    <Image source={require('../../../assets/images/ArtistProfile/message.png')} />
-                    <Image source={require('../../../assets/images/ArtistProfile/ellipse.png')} style={styles.badge} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.roundButton} onPress={() => router.push("/settings")}>
-                    <Image source={require('../../../assets/images/ArtistProfile/settings.png')} />
-                  </TouchableOpacity>
-                </View>
-              )
+              <View style={styles.headerButtons}>
+                <TouchableOpacity style={styles.roundButton}>
+                  <Image source={require('../../../assets/images/ArtistProfile/bell.png')} />
+                  <Image source={require('../../../assets/images/ArtistProfile/ellipse.png')} style={styles.badge} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.roundButton} onPress={() => router.push("/artistInboxScreen")}>
+                  <Image source={require('../../../assets/images/ArtistProfile/message.png')} />
+                  <Image source={require('../../../assets/images/ArtistProfile/ellipse.png')} style={styles.badge} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.roundButton} onPress={() => router.push("/settings")}>
+                  <Image source={require('../../../assets/images/ArtistProfile/settings.png')} />
+                </TouchableOpacity>
+              </View>
+
             ) : (
               // Render the three dots icon when viewing someone else's profile
               <View style={styles.headerButtons}>
@@ -449,7 +373,6 @@ const ArtistProfileScreen = () => {
                   <Image source={require('../../../assets/images/ArtistProfile/morehorizontal.png')} />
                 </TouchableOpacity>
               </View>
-
             )}
           </Animated.View>
         ),
@@ -467,9 +390,9 @@ const ArtistProfileScreen = () => {
   // FETCH ARTISTS OTHER IMAGES
   useEffect(() => {
     const fetchProfileImages = async () => {
-      if (!artistId) return; // Exit if artistId is not available
+      if (!userId) return; // Exit if userId is not available
       try {
-        const fetchedPhotos = await ArtistService.getProfileImages(artistId);
+        const fetchedPhotos = await ArtistService.getProfileImages(userId);
 
         // Check if fetchedPhotos is valid, and set photos state accordingly
         if (Array.isArray(fetchedPhotos) && fetchedPhotos.length > 0) {
@@ -482,7 +405,7 @@ const ArtistProfileScreen = () => {
     };
 
     fetchProfileImages();
-  }, [artistId]);
+  }, [userId]);
 
 
   return (
@@ -494,18 +417,48 @@ const ArtistProfileScreen = () => {
         onRequestClose={() => setShowEditPhotosScreen(false)}
       >
         <EditProfilePhotosScreen
-          artistId={artistId}
+          userId={userId}
           photos={photos}
-          onSave={handleSaveChanges}
+          onSave={() => {
+            handleSaveChanges();
+            fetchUserProfile();
+          }}
           onCancel={() => {
             setShowEditPhotosScreen(false)
             setIsEditing(false)
-            fetchArtistProfile();
+            fetchUserProfile();
           }}
           onAddPhoto={handleAddPhoto}
           onRemovePhoto={handleRemovePhoto}
         />
       </Modal>
+
+      {/* Modal for EditProfileScreen */}
+      <Modal
+        visible={isEditing}
+        animationType="slide"
+        onRequestClose={() => setIsEditing(false)}
+      >
+        <EditProfileScreen
+          name={name}
+          setName={setName}
+          username={username}
+          setUsername={setUsername}
+          coverImageUri={coverImageUri}
+          setCoverImageUri={setCoverImageUri}
+          defaultCover={DEFAULT_COVER_IMAGE}
+          avatarUri={avatarUri}
+          defaultProfile={DEFAULT_PROFILE_IMAGE}
+          currentUsername={username} // Pass the current username here
+          lastUpdatedUsername={lastUpdatedUsername}
+          openEditProfilePhotosScreen={openEditProfilePhotosScreen}
+          onCancel={() => {
+            setIsEditing(false)
+            fetchUserProfile();
+          }}
+        />
+      </Modal>
+
 
       {/* ACTION MODAL FOR BLOCK/REPORT */}
       <Modal
@@ -586,63 +539,48 @@ const ArtistProfileScreen = () => {
               <Animated.View
                 style={[
                   styles.profileOverlay,
-                  { marginTop: isEditing ? 145 : isSelfProfile ? 180 : 100 },
+                  { marginTop: isEditing ? 180 : isSelfProfile ? 180 : 164 },
                 ]}
               >
                 {/* IF ARTIST IS VIEWING THEIR PROFILE */}
                 {isSelfProfile ? (
                   <>
                     {/* ARTIST PROFILE IMAGE */}
-                    <Animated.View style={[styles.avatarContainer, combinedAnimatedStyle]}>
+                    <Animated.View style={[styles.otherUserProfileContainer, combinedAnimatedStyle]}>
+                      <View style={styles.profileDetailsContainer}>
+                        <View style={styles.profileDetailsView}>
+                          <View>
+                            <Image
+                              source={avatarUri ? { uri: avatarUri } : require('../../../assets/images/profile.png')}
+                              style={styles.otherUserProfileImage}
+                            />
+                            {/* Artist Name and Handle */}
+                            <Text style={styles.artistName}>{name}</Text>
+                            <Text style={styles.artistHandle}>@{name}</Text>
+                          </View>
+                        </View>
 
-                      <Image
-                        source={{ uri: avatarUri }}
-                        style={styles.profileImage}
-                      />
+                        {/* ARITST SOCIAL HANDLES */}
+                        <View style={styles.socialIconsContainer}>
+                          <TouchableOpacity>
+                            <Image source={require('../../../assets/images/ArtistProfile/entypo-social_instagram.png')} style={styles.icon} />
+                          </TouchableOpacity>
+                          <TouchableOpacity>
+                            <Image source={require('../../../assets/images/ArtistProfile/lineicons_tiktok.png')} style={styles.icon} />
+                          </TouchableOpacity>
+                          <TouchableOpacity>
+                            <Image source={require('../../../assets/images/ArtistProfile/uil_snapchat-square.png')} style={styles.icon} />
+                          </TouchableOpacity>
+                        </View>
 
-                      {isEditing && (
-                        <TouchableOpacity
-                          style={styles.editIconContainer}
-                          onPress={openEditProfilePhotosScreen}
-                        >
-                          <Image
-                            source={require('../../../assets/images/ArtistProfile/add.png')}
-                            style={styles.editIcon}
-                          />
-                        </TouchableOpacity>
-                      )}
+                        {/* HEADLINE OR BIO */}
+                        <Text style={styles.headline}>
+                          Headlining this Saturday 10/26/24
+                          <Text style={styles.mentioned}> @roseloungeDC! </Text>
+                          Tickets are selling fast, make sure to get yours. See you there! 🎉
+                        </Text>
+                      </View>
                     </Animated.View>
-
-                    {/* ARTIST NAME */}
-                    {isEditing ? (
-                      <Animated.View style={[inputAnimatedStyle, combinedAnimatedStyle]}>
-                        <TextInput
-                          style={styles.input}
-                          value={name}
-                          autoCorrect={false}
-                          onChangeText={setName}
-                        />
-                      </Animated.View>
-                    ) : (
-                      <Animated.Text style={[styles.artistName, combinedAnimatedStyle]}>{name}</Animated.Text>
-                    )}
-
-                    {/* ARTIST DESCRIPTION/GENRE */}
-                    {isEditing ? (
-                      <Animated.View style={[inputAnimatedStyle, combinedAnimatedStyle]}>
-                        <TextInput
-                          style={[styles.input, { opacity: 0.7, borderColor: Colors.white }]}
-                          value={genre}
-                          autoCorrect={false}
-                          onChangeText={handleGenreChange}
-                          maxLength={30}
-                        />
-                        {/* UPTO 30 CHARACTERS ARE ALLOWED */}
-                        <Text style={styles.charCount}>{remainingChars} / 30</Text>
-                      </Animated.View>
-                    ) : (
-                      <Animated.Text style={[styles.artistInfo, combinedAnimatedStyle]}>{genre}</Animated.Text>
-                    )}
                   </>
                 ) : (
                   // IF LISTENER IS VIEWING ARTIST PROFILE
@@ -746,30 +684,6 @@ const ArtistProfileScreen = () => {
 
               {/* TAB SELECTION */}
               <View style={styles.container}>
-                {/* SEARCH BAR  */}
-                {/* {showSearch && (
-                  <Animated.View style={[styles.searchContainer, searchBarStyle]}>
-                    <View style={styles.searchBox}>
-                      <Feather name="search" color="#FFFFFF" size={22} style={{ paddingHorizontal: 10 }} />
-                      <TextInput
-                        placeholder={currentPlaceholder}
-                        placeholderTextColor="#CECECE"
-                        style={styles.searchInput}
-                        value={searchText}
-                        onChangeText={setSearchText}
-                      />
-                      {searchText.length > 0 && (
-                        <TouchableOpacity onPress={() => setSearchText('')} style={{ paddingHorizontal: 10 }}>
-                          <FontAwesome6 name="times-circle" size={16} color="#FFFFFF" />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                    <TouchableOpacity onPress={() => handleShowSearch(false)}>
-                      <Text style={styles.cancelText}>Cancel</Text>
-                    </TouchableOpacity>
-                  </Animated.View>
-                )} */}
-
                 {/* SWITCH TABS */}
                 <View style={styles.toggleContainer}>
                   {tabs.map((tab) => (
@@ -885,7 +799,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#2F2F30',
-    height: 100,
+    height: 105,
     borderColor: 'grey',
     justifyContent: 'center',
     alignItems: 'center',
@@ -899,9 +813,11 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
   profileOverlay: {
+    display: 'flex',
     position: "absolute",
     left: 0,
     right: 0,
+    top: -78,
     alignItems: "center",
   },
   avatarContainer: {
@@ -945,12 +861,12 @@ const styles = StyleSheet.create({
   },
   artistName: {
     color: Colors.white,
-    textAlign: 'center',
     fontFamily: 'Open Sans',
     fontSize: 24,
     fontStyle: 'normal',
-    fontWeight: '900',
+    fontWeight: 'bold',
     lineHeight: 26,
+    marginTop: 8,
     zIndex: 3,
     textShadowColor: 'rgba(0, 0, 0, 0.7)',
     textShadowOffset: { width: 0, height: 1 },
@@ -997,7 +913,7 @@ const styles = StyleSheet.create({
   profileDetailsView: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
   },
   otherUserProfileImage: {
     width: 80,
@@ -1077,6 +993,7 @@ const styles = StyleSheet.create({
     height: 24,
     marginLeft: 0,
     marginHorizontal: 24,
+    marginTop: 6,
   },
   headline: {
     color: Colors.white,
@@ -1084,7 +1001,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontStyle: 'normal',
     fontWeight: '400',
-    marginBottom: 10,
+    marginVertical: 6,
   },
   mentioned: {
     color: '#8951FF',

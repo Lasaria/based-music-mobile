@@ -1,10 +1,8 @@
 import axios from 'axios';
-import { axiosDelete, axiosGet, axiosPatch, axiosPost } from '../utils/axiosCalls';
+import { axiosGet, axiosPatch, axiosPost } from '../utils/axiosCalls';
 import { tokenManager } from '../utils/tokenManager';
 
-// const serverURL = 'http://localhost:3000'
-const serverURL = `http://${process.env.EXPO_PUBLIC_IP_ADDRESS}:3000`;
-
+const serverURL = 'http://localhost:3000'
 
 export const ArtistService = {
 
@@ -29,35 +27,50 @@ export const ArtistService = {
         }
     },
 
-    getArtistProfile: async (artistId) => {
+    getUserProfile: async (userId) => {
         try {
-            // Pass artistId dynamically as a parameter
+            // Pass userId dynamically as a parameter
             const response = await axiosGet({
-                url: `${serverURL}/artists/${artistId}/profile`,
+                url: `${serverURL}/artists/${userId}/profile`,
             });
-            console.log('Artist profile fetched successfully:', response);
+            console.log('User profile fetched successfully:', response);
+            console.log("Received userId:", userId); // Log userId
             return response;
         } catch (err) {
             // Log the full error details
-            console.error('Error fetching artist profile:', err.response ? err.response.data : err.message);
+            console.error('Error fetching user profile:', err.response ? err.response.data : err.message);
             throw new Error(err.response ? err.response.data.message : err.message); // Log server response error
         }
     },
 
-    updateArtistProfile: async ({ artistId, name, bio, genre, location, contactEmail, profileImageURL, coverImageURL }) => {
+    updateUserProfile: async ({ userId, display_name, username, selected_genres, user_location, cover_image_url, profile_image_url, token, last_updated_username, }) => {
         try {
-            console.log('Sending the following data to update:', { name, bio, genre, location, contactEmail, profileImageURL, coverImageURL });
+            const profileData = {
+                display_name,
+                username,
+                selected_genres,
+                user_location,
+                cover_image_url,
+                profile_image_url,
+                last_updated_username,
+
+            };
+
+            console.log('About to send the following data for update:', profileData);
 
             const response = await axiosPatch({
-                url: `${serverURL}/artists/${artistId}/profile`,
-                body: JSON.stringify({ name, bio, genre, location, contactEmail, profileImageURL, coverImageURL }), // Ensure profileImageURL is sent
+                url: `${serverURL}/artists/${userId}/profile`,
+                body: JSON.stringify(profileData),
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
             });
 
-            console.log('Artist profile updated successfully:', response);
-            return response;
+            console.log('Update response:', response.data);
+            return response.data;
         } catch (err) {
-            console.error('Error updating artist profile:', err.response ? err.response.data : err.message);
-            throw new Error(err.response ? err.response.data.message : err.message);
+            console.error('Error updating profile:', err.message);
+            throw new Error(err.message);
         }
     },
 
@@ -173,10 +186,11 @@ export const ArtistService = {
             throw new Error(error.message || 'Failed to delete selected album');
         }
     },
-    getProfileImages: async (artistId) => {
+
+    getProfileImages: async (userId) => {
         try {
             const response = await axiosGet({
-                url: `${serverURL}/artists/${artistId}/profile-images`,
+                url: `${serverURL}/artists/${userId}/profile-images`,
             });
             return response.images;
         } catch (error) {
@@ -184,20 +198,20 @@ export const ArtistService = {
             throw new Error(error.message || "Failed to fetch profile images");
         }
     },
-    // Function to upload multiple profile images
-    uploadMultipleProfileImages: async (artistId, formData) => {
+
+    uploadMultipleProfileImages: async (userId, formData) => {
         const response = await axios.post(
-            `${serverURL}/artists/${artistId}/profile-images`,
+            `${serverURL}/artists/${userId}/profile-images`,
             formData,
             { headers: { "Content-Type": "multipart/form-data" } }
         );
         return response.data.uploadedFiles;
     },
 
-    updateArtistProfileImage: async (artistId, mainPhotoUri) => {
+    updateUserProfileImage: async (userId, mainPhotoUri) => {
         try {
             const response = await axiosPatch({
-                url: `${serverURL}/artists/${artistId}/profile`,
+                url: `${serverURL}/artists/${userId}/profile`,
                 body: JSON.stringify({ mainPhotoUri }),
                 headers: { Authorization: `Bearer ${await tokenManager.getAccessToken()}` }
             });
@@ -206,6 +220,22 @@ export const ArtistService = {
         } catch (error) {
             console.error('Failed to update profile image:', error.response ? error.response.data : error.message);
             throw new Error(error.response ? error.response.data.message : error.message);
+        }
+    },
+
+    checkUsernameAvailability: async (username) => {
+        try {
+            console.log("Checking username availability in service for:", username);
+            const response = await axios.post(`${serverURL}/artists/check-username`, { username }, {
+                headers: {
+                    Authorization: `Bearer ${await tokenManager.getAccessToken()}`,
+                },
+            });
+            console.log("Received response from username check:", response.data);
+            return response.data.available; // This should be true or false based on server response
+        } catch (err) {
+            console.error('Error checking username availability:', err.message);
+            return false; // Assume username is taken if an error occurs
         }
     },
 }

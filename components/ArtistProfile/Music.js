@@ -334,7 +334,7 @@ const Music = ({ name, isSelfProfile }) => {
                 albumsRef.current = isInitialFetch
                     ? albumsResponse.albums
                     : [...albumsRef.current, ...albumsResponse.albums];
-                setAlbums([...albumsData]);
+                setAlbums([...albumsRef.current]);
                 lastAlbumKeyRef.current = albumsResponse.lastEvaluatedKey;
             }
 
@@ -344,7 +344,7 @@ const Music = ({ name, isSelfProfile }) => {
                 tracksRef.current = isInitialFetch
                     ? tracksResponse.tracks
                     : [...tracksRef.current, ...tracksResponse.tracks];
-                setTracks([...tracksData]);
+                setTracks([...tracksRef.current]);
                 lastTrackKeyRef.current = tracksResponse.lastEvaluatedKey;
             }
         } catch (error) {
@@ -697,8 +697,8 @@ const Music = ({ name, isSelfProfile }) => {
                 />
             </View>
             <View style={styles.trackInfo}>
-                <Text style={styles.trackTitle}>{handleFormatText(item.title || 'Unknown', 30)}</Text>
-                <Text style={styles.artist}>{handleFormatText(item.artist || name, 30)}</Text>
+                <Text style={styles.trackTitle}>{handleFormatText(item.title || 'Unknown', 26)}</Text>
+                <Text style={styles.artist}>{handleFormatText(item.artist || name, 26)}</Text>
             </View>
             <Text style={styles.trackDuration}>{item.duration || '3:24'}</Text>
             <Image source={item.cover_image_url && require('../../assets/images/ArtistProfile/play.png')} style={styles.play} />

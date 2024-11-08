@@ -8,13 +8,12 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // SERVER URL
-// const serverURL = 'http://localhost:3000';
-const serverURL = `http://${process.env.EXPO_PUBLIC_IP_ADDRESS}:3000`;
+const serverURL = 'http://localhost:3000';
 
 // DEFAULT PHOTO
 const DEFAULT_PHOTO_URI = 'https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg';
 
-const EditProfilePhotosScreen = ({ artistId, photos, onSave, onCancel }) => {
+const EditProfilePhotosScreen = ({ userId, photos, onSave, onCancel }) => {
     const [mainPhoto, setMainPhoto] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [localPhotos, setLocalPhotos] = useState([]);
@@ -26,9 +25,10 @@ const EditProfilePhotosScreen = ({ artistId, photos, onSave, onCancel }) => {
 
     // FETCH ALL PHOTOS FROM S3
     const initializePhotos = async () => {
+        setLoading(true); // Start loading
         try {
             const token = await tokenManager.getAccessToken();
-            const response = await axios.get(`${serverURL}/artists/${artistId}/profile`, {
+            const response = await axios.get(`${serverURL}/artists/${userId}/profile`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -112,7 +112,7 @@ const EditProfilePhotosScreen = ({ artistId, photos, onSave, onCancel }) => {
             const imageKey = photo.uri.split('.com/')[1];
             const token = await tokenManager.getAccessToken();
 
-            await axios.delete(`${serverURL}/artists/${artistId}/profile-images`, {
+            await axios.delete(`${serverURL}/artists/${userId}/profile-images`, {
                 headers: { Authorization: `Bearer ${token}` },
                 data: { imageKey },
             });
@@ -201,7 +201,7 @@ const EditProfilePhotosScreen = ({ artistId, photos, onSave, onCancel }) => {
 
                 console.log('Uploading to S3:', formData);
                 const s3Response = await axios.post(
-                    `${serverURL}/artists/${artistId}/profile-images`,
+                    `${serverURL}/artists/${userId}/profile-images`,
                     formData,
                     {
                         headers: {
@@ -229,13 +229,13 @@ const EditProfilePhotosScreen = ({ artistId, photos, onSave, onCancel }) => {
         try {
             const token = await tokenManager.getAccessToken();
             const dynamoDBData = {
-                artistId: artistId,
+                userId: userId,
                 mainPhotoUri: mainPhoto,
             };
 
             console.log('Updating DynamoDB with:', dynamoDBData);
             const dynamoDBResponse = await axios.patch(
-                `${serverURL}/artists/${artistId}/profile`,
+                `${serverURL}/artists/${userId}/profile`,
                 dynamoDBData,
                 {
                     headers: { Authorization: `Bearer ${token}` },

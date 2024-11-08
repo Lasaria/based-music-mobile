@@ -198,8 +198,8 @@ export const AuthService = {
       await tokenManager.saveTokens(response.result.AuthenticationResult);
 
     } catch (error) {
-      console.error('Error:', err.message);
-      throw new Error(err.message);
+      console.error('Error:', error.message);
+      throw new Error(error.message);
     }
   },
 
