@@ -15,6 +15,8 @@ import { axiosGet } from "../../../utils/axiosCalls";
 import { tokenManager } from "../../../utils/tokenManager";
 import { AudioContext } from "../../../contexts/AudioContext";
 import Toast from "react-native-toast-message";
+import SongList from "../../../components/SongComponent";
+
 const MAIN_SERVER_URL = "http://localhost:3000";
 
 function MusicScreen() {
@@ -31,6 +33,7 @@ function MusicScreen() {
   const [isSongs, setIsSongs] = useState(false);
   const [isAlbums, setIsAlbums] = useState(false);
   const [isArtists, setIsArtists] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const {
     updateCurrentTrack,
     isPlaying,
@@ -67,7 +70,6 @@ function MusicScreen() {
         limit: "50",
       });
 
-      // Only add type if it's not 'all'
       if (contentType !== "all") {
         queryParams.append("type", contentType);
       }
@@ -76,12 +78,20 @@ function MusicScreen() {
         queryParams.append("lastEvaluatedKey", lastEvaluatedKey);
       }
 
+      // Add this block for search
+      if (searchQuery) {
+        queryParams.append("search", searchQuery);
+      }
+
       const response = await axiosGet({
         url: `${MAIN_SERVER_URL}/library/${userId}?${queryParams.toString()}`,
         isAuthenticated: true,
       });
-
-      setLibraryData(() => (resetData ? response.items : [...response.items]));
+      console.log("Library response:", JSON.stringify(response.items, null, 2));
+      // Modified to merge data for pagination
+      setLibraryData(() =>
+        resetData ? response.items : [...libraryData, ...response.items]
+      );
       setLastEvaluatedKey(response.lastEvaluatedKey);
       setHasMore(response.hasMore);
     } catch (err) {
@@ -98,6 +108,15 @@ function MusicScreen() {
       fetchLibraryData(true);
     }
   }, [userId, contentType]);
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (userId) {
+        fetchLibraryData(true);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
 
   const renderLibraryItem = ({ item }) => {
     const formatDuration = (duration) => {
@@ -282,6 +301,8 @@ function MusicScreen() {
           placeholder="Search"
           placeholderTextColor="gray"
           style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
         />
       </View>
 
@@ -354,6 +375,22 @@ function MusicScreen() {
 
       {error ? (
         <Text style={styles.errorText}>{error}</Text>
+      ) : contentType === "song" ? (
+        <SongList
+          songs={libraryData}
+          loading={loading}
+          onEndReached={() => hasMore && fetchLibraryData()}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                {searchQuery
+                  ? "No songs found matching your search"
+                  : "No songs in your library"}
+              </Text>
+            </View>
+          }
+          containerClassName="pb-32"
+        />
       ) : (
         <FlatList
           data={libraryData}
@@ -365,6 +402,15 @@ function MusicScreen() {
             loading && (
               <ActivityIndicator color="purple" style={styles.loader} />
             )
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                {searchQuery
+                  ? `No ${contentType}s found matching your search`
+                  : `No ${contentType}s in your library`}
+              </Text>
+            </View>
           }
           contentContainerStyle={styles.listContainer}
         />
@@ -425,6 +471,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#000",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  emptyText: {
+    color: "gray",
+    fontSize: 16,
+    textAlign: "center",
   },
   header: {
     paddingTop: 60,
