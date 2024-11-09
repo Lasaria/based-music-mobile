@@ -1,44 +1,57 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, Alert, TextInput, Modal } from 'react-native';
-import { AntDesign, FontAwesome, MaterialIcons } from '@expo/vector-icons';
+import { Modal, StyleSheet, Text, View, Image, TouchableOpacity, FlatList, Alert, TextInput } from 'react-native';
+import { AntDesign, FontAwesome, FontAwesome6, MaterialIcons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Color';
 import numeral from 'numeral';
+import NewPostModal from './NewPost';
 
-// DUMMY POSTS DATA
 const initialPosts = [
     {
         id: 1,
-        username: 'Estella Boersma',
-        time: '6h ago',
-        content: 'Headlining tonight at the El Rey Theater in Los Angeles! Doors at 9pm, show starts at 10pm. Go to my profile to get your tickets!',
-        likes: 2165,
-        comments: 418,
-        shares: 9,
-        liked: false, // New flag to track if the post is liked
-        avatar: 'https://s3-alpha-sig.figma.com/img/d828/ea0b/2b2446ec17fd510c8126e76cd7de76d0?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=pmevaE5g9jAepm7iqSj30t2UApaOrBIWAmq3NpQO8At9DL~UiPp-nrIQK~WcVwCK2BCIPVEvwe~k8grXTwRGHbr-5DGJ25NKtqAPXkTyA-MDTfGxzkoDcmgSq3XaKVplcM03dKCA0UKtudnqdvSMdb7mmq0dhAns5g-ItIVjpkZlI69xdLzDatxnMO-Egurx5efuPhW63vB0ku5m5~lx8DLWGPQxeoXzS~qCmOeRUTtpC8X47A7Oy9nkJ2uampPbeY9dAkTGwlVZp6SKdDz9IFNRNgkziAOZDaa1nVB9DCT2HjQJFGVcpNCG3ks0dxHhzmdYE4zL9okS2KASKXbrVg__',
+        username: 'Humza',
+        time: '1d ago',
+        content: 'The Big Bad concert was epic! Posting pictures soon!!!',
+        likes: 122200,
+        comments: 18,
+        shares: 6,
+        liked: false,
+        avatar: 'https://s3-alpha-sig.figma.com/img/d828/ea0b/2b2446ec17fd510c8126e76cd7de76d0?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=dFkjHsK0BrG2idRXmxy8mDyeVCjJiuNJfqbcpDs105GvscgbDw6gDk~O7R28Fgzu-qtjzfXXXo2b1gY94Y2H7s4jgOQUXAsiQnvsqxlp4aotII8zZSQrrCw~3ylKTqpp5OkI5rW0wk1XD2ahrMBhXMtefk4GI5p44WKrAYaliumfxh~SB8G0EeyvAQ7rImkq9AM93tbmkayPCO-c5C6IUw74Fcgar9vRcXszDosEGfrIkKQGzp2j28Htk4nN5gf1tAAtAQRvDfDUwX0iYR4UyB7ESHDkLiWKvKoBPnXv96TKNV-QelGKduXSuduM9zrafiDg49YIaGS1ibGF2RqZEA__',
     },
     {
         id: 2,
-        username: 'Estella Boersma',
+        username: 'Humza',
         time: '1d ago',
-        content: 'Tour’s been amazing. Los Angeles, Fort Lauderdale, Orlando, Atlanta, Raleigh are up next. See you there!',
-        image: 'https://s3-alpha-sig.figma.com/img/0de0/9e60/5f8283339e62a8596ee036050a9a64e8?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=GVWYn3TMoOtqFff6LtF~YL76PMUjsHwMeVXdC6qUdysXHYE9d~JcvRvsvh3sTTorJ530ge7FU9w~rvmdQm1Tdd7pgGnPp27HYEFuLq1jLkn054Ex1Q935LbBOuqzWIH~BH0JnQj7z3yvJlvlbwNUCLJQ1KQEv9AzLcfwty6-JDnJiZJkLAkqmjOEy~d7j6g3ehwfWHp3o93mdGFWoA2HdvmoRrY7a-E2x9JA53whAHd1ATfVr9R0AJt1~X4s-~PSoZwhYDLD1m-KkUHlKFHtZ0s504sTUsJK70UsNm5ybUb1yuOgltCGDgjL~9UqlrJ4TWQGzumh4kPzOWRShWSX2g__',
-        likes: 20100,
-        comments: 1400,
-        shares: 954,
-        liked: false, // New flag to track if the post is liked
-        avatar: 'https://s3-alpha-sig.figma.com/img/d828/ea0b/2b2446ec17fd510c8126e76cd7de76d0?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=pmevaE5g9jAepm7iqSj30t2UApaOrBIWAmq3NpQO8At9DL~UiPp-nrIQK~WcVwCK2BCIPVEvwe~k8grXTwRGHbr-5DGJ25NKtqAPXkTyA-MDTfGxzkoDcmgSq3XaKVplcM03dKCA0UKtudnqdvSMdb7mmq0dhAns5g-ItIVjpkZlI69xdLzDatxnMO-Egurx5efuPhW63vB0ku5m5~lx8DLWGPQxeoXzS~qCmOeRUTtpC8X47A7Oy9nkJ2uampPbeY9dAkTGwlVZp6SKdDz9IFNRNgkziAOZDaa1nVB9DCT2HjQJFGVcpNCG3ks0dxHhzmdYE4zL9okS2KASKXbrVg__',
+        content: 'Met so many cool folks at the fire festival last night. Had a blast!',
+        likes: 159,
+        comments: 150,
+        shares: 41,
+        liked: false,
+        avatar: 'https://s3-alpha-sig.figma.com/img/d828/ea0b/2b2446ec17fd510c8126e76cd7de76d0?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=dFkjHsK0BrG2idRXmxy8mDyeVCjJiuNJfqbcpDs105GvscgbDw6gDk~O7R28Fgzu-qtjzfXXXo2b1gY94Y2H7s4jgOQUXAsiQnvsqxlp4aotII8zZSQrrCw~3ylKTqpp5OkI5rW0wk1XD2ahrMBhXMtefk4GI5p44WKrAYaliumfxh~SB8G0EeyvAQ7rImkq9AM93tbmkayPCO-c5C6IUw74Fcgar9vRcXszDosEGfrIkKQGzp2j28Htk4nN5gf1tAAtAQRvDfDUwX0iYR4UyB7ESHDkLiWKvKoBPnXv96TKNV-QelGKduXSuduM9zrafiDg49YIaGS1ibGF2RqZEA__',
+        image: 'https://s3-alpha-sig.figma.com/img/54b7/992c/b09be439b3af917be9f4b27f3215bc67?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=MImq6ucyx5ASCnMdPZ~1KvZy9zPJw8xLFBq2CPRTENR57qTsLsEOF4pviV-hutj7KpP3Mgq1szFJRveGfBCf6juKXIvOEmDbztkp58Qbn5VypmO3v2olmRJiST64r2BTLr4WdwsYsp6VBXtd13cFKWhhx5Yhzbg2BH4oCLgs~3eUMZgQDEbKOl2uEzzYtfOL6L7iAXJ8hcOkZae1OW6lMBnxfcDsFP0jQztWwa77512cEKjikhuCtL423dKc~lKTeIoxsezRUw6u-kHqibyxzCvBjVre8YnCSHl2XmrKEYRJBooJvdXin6R4xisiV5n~zT6PL3xbmPsw26hgUHs~qQ__',
+    },
+    {
+        id: 3,
+        username: 'Humza',
+        time: '1d ago',
+        content: 'Rosebar lounge is always a vibe.',
+        likes: 159,
+        comments: 150,
+        shares: 41,
+        liked: false,
+        avatar: 'https://s3-alpha-sig.figma.com/img/d828/ea0b/2b2446ec17fd510c8126e76cd7de76d0?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=dFkjHsK0BrG2idRXmxy8mDyeVCjJiuNJfqbcpDs105GvscgbDw6gDk~O7R28Fgzu-qtjzfXXXo2b1gY94Y2H7s4jgOQUXAsiQnvsqxlp4aotII8zZSQrrCw~3ylKTqpp5OkI5rW0wk1XD2ahrMBhXMtefk4GI5p44WKrAYaliumfxh~SB8G0EeyvAQ7rImkq9AM93tbmkayPCO-c5C6IUw74Fcgar9vRcXszDosEGfrIkKQGzp2j28Htk4nN5gf1tAAtAQRvDfDUwX0iYR4UyB7ESHDkLiWKvKoBPnXv96TKNV-QelGKduXSuduM9zrafiDg49YIaGS1ibGF2RqZEA__',
+        image: 'https://s3-alpha-sig.figma.com/img/ab31/3cd7/721087e7ab198554ed2b02d70e6c691d?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=n5WQMwtBJD7g6JMYzl59eVBDjKwSgfMie3JI--IfkSJI8RpjFLM3bVeiELjEerMYeYKHx5u7iif8dZ6-tbWiOt8nCBuiFf3aRNFcDbUVHUeIlGAGwkiqdcjy2o5sg5heaw2s~yT7L--IvKv-h6Ulm3aX9xdTfNMrTJSkr4lugm8UTUvfVl9Xz2EMtNUmblSH0J4AR~PYKhZFddSLkCEeE4P6qLglbVz5VZtaH646B092l0jWMaTxBxS4OtSmTSepifgMOmhWziaBzBmxg9E0xyNKfY6dgZImhleM~aLzkT0b0G150yxkoZzjDJlkb7ziLIG2iZU9BJ46nnOEQzrtKA__',
     },
 ];
 
 const Posts = ({ avatarUri, name, isSelfProfile }) => {
-    // POSTS STATES
+    console.log(isSelfProfile);
     const [posts, setPosts] = useState(initialPosts);
     const [editId, setEditId] = useState(null);
-    const [liked, setLiked] = useState(false);
     const [editContent, setEditContent] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedPostId, setSelectedPostId] = useState(null);
+    const [newPostModalVisible, setNewPostModalVisible] = useState(false);
+
 
     // FUNCTIONS TO HANDLE EDITING POST
     const handleEdit = (id) => {
@@ -70,7 +83,6 @@ const Posts = ({ avatarUri, name, isSelfProfile }) => {
         setModalVisible(false);
     };
 
-    // HANDLE LIKE BUTTON PRESS
     const handleLike = (id) => {
         setPosts(posts.map(post => {
             if (post.id === id) {
@@ -84,6 +96,10 @@ const Posts = ({ avatarUri, name, isSelfProfile }) => {
         }));
     };
 
+    const handleAddPost = (newPost) => {
+        setPosts([newPost, ...posts]);
+    };
+
     // FUNCTIONS TO SHOW MODAL WITH EDIT AND DELETE POST
     const showOptions = (id) => {
         setSelectedPostId(id);
@@ -93,22 +109,17 @@ const Posts = ({ avatarUri, name, isSelfProfile }) => {
     const renderPost = ({ item }) => (
         <View style={styles.postCard}>
             <View style={styles.header}>
-                {/* ARTIST AVATAR IMAGE */}
-                <Image source={{ uri: avatarUri }} style={styles.avatar} />
+                <Image source={{ uri: avatarUri || item.avatar }} style={styles.avatar} />
                 <View style={styles.headerInfo}>
-                    {/* ARTIST USERNAME */}
-                    <Text style={styles.username}>{name}</Text>
-                    {/* ARTIST POST TIME */}
+                    <Text style={styles.username}>{name || item.username}</Text>
                     <Text style={styles.time}>{item.time}</Text>
                 </View>
-                {/* THREE DOTS OPTION FOR EDIT DELETE POST */}
                 {isSelfProfile && (
                     <TouchableOpacity onPress={() => showOptions(item.id)}>
                         <Image source={require('../../assets/images/ArtistProfile/morehorizontal.png')} />
                     </TouchableOpacity>
                 )}
             </View>
-
             {/* POST CONTENT */}
             <View style={styles.contentContainer}>
                 {editId === item.id ? (
@@ -132,10 +143,8 @@ const Posts = ({ avatarUri, name, isSelfProfile }) => {
                 )}
             </View>
 
-            {/* Post image if available */}
             {item.image && <Image source={{ uri: item.image }} style={styles.postImage} />}
 
-            {/* POST ENGAGEMENT */}
             <View style={styles.engagement}>
                 <View style={styles.likesContainer}>
                     {/* LIKE ICONS */}
@@ -156,13 +165,9 @@ const Posts = ({ avatarUri, name, isSelfProfile }) => {
                 </View>
             </View>
 
-            {/* ACTION BUTTONS */}
             <View style={styles.actions}>
-                <TouchableOpacity style={styles.actionButton}>
-                    <FontAwesome name={liked ? 'heart' : 'heart-o'} color={liked ? 'red' : 'white'} size={24} onPress={() => {
-                        setLiked(!liked)
-                        handleLike(item.id)
-                    }} />
+                <TouchableOpacity style={styles.actionButton} onPress={() => handleLike(item.id)}>
+                    <FontAwesome name={item.liked ? 'heart' : 'heart-o'} color={item.liked ? 'red' : Colors.white} size={24} />
                     <Text style={styles.actionText}>Like</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionButton}>
@@ -229,14 +234,27 @@ const Posts = ({ avatarUri, name, isSelfProfile }) => {
     );
 
     return (
-        // DISPLAY ALL THE POSTS
-        <FlatList
-            data={posts}
-            renderItem={renderPost}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={styles.container}
-            scrollEnabled={false}
-        />
+        <View style={styles.container}>
+            <FlatList
+                data={posts}
+                renderItem={renderPost}
+                keyExtractor={(item) => item.id.toString()}
+                contentContainerStyle={styles.listContent}
+                scrollEnabled={false}
+            />
+            {isSelfProfile && (
+                <TouchableOpacity style={styles.newPostButton} onPress={() => setNewPostModalVisible(true)}>
+                    <FontAwesome6 name="plus" size={36} color={'white'} />
+                </TouchableOpacity>
+            )}
+            <NewPostModal
+                visible={newPostModalVisible}
+                onClose={() => setNewPostModalVisible(false)}
+                onAddPost={handleAddPost}
+                avatarUri={avatarUri}
+                username={name}
+            />
+        </View>
     );
 };
 
@@ -244,25 +262,29 @@ export default Posts;
 
 const styles = StyleSheet.create({
     container: {
+        flex: 1,
         backgroundColor: '#121212',
-        paddingBottom: 20,
+    },
+    listContent: {
+        paddingBottom: 80,
     },
     postCard: {
         backgroundColor: '#1C1C1C',
         padding: 16,
-        margin: 12,
         borderRadius: 10,
+        margin: 12,
         marginTop: 28,
         marginBottom: 8,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
+        marginBottom: 10,
     },
     avatar: {
-        width: 45,
-        height: 45,
-        borderRadius: 35,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
     },
     headerInfo: {
         flex: 1,
@@ -276,7 +298,7 @@ const styles = StyleSheet.create({
     time: {
         color: Colors.white,
         fontSize: 12,
-        fontWeight: '400',
+        opacity: 0.9
     },
     contentContainer: {
         marginTop: 19,
@@ -285,21 +307,23 @@ const styles = StyleSheet.create({
         color: Colors.white,
         fontSize: 16,
         fontWeight: '400',
+        marginBottom: 12,
     },
     textarea: {
         backgroundColor: '#333',
         color: Colors.white,
         padding: 10,
         borderRadius: 5,
-        height: 100, // Makes the input more like a textarea
-        textAlignVertical: 'top', // Ensures the text starts at the top
+        height: 100,
+        textAlignVertical: 'top',
     },
     saveButton: {
-        backgroundColor: Colors.primary,
-        padding: 10,
+        backgroundColor: Colors.themeColor,
+        padding: 16,
         borderRadius: 10,
         marginTop: 10,
         alignItems: 'center',
+        marginBottom: 24,
     },
     saveButtonText: {
         color: Colors.white,
@@ -310,7 +334,7 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 200,
         borderRadius: 10,
-        marginTop: 20,
+        marginBottom: 10,
     },
     engagement: {
         flexDirection: 'row',
@@ -318,12 +342,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: 10,
     },
-    likesContainer: {
+    commentsAndShareContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
     },
-    commentsAndShareContainer: {
+    likesContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
@@ -336,18 +360,17 @@ const styles = StyleSheet.create({
     comments: {
         color: Colors.white,
         fontSize: 14,
-        fontWeight: '700',
+        opacity: 0.9
     },
     shares: {
         color: Colors.white,
         fontSize: 14,
-        fontWeight: '700',
+        opacity: 0.9
     },
     actions: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 15,
-        marginHorizontal: 24,
+        justifyContent: 'space-around',
+        paddingTop: 10,
     },
     actionButton: {
         flexDirection: 'row',
@@ -358,6 +381,17 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '700',
         marginLeft: 5,
+    },
+    newPostButton: {
+        position: 'absolute',
+        bottom: 10,
+        right: 20,
+        width: 64,
+        height: 64,
+        borderRadius: 40,
+        backgroundColor: Colors.themeColor,
+        alignItems: 'center',
+        justifyContent: 'center'
     },
     dropdownOverlay: {
         flex: 1,

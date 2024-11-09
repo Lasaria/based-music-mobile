@@ -12,9 +12,9 @@ const events = [
         time: 'Fri, 7 PM',
         attendees: 447,
         attendeesCover: [
-            'https://s3-alpha-sig.figma.com/img/9253/cfb9/9b8a861f94614d0a8958ffb8d1ad5f1d?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=Hn-tAYFGasCFji6~Qm1uNx8-RKfLYvGsLqMIlFX00PwmQ-bsuwHh3llCP8CXNRpDV0OB4wz6u7oyQbxNrmRxBJSiw31WdjftwG0aBD-OFhXVynmAz1M2AIMm4Qc~jkDFBp~nf6jpemqC2TmjLjDRkVwDQk37CVGVUnFVgG4PSukeRnUQxzllix-0W4t1TQF8P1GAVAOZbaatKRMzmDkVURCeRON3nDYaOnnV6FL1t6liRv7m5hla~vlRkCLrXt3BUv3XhbCK8u40XcHBbP7qDCXxYdHCsZEEiKS3UnkbOUIc6sAWZimNVPnG1GmJawyt4u6cE3F~wSccv9PJ54KFBg__',
-            'https://s3-alpha-sig.figma.com/img/c55d/ef94/e44e69d5bb8503477a7eca59e753bffa?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=Zrf2MphOlt-gSL8BMLE1RhYhV3CEnMBPtNLXW7n0Ov4tLpLA3KLvAqwxuHPWn6xI-1H6P-RLOZ3yPtP5QqNA6lA~3R13s7lfZCWH4vSVvD5q3VSjqBEkQOBzqzThHZgrX4LtpNO2HF82FKTstUfTSmnBVlQ09nhKWHRjQieU5Kf7NNkOddpYkfWJ80RsQBlXtUuegv7qhNBjnpJwzH~4Och94q62C8GgrPYdVIrRKhAHQXdCfh-hV03ft1wQmQ0R5urn0Yhlkx3JU2edFjsqvG3g-27CKYpsxm0l0XoAK~dUh3rgNnpHwrwnvedsv3uErNWr5TtaE3Cwof9UDSpqGg__',
-            'https://s3-alpha-sig.figma.com/img/8b25/f292/89e88889188d07ef9624cbc063aa7fc2?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=jxT-YJprPvTPcbu8rrqhbhxyRrVC38wZjIo~UhSecS3V1Y9pK913aklbJOqr3Q9jXGOVU3EV3i6UivhVgeoWpDeYpLvpEIXAgzACTNP7evXY7pIsAfCCrrOnVLbIhsk7koglXO~4fMprBQrKOEZZi8AzgymCVBP~1lmUW768Z679PgM8mmUj2EaeM7gGx9iXebALbrLER6~EE8KDRGNMzDpJKg~WoCjMoUqJ4zALVkDpJRz6Y537XZm2HueAeqJKlrEIWH4X5qWuma1Oac98B25iIT3GbUje~bKYC626mHnq61ETy2kv-~er33nGECDILlCaHDxSaIyvMZZCU9jMuA__',
+            'https://s3-alpha-sig.figma.com/img/9253/cfb9/9b8a861f94614d0a8958ffb8d1ad5f1d?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=lqzCHqYxC4KIv6YpayGX2ktMb3VtVV50lONX3kRjfpf9-w~9Jybjtgf33s3-5V0Kxf1frsXwK52~F0XrLxWXuUx-Rz0kDxjBy8BgdvTLifTJqW~Frxo1ctToQ-XefQjOdGoLCXH-8My97X~1QC9enima5A29KQxZDziGnh2N3CQfbbTEItvFNBzQ~9BZvxyBsXVqROH7xq0s1bCPpB004JOqXsWFdoUsJ-YmYdS3nsSzq87tPFocM2c9sM2MoweRFBpCGrRGJgPV0IMpdtMWvNAb0xT0EJw~Z3RMOjO8RBXJbk1BplUZI4~2YIsolmTJN0JrhG0Ku3Va5pT6OXpPIg__',
+            'https://s3-alpha-sig.figma.com/img/c55d/ef94/e44e69d5bb8503477a7eca59e753bffa?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=I2fCD1dVPDI1k0k1QlLtfIITI7sfkqxVfbBwLf5tRgMDzgkquF2QJ9mijEsclFrsrl6V5fsn0aPatkzGLEJJeFcBrVUSd12irDVBYWlV6HbMeuCB5gmlLWvg188wdRHwIkS7lPgC73ZiPHMrPCKseEoM1jWFG95AaJwELGg2I~9JCOpNOUKwIHVj0jOptJyUmkESPWG-9bv76-0pP0vDdZs-qMQ7KI9HYskgguDJl9uS3M7x3xx9jQC5J1VPOPj3yO1-WM8TTzXDRLtP6oOR2jKaFUPsRYYrClPXHHZl0bIiUW3YRAnIr-ST~rJ2GYFsDiWzgt0no-3reVwswwziag__',
+            'https://s3-alpha-sig.figma.com/img/8b25/f292/89e88889188d07ef9624cbc063aa7fc2?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=LBjyKBJsWjzd63vpMvGhRr6ELqZVgErnPwNdY0cLc8UC7QxOJ9fDPEDdks5v5DclJ~L5DO8G6lAv42EjEjmn7D1ZhrFTOQPAmg62C2Jnxy5GdCTfekEqEEB2NC2NIuD-n2HTsMWl7ZZJiQxoYl75wy4jEOK7mBLaAd9Mm86NunIvaotMFJ66-NIwSsAe3Fmd1A-sUwteGJ8NYatDmxZeo66FiIU-Xk151QcHmq9vyps1hzIqfiUHR7dYhHmXsPIEEXU3wCmlYYBLqBp7wh02OtMvHD0GGo9283ntv9V4vkg04ioVBcJXxb1yH8rRvdy23UXmo3oWqA2WewOWqQTTCw__',
         ],
     },
     {
@@ -25,9 +25,9 @@ const events = [
         time: 'Sat, 7 PM',
         attendees: 447,
         attendeesCover: [
-            'https://s3-alpha-sig.figma.com/img/9253/cfb9/9b8a861f94614d0a8958ffb8d1ad5f1d?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=Hn-tAYFGasCFji6~Qm1uNx8-RKfLYvGsLqMIlFX00PwmQ-bsuwHh3llCP8CXNRpDV0OB4wz6u7oyQbxNrmRxBJSiw31WdjftwG0aBD-OFhXVynmAz1M2AIMm4Qc~jkDFBp~nf6jpemqC2TmjLjDRkVwDQk37CVGVUnFVgG4PSukeRnUQxzllix-0W4t1TQF8P1GAVAOZbaatKRMzmDkVURCeRON3nDYaOnnV6FL1t6liRv7m5hla~vlRkCLrXt3BUv3XhbCK8u40XcHBbP7qDCXxYdHCsZEEiKS3UnkbOUIc6sAWZimNVPnG1GmJawyt4u6cE3F~wSccv9PJ54KFBg__',
-            'https://s3-alpha-sig.figma.com/img/c55d/ef94/e44e69d5bb8503477a7eca59e753bffa?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=Zrf2MphOlt-gSL8BMLE1RhYhV3CEnMBPtNLXW7n0Ov4tLpLA3KLvAqwxuHPWn6xI-1H6P-RLOZ3yPtP5QqNA6lA~3R13s7lfZCWH4vSVvD5q3VSjqBEkQOBzqzThHZgrX4LtpNO2HF82FKTstUfTSmnBVlQ09nhKWHRjQieU5Kf7NNkOddpYkfWJ80RsQBlXtUuegv7qhNBjnpJwzH~4Och94q62C8GgrPYdVIrRKhAHQXdCfh-hV03ft1wQmQ0R5urn0Yhlkx3JU2edFjsqvG3g-27CKYpsxm0l0XoAK~dUh3rgNnpHwrwnvedsv3uErNWr5TtaE3Cwof9UDSpqGg__',
-            'https://s3-alpha-sig.figma.com/img/8b25/f292/89e88889188d07ef9624cbc063aa7fc2?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=jxT-YJprPvTPcbu8rrqhbhxyRrVC38wZjIo~UhSecS3V1Y9pK913aklbJOqr3Q9jXGOVU3EV3i6UivhVgeoWpDeYpLvpEIXAgzACTNP7evXY7pIsAfCCrrOnVLbIhsk7koglXO~4fMprBQrKOEZZi8AzgymCVBP~1lmUW768Z679PgM8mmUj2EaeM7gGx9iXebALbrLER6~EE8KDRGNMzDpJKg~WoCjMoUqJ4zALVkDpJRz6Y537XZm2HueAeqJKlrEIWH4X5qWuma1Oac98B25iIT3GbUje~bKYC626mHnq61ETy2kv-~er33nGECDILlCaHDxSaIyvMZZCU9jMuA__',
+            'https://s3-alpha-sig.figma.com/img/9253/cfb9/9b8a861f94614d0a8958ffb8d1ad5f1d?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=lqzCHqYxC4KIv6YpayGX2ktMb3VtVV50lONX3kRjfpf9-w~9Jybjtgf33s3-5V0Kxf1frsXwK52~F0XrLxWXuUx-Rz0kDxjBy8BgdvTLifTJqW~Frxo1ctToQ-XefQjOdGoLCXH-8My97X~1QC9enima5A29KQxZDziGnh2N3CQfbbTEItvFNBzQ~9BZvxyBsXVqROH7xq0s1bCPpB004JOqXsWFdoUsJ-YmYdS3nsSzq87tPFocM2c9sM2MoweRFBpCGrRGJgPV0IMpdtMWvNAb0xT0EJw~Z3RMOjO8RBXJbk1BplUZI4~2YIsolmTJN0JrhG0Ku3Va5pT6OXpPIg__',
+            'https://s3-alpha-sig.figma.com/img/c55d/ef94/e44e69d5bb8503477a7eca59e753bffa?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=I2fCD1dVPDI1k0k1QlLtfIITI7sfkqxVfbBwLf5tRgMDzgkquF2QJ9mijEsclFrsrl6V5fsn0aPatkzGLEJJeFcBrVUSd12irDVBYWlV6HbMeuCB5gmlLWvg188wdRHwIkS7lPgC73ZiPHMrPCKseEoM1jWFG95AaJwELGg2I~9JCOpNOUKwIHVj0jOptJyUmkESPWG-9bv76-0pP0vDdZs-qMQ7KI9HYskgguDJl9uS3M7x3xx9jQC5J1VPOPj3yO1-WM8TTzXDRLtP6oOR2jKaFUPsRYYrClPXHHZl0bIiUW3YRAnIr-ST~rJ2GYFsDiWzgt0no-3reVwswwziag__',
+            'https://s3-alpha-sig.figma.com/img/8b25/f292/89e88889188d07ef9624cbc063aa7fc2?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=LBjyKBJsWjzd63vpMvGhRr6ELqZVgErnPwNdY0cLc8UC7QxOJ9fDPEDdks5v5DclJ~L5DO8G6lAv42EjEjmn7D1ZhrFTOQPAmg62C2Jnxy5GdCTfekEqEEB2NC2NIuD-n2HTsMWl7ZZJiQxoYl75wy4jEOK7mBLaAd9Mm86NunIvaotMFJ66-NIwSsAe3Fmd1A-sUwteGJ8NYatDmxZeo66FiIU-Xk151QcHmq9vyps1hzIqfiUHR7dYhHmXsPIEEXU3wCmlYYBLqBp7wh02OtMvHD0GGo9283ntv9V4vkg04ioVBcJXxb1yH8rRvdy23UXmo3oWqA2WewOWqQTTCw__',
         ],
     },
     {
@@ -38,9 +38,9 @@ const events = [
         time: 'Sun, 7 PM',
         attendees: 447,
         attendeesCover: [
-            'https://s3-alpha-sig.figma.com/img/9253/cfb9/9b8a861f94614d0a8958ffb8d1ad5f1d?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=Hn-tAYFGasCFji6~Qm1uNx8-RKfLYvGsLqMIlFX00PwmQ-bsuwHh3llCP8CXNRpDV0OB4wz6u7oyQbxNrmRxBJSiw31WdjftwG0aBD-OFhXVynmAz1M2AIMm4Qc~jkDFBp~nf6jpemqC2TmjLjDRkVwDQk37CVGVUnFVgG4PSukeRnUQxzllix-0W4t1TQF8P1GAVAOZbaatKRMzmDkVURCeRON3nDYaOnnV6FL1t6liRv7m5hla~vlRkCLrXt3BUv3XhbCK8u40XcHBbP7qDCXxYdHCsZEEiKS3UnkbOUIc6sAWZimNVPnG1GmJawyt4u6cE3F~wSccv9PJ54KFBg__',
-            'https://s3-alpha-sig.figma.com/img/c55d/ef94/e44e69d5bb8503477a7eca59e753bffa?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=Zrf2MphOlt-gSL8BMLE1RhYhV3CEnMBPtNLXW7n0Ov4tLpLA3KLvAqwxuHPWn6xI-1H6P-RLOZ3yPtP5QqNA6lA~3R13s7lfZCWH4vSVvD5q3VSjqBEkQOBzqzThHZgrX4LtpNO2HF82FKTstUfTSmnBVlQ09nhKWHRjQieU5Kf7NNkOddpYkfWJ80RsQBlXtUuegv7qhNBjnpJwzH~4Och94q62C8GgrPYdVIrRKhAHQXdCfh-hV03ft1wQmQ0R5urn0Yhlkx3JU2edFjsqvG3g-27CKYpsxm0l0XoAK~dUh3rgNnpHwrwnvedsv3uErNWr5TtaE3Cwof9UDSpqGg__',
-            'https://s3-alpha-sig.figma.com/img/8b25/f292/89e88889188d07ef9624cbc063aa7fc2?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=jxT-YJprPvTPcbu8rrqhbhxyRrVC38wZjIo~UhSecS3V1Y9pK913aklbJOqr3Q9jXGOVU3EV3i6UivhVgeoWpDeYpLvpEIXAgzACTNP7evXY7pIsAfCCrrOnVLbIhsk7koglXO~4fMprBQrKOEZZi8AzgymCVBP~1lmUW768Z679PgM8mmUj2EaeM7gGx9iXebALbrLER6~EE8KDRGNMzDpJKg~WoCjMoUqJ4zALVkDpJRz6Y537XZm2HueAeqJKlrEIWH4X5qWuma1Oac98B25iIT3GbUje~bKYC626mHnq61ETy2kv-~er33nGECDILlCaHDxSaIyvMZZCU9jMuA__',
+            'https://s3-alpha-sig.figma.com/img/9253/cfb9/9b8a861f94614d0a8958ffb8d1ad5f1d?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=lqzCHqYxC4KIv6YpayGX2ktMb3VtVV50lONX3kRjfpf9-w~9Jybjtgf33s3-5V0Kxf1frsXwK52~F0XrLxWXuUx-Rz0kDxjBy8BgdvTLifTJqW~Frxo1ctToQ-XefQjOdGoLCXH-8My97X~1QC9enima5A29KQxZDziGnh2N3CQfbbTEItvFNBzQ~9BZvxyBsXVqROH7xq0s1bCPpB004JOqXsWFdoUsJ-YmYdS3nsSzq87tPFocM2c9sM2MoweRFBpCGrRGJgPV0IMpdtMWvNAb0xT0EJw~Z3RMOjO8RBXJbk1BplUZI4~2YIsolmTJN0JrhG0Ku3Va5pT6OXpPIg__',
+            'https://s3-alpha-sig.figma.com/img/c55d/ef94/e44e69d5bb8503477a7eca59e753bffa?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=I2fCD1dVPDI1k0k1QlLtfIITI7sfkqxVfbBwLf5tRgMDzgkquF2QJ9mijEsclFrsrl6V5fsn0aPatkzGLEJJeFcBrVUSd12irDVBYWlV6HbMeuCB5gmlLWvg188wdRHwIkS7lPgC73ZiPHMrPCKseEoM1jWFG95AaJwELGg2I~9JCOpNOUKwIHVj0jOptJyUmkESPWG-9bv76-0pP0vDdZs-qMQ7KI9HYskgguDJl9uS3M7x3xx9jQC5J1VPOPj3yO1-WM8TTzXDRLtP6oOR2jKaFUPsRYYrClPXHHZl0bIiUW3YRAnIr-ST~rJ2GYFsDiWzgt0no-3reVwswwziag__',
+            'https://s3-alpha-sig.figma.com/img/8b25/f292/89e88889188d07ef9624cbc063aa7fc2?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=LBjyKBJsWjzd63vpMvGhRr6ELqZVgErnPwNdY0cLc8UC7QxOJ9fDPEDdks5v5DclJ~L5DO8G6lAv42EjEjmn7D1ZhrFTOQPAmg62C2Jnxy5GdCTfekEqEEB2NC2NIuD-n2HTsMWl7ZZJiQxoYl75wy4jEOK7mBLaAd9Mm86NunIvaotMFJ66-NIwSsAe3Fmd1A-sUwteGJ8NYatDmxZeo66FiIU-Xk151QcHmq9vyps1hzIqfiUHR7dYhHmXsPIEEXU3wCmlYYBLqBp7wh02OtMvHD0GGo9283ntv9V4vkg04ioVBcJXxb1yH8rRvdy23UXmo3oWqA2WewOWqQTTCw__',
         ],
     },
     {
@@ -51,9 +51,9 @@ const events = [
         time: 'Mon, 7 PM',
         attendees: 447,
         attendeesCover: [
-            'https://s3-alpha-sig.figma.com/img/9253/cfb9/9b8a861f94614d0a8958ffb8d1ad5f1d?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=Hn-tAYFGasCFji6~Qm1uNx8-RKfLYvGsLqMIlFX00PwmQ-bsuwHh3llCP8CXNRpDV0OB4wz6u7oyQbxNrmRxBJSiw31WdjftwG0aBD-OFhXVynmAz1M2AIMm4Qc~jkDFBp~nf6jpemqC2TmjLjDRkVwDQk37CVGVUnFVgG4PSukeRnUQxzllix-0W4t1TQF8P1GAVAOZbaatKRMzmDkVURCeRON3nDYaOnnV6FL1t6liRv7m5hla~vlRkCLrXt3BUv3XhbCK8u40XcHBbP7qDCXxYdHCsZEEiKS3UnkbOUIc6sAWZimNVPnG1GmJawyt4u6cE3F~wSccv9PJ54KFBg__',
-            'https://s3-alpha-sig.figma.com/img/c55d/ef94/e44e69d5bb8503477a7eca59e753bffa?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=Zrf2MphOlt-gSL8BMLE1RhYhV3CEnMBPtNLXW7n0Ov4tLpLA3KLvAqwxuHPWn6xI-1H6P-RLOZ3yPtP5QqNA6lA~3R13s7lfZCWH4vSVvD5q3VSjqBEkQOBzqzThHZgrX4LtpNO2HF82FKTstUfTSmnBVlQ09nhKWHRjQieU5Kf7NNkOddpYkfWJ80RsQBlXtUuegv7qhNBjnpJwzH~4Och94q62C8GgrPYdVIrRKhAHQXdCfh-hV03ft1wQmQ0R5urn0Yhlkx3JU2edFjsqvG3g-27CKYpsxm0l0XoAK~dUh3rgNnpHwrwnvedsv3uErNWr5TtaE3Cwof9UDSpqGg__',
-            'https://s3-alpha-sig.figma.com/img/8b25/f292/89e88889188d07ef9624cbc063aa7fc2?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=jxT-YJprPvTPcbu8rrqhbhxyRrVC38wZjIo~UhSecS3V1Y9pK913aklbJOqr3Q9jXGOVU3EV3i6UivhVgeoWpDeYpLvpEIXAgzACTNP7evXY7pIsAfCCrrOnVLbIhsk7koglXO~4fMprBQrKOEZZi8AzgymCVBP~1lmUW768Z679PgM8mmUj2EaeM7gGx9iXebALbrLER6~EE8KDRGNMzDpJKg~WoCjMoUqJ4zALVkDpJRz6Y537XZm2HueAeqJKlrEIWH4X5qWuma1Oac98B25iIT3GbUje~bKYC626mHnq61ETy2kv-~er33nGECDILlCaHDxSaIyvMZZCU9jMuA__',
+            'https://s3-alpha-sig.figma.com/img/9253/cfb9/9b8a861f94614d0a8958ffb8d1ad5f1d?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=lqzCHqYxC4KIv6YpayGX2ktMb3VtVV50lONX3kRjfpf9-w~9Jybjtgf33s3-5V0Kxf1frsXwK52~F0XrLxWXuUx-Rz0kDxjBy8BgdvTLifTJqW~Frxo1ctToQ-XefQjOdGoLCXH-8My97X~1QC9enima5A29KQxZDziGnh2N3CQfbbTEItvFNBzQ~9BZvxyBsXVqROH7xq0s1bCPpB004JOqXsWFdoUsJ-YmYdS3nsSzq87tPFocM2c9sM2MoweRFBpCGrRGJgPV0IMpdtMWvNAb0xT0EJw~Z3RMOjO8RBXJbk1BplUZI4~2YIsolmTJN0JrhG0Ku3Va5pT6OXpPIg__',
+            'https://s3-alpha-sig.figma.com/img/c55d/ef94/e44e69d5bb8503477a7eca59e753bffa?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=I2fCD1dVPDI1k0k1QlLtfIITI7sfkqxVfbBwLf5tRgMDzgkquF2QJ9mijEsclFrsrl6V5fsn0aPatkzGLEJJeFcBrVUSd12irDVBYWlV6HbMeuCB5gmlLWvg188wdRHwIkS7lPgC73ZiPHMrPCKseEoM1jWFG95AaJwELGg2I~9JCOpNOUKwIHVj0jOptJyUmkESPWG-9bv76-0pP0vDdZs-qMQ7KI9HYskgguDJl9uS3M7x3xx9jQC5J1VPOPj3yO1-WM8TTzXDRLtP6oOR2jKaFUPsRYYrClPXHHZl0bIiUW3YRAnIr-ST~rJ2GYFsDiWzgt0no-3reVwswwziag__',
+            'https://s3-alpha-sig.figma.com/img/8b25/f292/89e88889188d07ef9624cbc063aa7fc2?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=LBjyKBJsWjzd63vpMvGhRr6ELqZVgErnPwNdY0cLc8UC7QxOJ9fDPEDdks5v5DclJ~L5DO8G6lAv42EjEjmn7D1ZhrFTOQPAmg62C2Jnxy5GdCTfekEqEEB2NC2NIuD-n2HTsMWl7ZZJiQxoYl75wy4jEOK7mBLaAd9Mm86NunIvaotMFJ66-NIwSsAe3Fmd1A-sUwteGJ8NYatDmxZeo66FiIU-Xk151QcHmq9vyps1hzIqfiUHR7dYhHmXsPIEEXU3wCmlYYBLqBp7wh02OtMvHD0GGo9283ntv9V4vkg04ioVBcJXxb1yH8rRvdy23UXmo3oWqA2WewOWqQTTCw__',
         ],
     },
 ];
@@ -75,7 +75,7 @@ const EventCard = ({ event }) => (
         <View style={styles.eventInfo}>
             <Text style={styles.city}>{formatText(event.city, 24)}</Text>
             <Text style={styles.venue}>
-                {formatText(event.time, 18)} • {formatText(event.venue,18)}
+                {formatText(event.time, 18)} • {formatText(event.venue, 18)}
             </Text>
             <View style={styles.attendeesContainer}>
                 {/* STACKED ATTENDEES PROFILE IMAGES */}
@@ -107,12 +107,14 @@ const EventCard = ({ event }) => (
     </TouchableOpacity >
 );
 
-const Events = () => {
+const Events = ({ isSelfProfile }) => {
     return (
         <>
-            <TouchableOpacity style={styles.manageEvents}>
-                <Text style={styles.manageEventsText}>Manage Events</Text>
-            </TouchableOpacity>
+            {isSelfProfile && (
+                <TouchableOpacity style={styles.manageEvents}>
+                    <Text style={styles.manageEventsText}>Manage Events</Text>
+                </TouchableOpacity>
+            )}
             <FlatList
                 data={events}
                 keyExtractor={(item) => item.id.toString()}

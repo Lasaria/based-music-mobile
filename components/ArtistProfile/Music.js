@@ -462,11 +462,18 @@ const Music = ({ name, isSelfProfile }) => {
     };
 
     // HANDLE FUNCTION FOR CANCEL SEARCH BUTTON
-    const handleCancelSearch = (type) => {
-        setSelectedItems([]); // Clear selected items
-        setShowAll((prev) => ({ ...prev, [type]: false })); // Exit "Show All" mode
-        setIsSelecting({ tracks: false, albums: false, beats: false, sounds: false, presets: false }); // Exit selection mode
+    const handleCancelSearch = () => {
+        setSearchText('');
+        setShowAll({
+            tracks: false,
+            albums: false,
+            beats: false,
+            sounds: false,
+            presets: false
+        });
     };
+
+    const isAnyShowAllActive = Object.values(showAll).some(value => value);
 
     // SHOW DELETE MODAL UI
     const renderDeleteModal = () => (
@@ -541,28 +548,7 @@ const Music = ({ name, isSelfProfile }) => {
 
         return (
             <View style={styles.section}>
-                {showAll[type] && (
-                    <View style={[styles.searchContainer]}>
-                        <View style={styles.searchBox}>
-                            <Feather name="search" color="#FFFFFF" size={22} style={{ paddingHorizontal: 10 }} />
-                            <TextInput
-                                placeholder={currentPlaceholder}
-                                placeholderTextColor="#CECECE"
-                                style={styles.searchInput}
-                                value={searchText}
-                                onChangeText={setSearchText}
-                            />
-                            {searchText.length > 0 && (
-                                <TouchableOpacity onPress={() => setSearchText('')} style={{ paddingHorizontal: 10 }}>
-                                    <FontAwesome6 name="times-circle" size={16} color="#FFFFFF" />
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                        <TouchableOpacity onPress={() => handleCancelSearch(type)}>
-                            <Text style={styles.cancelText}>Cancel</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
+
                 <View style={styles.header}>
                     <Text style={styles.sectionTitle}>{title}</Text>
                     <View style={styles.actionButtons}>
@@ -800,6 +786,28 @@ const Music = ({ name, isSelfProfile }) => {
     return (
         <ScrollView
             style={styles.container}>
+            {isAnyShowAllActive && (
+                <View style={styles.searchContainer}>
+                    <View style={styles.searchBox}>
+                        <Feather name="search" color="#FFFFFF" size={22} style={{ paddingHorizontal: 10 }} />
+                        <TextInput
+                            placeholder={currentPlaceholder}
+                            placeholderTextColor="#CECECE"
+                            style={styles.searchInput}
+                            value={searchText}
+                            onChangeText={setSearchText}
+                        />
+                        {searchText.length > 0 && (
+                            <TouchableOpacity onPress={() => setSearchText('')} style={{ paddingHorizontal: 10 }}>
+                                <FontAwesome6 name="times-circle" size={16} color="#FFFFFF" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                    <TouchableOpacity onPress={handleCancelSearch}>
+                        <Text style={styles.cancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
 
             <Animated.View style={{ opacity }}>
                 {renderItemsSection('tracks', tracks, 'Tracks')}

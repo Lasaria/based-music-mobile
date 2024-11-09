@@ -1,5 +1,5 @@
-import { ActivityIndicator, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, Vibration, View } from 'react-native';
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Image, Modal, StyleSheet, Text, TouchableOpacity, Vibration, View } from 'react-native';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { router, useNavigation } from 'expo-router';
 import { Colors } from '../../../constants/Color';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -90,12 +90,10 @@ const ArtistProfileScreen = () => {
         // Determine if the logged-in user is viewing their own profile
         const isUserSelfProfile = response.id === userId;
         setIsSelfProfile(isUserSelfProfile);
-        console.log("Is user viewing their own profile?", isUserSelfProfile); // Log the result for verification
+        console.log("Is user viewing their own profile?", isUserSelfProfile); 
 
-        // Update variable names to match new schema
         const profileImageUrl = response.profile_image_url;
 
-        // Use default avatar if the profile image is null or invalid
         const validProfileImageUrl = (profileImageUrl && profileImageUrl !== 'Unknown')
           ? profileImageUrl
           : DEFAULT_PROFILE_IMAGE;
@@ -104,7 +102,7 @@ const ArtistProfileScreen = () => {
           ? response.cover_image_url
           : DEFAULT_COVER_IMAGE;
 
-        setAvatarUri(validProfileImageUrl); // Ensure profile_image_url is valid or use the default avatar
+        setAvatarUri(validProfileImageUrl); 
         setCoverImageUri(coverImageUrl);
 
         // Set other fields using new schema
@@ -713,10 +711,10 @@ const ArtistProfileScreen = () => {
                     {selectedTab === 'music' && <Music name={name} isSelfProfile={isSelfProfile} />}
                   </View>
                   <View>
-                    {selectedTab === 'events' && <Events />}
+                    {selectedTab === 'events' && <Events isSelfProfile={isSelfProfile} />}
                   </View>
                   <View>
-                    {selectedTab === 'posts' && <Posts avatarUri={avatarUri} name={name} />}
+                    {selectedTab === 'posts' && <Posts avatarUri={avatarUri} name={name} isSelfProfile={isSelfProfile} />}
                   </View>
                   <View>
                     {selectedTab === 'dashboard' && <Dashboard />}
