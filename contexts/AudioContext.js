@@ -14,9 +14,44 @@ const debug = (message, data = null) => {
 
 // Constants for optimized streaming
 const BASE_URL = "http://localhost:3000";
-const INITIAL_CHUNK_SIZE = 65536; // 64KB initial load
+const CHUNK_SIZE = 1024 * 1024; // 1MB chunks for efficient streaming
 const CACHE_PREFIX = "audio_metadata_";
 const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
+const STATUS_UPDATE_INTERVAL = 500; // 500ms
+const LOADING_TIMEOUT = 15000; // 15 seconds
+const BUFFER_CONFIG = {
+  initialChunkSize: CHUNK_SIZE,
+  preloadSize: CHUNK_SIZE * 2, // Pre-buffer 2MB
+};
+
+// Audio session configuration
+const AUDIO_MODE_CONFIG = {
+  allowsRecordingIOS: false,
+  playsInSilentModeIOS: true,
+  staysActiveInBackground: true,
+  shouldDuckAndroid: true,
+  playThroughEarpieceAndroid: false,
+};
+
+// Create standard configurations
+const createAudioConfig = (trackId) => ({
+  uri: `${BASE_URL}/tracks/stream/${trackId}`,
+  headers: {
+    Range: `bytes=0-${BUFFER_CONFIG.initialChunkSize}`,
+  },
+  progressUpdateIntervalMillis: STATUS_UPDATE_INTERVAL,
+  androidImplementation: "MediaPlayer",
+});
+
+const createSoundConfig = (volume = 1.0) => ({
+  shouldPlay: false,
+  progressUpdateIntervalMillis: STATUS_UPDATE_INTERVAL,
+  positionMillis: 0,
+  volume,
+  rate: 1.0,
+  shouldCorrectPitch: true,
+  preloadBufferSizeInBytes: BUFFER_CONFIG.preloadSize,
+});
 
 // Metadata cache implementation
 class MetadataCache {
@@ -378,41 +413,26 @@ export const AudioProvider = ({ children }) => {
         soundRef.current = null;
       }
 
-      // Construct streaming URL with initial range request
-      debug("[loadAudio()] Starting new sound creation");
-      const streamUrl = `${BASE_URL}/tracks/stream/${track.track_id}`;
-      debug("Using stream URL:", streamUrl);
-
       // Configure audio session
       debug("[loadAudio()] Configuring audio session");
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
-      });
+      await Audio.setAudioModeAsync(AUDIO_MODE_CONFIG);
 
-      // Add range request for initial chunk
-      const initialHeaders = {
-        Range: `bytes=0-${65536}`, // Request first 64KB
-      };
+      // Create configurations
+      debug("[loadAudio()] Creating audio and sound configurations");
+      const audioConfig = createAudioConfig(track.track_id);
+      const soundConfig = createSoundConfig(volume);
+
+      debug("Using stream URL:", audioConfig.uri);
+
+      // // Add range request for initial chunk
+      // const initialHeaders = {
+      //   Range: `bytes=0-${65536}`, // Request first 64KB
+      // };
 
       debug("[loadAudio] Creating sound object with range request");
       const { sound, status } = await Audio.Sound.createAsync(
-        {
-          uri: streamUrl,
-          headers: initialHeaders,
-          progressUpdateIntervalMillis: 500,
-        },
-        {
-          shouldPlay: false,
-          progressUpdateIntervalMillis: 500,
-          positionMillis: 0,
-          volume: volume,
-          rate: 1.0,
-          androidImplementation: "MediaPlayer",
-        },
+        audioConfig,
+        soundConfig,
         (status) => {
           debug("[loadAudio()] Status callback received:", {
             isLoaded: status.isLoaded,
