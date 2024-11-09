@@ -20,11 +20,13 @@ import arrowleftevent from '../../assets/icon/24x24/arrowleftevent.png';
 import uploadImage from '../../assets/icon/24x24/uploadImage.png';
 import calendar from '../../assets/icon/24x24/calendar.png';
 import { router } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 
-const serverURL = 'http://10.3.65.248:3000';
+const serverURL = 'http://10.3.65.245:3000';
 
 const VenueEventsScreen = () => {
   // State for event details
+  const params = useLocalSearchParams();
   const [eventData, setEventData] = useState({
     title: '',
     description: '',
@@ -54,7 +56,29 @@ const VenueEventsScreen = () => {
 
   useEffect(() => {
     loadFonts();
-  }, []);
+    
+    // Check if event data was passed from the EventsHomeScreen
+    if (params.eventData) {
+      try {
+        const parsedEventData = JSON.parse(params.eventData);
+        setEventData({
+          title: parsedEventData.title || '',
+          description: parsedEventData.description || '',
+          date: new Date(parsedEventData.date),
+          start_time: new Date(parsedEventData.start_time),
+          end_time: new Date(parsedEventData.end_time),
+          timezone: parsedEventData.timezone || '',
+          age_limit: parsedEventData.age_limit || '',
+          eventId: parsedEventData.EventID,
+        });
+        if (parsedEventData.event_image_url) {
+          setImageUri(parsedEventData.event_image_url);
+        }
+      } catch (error) {
+        console.error('Error parsing event data:', error);
+      }
+    }
+  }, [params.eventData]);
 
   // Function to handle input changes
   const handleInputChange = (field, value) => {
@@ -118,16 +142,54 @@ const VenueEventsScreen = () => {
         end_time: eventData.end_time.toISOString(),
         timezone: eventData.timezone,
         age_limit: eventData.age_limit,
-        eventImageUrl: null, // Store the S3 URL in DynamoDB
+        event_image_url: null, // Store the S3 URL in DynamoDB
       };
+      let response;
+      let eventIdToUse;
+      if (eventData.eventId) {
+        // Update existing event
+        console.log(eventData.eventId);
+        response = await EventService.updateEvent(eventData.eventId, eventPayload);
+        console.log("Event updated with ID:", eventData.eventId);
+        eventIdToUse = eventData.eventId;
 
+        if (imageUri !== null && !imageUri.includes('amazonaws')) {
+        
+          const formData = [
+            {
+              name: 'eventImage',
+              filename: 'event.jpg',
+              type: 'image/jpeg',
+              data: RNBlobUtil.wrap(decodeURIComponent(imageUri.replace('file://', ''))),
+            },
+          ];
+  
+          // Upload image to S3
+          const imageResponse = await RNBlobUtil.fetch(
+            'PATCH',
+            `${serverURL}/events/${eventData.eventId}/update-event-image`,
+            {
+              'Content-Type': 'multipart/form-data',
+              Authorization: `Bearer ${await tokenManager.getAccessToken()}`,
+            },
+            formData
+          );
+  
+          console.log('Image updated successfully');
+        }
+      } else {
+        // Create a new event
+        response = await EventService.createEvent(eventPayload);
+        console.log("Event created successfully with ID:", response.event.EventID);
+        eventIdToUse = response.event.EventID;
+      
       // Create the event in DynamoDB
-      const response = await EventService.createEvent(eventPayload);
+     /* const response = await EventService.createEvent(eventPayload);
       console.log("Uploaded to dynamo with null image");
       // Extract the EventID
       const eventId = response.event.EventID;
       console.log('Created Event ID:', eventId);
-      // First, upload the image to S3 through your backend
+      // First, upload the image to S3 through your backend*/
       if (imageUri) {
         
           const formData = [
@@ -142,7 +204,7 @@ const VenueEventsScreen = () => {
           // Upload image to S3
           const imageResponse = await RNBlobUtil.fetch(
             'PATCH',
-            `${serverURL}/events/${eventId}/event-image`,
+            `${serverURL}/events/${eventIdToUse}/event-image`,
             {
               'Content-Type': 'multipart/form-data',
               Authorization: `Bearer ${await tokenManager.getAccessToken()}`,
@@ -152,6 +214,7 @@ const VenueEventsScreen = () => {
   
           console.log('Image uploaded successfully');
       }
+    }
 
       alert('Event created successfully!');
       clearForm();
@@ -161,6 +224,10 @@ const VenueEventsScreen = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const cancelImage = () => {
+    setImageUri(null);
   };
 
   const clearForm = () => {
@@ -214,11 +281,19 @@ const VenueEventsScreen = () => {
           </View>
         )}
         
-        {!imageUri && (  // Only show upload button when no image is selected
-    <TouchableOpacity onPress={pickImage} style={styles.cameraButton}>
-      <Image source={uploadImage} style={styles.cameraIcon} />
-    </TouchableOpacity>
-  )}
+         {/* Only show the upload button when no image is selected */}
+      {!imageUri && (
+        <TouchableOpacity onPress={pickImage} style={styles.cameraButton}>
+          <Image source={uploadImage} style={styles.cameraIcon} />
+        </TouchableOpacity>
+      )}
+
+      {/* Cancel button to remove the image */}
+      {imageUri && (
+        <TouchableOpacity onPress={cancelImage} style={styles.cancelButton}>
+          <Text style={styles.cancelButtonText}>Remove Image</Text>
+        </TouchableOpacity>
+      )}
         <Text style={styles.eventSubtext}>Recommended image size: 2160 x 1080px</Text>
         <Text style={styles.eventSubtext}>Maximum file size: 10MB</Text>
         <Text style={styles.eventSubtext}>Support image files: .jPEG, .PNg</Text>
@@ -617,6 +692,20 @@ const styles = StyleSheet.create({
     color: 'red',
     marginTop: -350,
     textAlign: 'center',
+  },
+  cancelButton: {
+    marginTop: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: 'red',
+    borderRadius: 5,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });
 

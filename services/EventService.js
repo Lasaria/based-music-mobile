@@ -5,13 +5,19 @@ const serverURL = 'http://10.3.65.248:3000';
 export const EventService = {
   createEvent: async (eventData) => {
     try {
-      const response = await axiosPost({
-        url: `${serverURL}/events`,
-        body: eventData,
-      });
-
-      console.log('Event created successfully with no image:', response);
-      return response;
+      // Check if eventData has an eventId
+      if (eventData.eventId) {
+        // Update an existing event
+        return await this.updateEvent(eventData.eventId, eventData);
+      } else {
+        // Create a new event
+        const response = await axiosPost({
+          url: `${serverURL}/events`,
+          body: eventData,
+        });
+        console.log('Event created successfully with no image:', response);
+        return response;
+      }
     } catch (err) {
       console.error('Error:', err.message);
       throw new Error(err.message);
@@ -46,15 +52,21 @@ export const EventService = {
 
   updateEvent: async (eventId, updatedEventData) => {
     try {
+      
+      console.log('Using eventId:', eventId); // Debug log
+      console.log('Update payload:', updatedEventData); // Debug log
+      
       const response = await axiosPut({
         url: `${serverURL}/events/${eventId}`,
         body: updatedEventData,
+        
       });
+      
       console.log('Event updated successfully:', response);
       return response;
     } catch (err) {
-      console.error('Error:', err.message);
-      throw new Error(err.message);
+      console.error('API Request Error:', err.response?.data || err.message);
+      throw new Error(err.response?.data?.message || err.message);
     }
   },
 

@@ -31,7 +31,7 @@ const ViewEventsScreen = () => {
       const response = await EventService.getAllEvents();
       const eventsWithSignedUrls = response.events.map(event => ({
         ...event,
-        eventImageUrl: event.eventImageUrl
+        event_image_url: event.event_image_url
       }));
       setEvents(eventsWithSignedUrls || []);
     } catch (error) {
@@ -142,7 +142,7 @@ const ViewEventsScreen = () => {
           <Text style={styles.eventTime}>
             Time: {formatTime(event.start_time)} - {formatTime(event.end_time)}
           </Text>
-          {event.eventImageUrl && (
+          {event.event_image_url && (
             <View style={styles.imageContainer}>
               {imageLoading && (
                 <ActivityIndicator 
@@ -152,7 +152,7 @@ const ViewEventsScreen = () => {
                 />
               )}
               <Image 
-                source={{ uri: event.eventImageUrl }} 
+                source={{ uri: event.event_image_url }} 
                 style={styles.eventImage}
                 resizeMode="cover"
                 onLoadStart={() => setImageLoading(true)}
