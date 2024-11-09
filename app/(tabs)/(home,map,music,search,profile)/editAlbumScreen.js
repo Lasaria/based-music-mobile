@@ -15,6 +15,7 @@ import DraggableFlatList from "react-native-draggable-flatlist";
 import { Ionicons } from "@expo/vector-icons";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { tokenManager } from "../../../utils/tokenManager";
+import { SERVER_URL, AUTHSERVER_URL } from '@env';
 
 const editAlbumScreen = () => {
   const router = useRouter();
@@ -114,7 +115,7 @@ const editAlbumScreen = () => {
    })
   
     try {
-      const response = await fetch("http://10.0.0.235:3000/albums", {
+      const response = await fetch(`${SERVER_URL}/albums`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',

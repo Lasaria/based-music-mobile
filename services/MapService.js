@@ -2,8 +2,9 @@ import * as SecureStore from "expo-secure-store";
 import { router } from "expo-router";
 import { axiosPost, axiosGet } from "../utils/axiosCalls";
 import { tokenManager } from "../utils/tokenManager";
+import { SERVER_URL, AUTHSERVER_URL } from '@env';
 
-const serverURL = "http://localhost:3000";
+const serverURL = SERVER_URL;
 
 
 export const MapService = {

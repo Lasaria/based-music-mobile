@@ -290,7 +290,7 @@ const MapScreen = () => {
       return (
         <React.Fragment key={index}>
           {/* FillLayer for polygons */}
-          <MapboxGL.ShapeSource
+          {/* <MapboxGL.ShapeSource
             id={`polygon-source-${item.boundary_id}`}
             shape={polygons}
             onPress={() => handlePolygonPress(item)} // Capture the polygon press
@@ -304,7 +304,7 @@ const MapScreen = () => {
                     fillOpacity: 0.5,
                 }}
             />
-          </MapboxGL.ShapeSource>
+          </MapboxGL.ShapeSource> */}
 
           {/* LineLayer for outline */}
           <MapboxGL.ShapeSource
@@ -316,7 +316,7 @@ const MapScreen = () => {
               minZoomLevel={item.level == 1 ? 0 : 9}
               maxZoomLevel={item.level == 1 ? 9 : 22}
                 style={{
-                    lineColor: "purple", // Color of the boundary line
+                    lineColor: "#ffe8a3", // Color of the boundary line
                     lineWidth: 3, // Thickness of the boundary line
                 }}
             />

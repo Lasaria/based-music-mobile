@@ -56,7 +56,15 @@ export const UserService = {
             const genreNames = selectedGenres.map(genre => genre.name);
 
             // Logging in here, finally, before setting up profile
-            await AuthService.signIn(email, password)
+            //await AuthService.signIn(email, password)
+
+                // Logging in with AuthService when email starts with "google-"
+                await AuthService.signIn(email, password);
+                console.log('Login successful');
+                // Add any additional logic here, like navigating to the next screen
+
+
+            const sub = await tokenManager.getUserId();
 
             // First API call: Send non-image data
             const profileResponse = await axiosPost({
