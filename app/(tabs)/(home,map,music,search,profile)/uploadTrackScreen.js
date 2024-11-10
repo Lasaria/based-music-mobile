@@ -6,16 +6,19 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  ActivityIndicator,
   Button,
   Modal,
 } from "react-native";
 import React, { use, useState } from "react";
 import { router } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
-import * as ImagePicker from 'expo-image-picker';
+import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { tokenManager } from "../../../utils/tokenManager";
+import { Audio } from "expo-av";
 import { axiosPost } from "../../../utils/axiosCalls";
+import { SERVER_URL, AUTHSERVER_URL } from '@env';
 
 const uploadTrackScreen = () => {
   const [title, setTitile] = useState("");
@@ -44,8 +47,7 @@ const uploadTrackScreen = () => {
   const [coverType, setCoverType] = useState();
   const [modalVisible, setModalVisible] = useState(false);
   const [newTrackName, setNewTrackName] = useState(name);
-
- 
+  const [isLoading, setIsLoading] = useState(false);
 
   const pickDocument = async () => {
     setError(null);
@@ -54,37 +56,41 @@ const uploadTrackScreen = () => {
     setUploadProgress(0);
     setUploadStatus("idle");
     setName("");
+    
     let result = await DocumentPicker.getDocumentAsync({
       type: "audio/*",
       copyToCacheDirectory: false,
       multiple: false,
     });
-
+  
     console.log("songs is: ", result);
-
+  
     if (result.assets && result.assets.length > 0) {
       const file = result.assets[0];
       let trackSize = file.size / (1024 * 1024);
       const allowedTypes = ["audio/mpeg", "audio/mp3", "audio/wav"];
-
-      //validate track type and size
-
+  
       if (!allowedTypes.includes(file.mimeType)) {
-        setName(file.name);
-        setUploadStatus("Error");
-        setError("Invalid file type. Only mp3, mpeg, or wav are allowed.");
+        Alert.alert("Error", "Invalid file type. Only mp3, mpeg or wav are allowed.");
       } else if (trackSize > 10) {
-        setName(file.name);
-        setUploadStatus("Error");
-        setError("File is too large. Must be under 10MB.");
+        Alert.alert("Error", "File is too large. Must be under 10MB.");
       } else {
-        setTrackType(file.mimeType);
-        setName(file.name);
-        trackSize = trackSize.toFixed(2);
-        setSize(trackSize);
-        setTrack(file.uri);
-        setUploadStatus("uploading");
-        startUpload(file.uri);
+        // Check track duration
+        const { sound } = await Audio.Sound.createAsync({ uri: file.uri });
+        const status = await sound.getStatusAsync();
+  
+        if (status.durationMillis < 30000) { // Less than 30 seconds
+          Alert.alert("Error", "Track must be at least 30 seconds long.");
+          sound.unloadAsync(); // Unload sound to free resources
+        } else {
+          setTrackType(file.mimeType);
+          setName(file.name);
+          trackSize = trackSize.toFixed(2);
+          setSize(trackSize);
+          setTrack(file.uri);
+          setUploadStatus("uploading");
+          startUpload(file.uri);
+        }
       }
     }
   };
@@ -107,20 +113,16 @@ const uploadTrackScreen = () => {
     });
     console.log(result);
 
-    if (result.assets && result.assets.length > 0) {
+    if (result.assets && !result.canceled && result.assets?.length > 0) {
       let file = result.assets[0];
       let fileSize = file.size;
       let fileType = file.mimeType;
       const allowedTypes = ["text/plain"];
 
       if (!allowedTypes.includes(fileType)) {
-        setLyricsName(file.name);
-        setLyricsUploadStatus("Error");
-        setLyricsError("Invalid file type. Only text/plain is allowed.");
+        Alert.alert("Error", "Invalid file type. Only txt files are allowed.");
       } else if (fileSize > 10 * 1024 * 1024) {
-        setLyricsName(file.name);
-        setLyricsUploadStatus("Error");
-        setLyricsError("File is too large. Must be under 10MB.");
+        Alert.alert("Error", "File is too large. Must be under 10MB.");
       } else {
         setLyricsName(file.name);
         setLyricsType(file.mimeType);
@@ -168,13 +170,9 @@ const uploadTrackScreen = () => {
       //validate track type and size
 
       if (!allowedTypes.includes(file.mimeType)) {
-        setCoverName(file.name);
-        setCoverUploadStatus("Error");
-        setCoverError("Invalid file type. Only png, jpeg, heic or jpg are allowed.");
+        Alert.alert("Error", "Invalid file type. Only png, jpeg, heic or jpg are allowed.");
       } else if (coverSize > 10 * 1024 * 1024) {
-        setCoverName(file.name);
-        setCoverUploadStatus("Error");
-        setCoverError("File is too large. Must be under 10MB.");
+        Alert.alert("Error", "File is too large. Must be under 10MB.");
       } else {
         setCoverName(file.name);
         setCoverType(file.mimeType);
@@ -283,31 +281,22 @@ const uploadTrackScreen = () => {
   };
 
   const saveTrack = async () => {
-    // console.log("token: ", token);
+    setIsLoading(true);
 
-    // let token;
-    // try {
-    //   const token = await tokenManager.getAccessToken();
-    //   console.log("token: ", token);
-    // } catch (error) {
-    //   Alert.alert("Error", "Failed to retrieve token.");
-    //   return;
-    // }
     const artistId = await tokenManager.getUserId();
     console.log("artistID: ", artistId);
 
     // Ensure all required fields are filled before proceeding
-    if (!title || !isrc || !genre || !track || !cover) {
+    if (!title || !isrc || !genre || !track) {
       Alert.alert("Error", "Please fill in all required fields.");
+      setIsLoading(false);
       return;
     }
 
     // Create a FormData object
     const formData = new FormData();
     const token = await tokenManager.getAccessToken();
-    
 
-  
     formData.append("artistId", artistId);
     formData.append("title", title);
     formData.append("isrc", isrc);
@@ -338,27 +327,23 @@ const uploadTrackScreen = () => {
     }
 
     try {
-      // console.log(formData);
-      // // Use axiosPost to make the API request
-      // const result = await axiosPost({
-      //   url: "http://localhost:3000/tracks",
-      //   formData: formData,
-      // });
-      const response = await fetch("http://localhost:3000/tracks", {
-        method: 'POST',
+      const response = await fetch(`${SERVER_URL}/tracks`, {
+        method: "POST",
         headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
           // Don't set Content-Type when sending FormData,
           // browser will set it automatically with the correct boundary
         },
-        body: formData
+        body: formData,
       });
 
       if (!response.ok) {
         // Try to parse error message from response
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          errorData?.message || `HTTP error! status: ${response.status}`
+        );
       }
 
       const result = await response.json();
@@ -370,361 +355,379 @@ const uploadTrackScreen = () => {
         error.data?.error || error.message || "Failed to upload the track.";
       Alert.alert("Error", errorMessage);
       console.error("Upload err:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <View style={styles.outerView}>
-      <ScrollView contentContainerStyle={styles.scrollView}>
-        <TouchableOpacity
-          style={styles.backArrow}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.arrowText}>←</Text>
-        </TouchableOpacity>
-        <View style={{ backgroundColor: "black" }}>
-          <Text style={styles.trackText}>Track Details</Text>
-          <Text style={styles.innerText}>
-            Tell us more about your song or beat
-          </Text>
+      {isLoading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#6F2CFF" />
+          <Text style={styles.loadingText}>Uploading</Text>
         </View>
+      )}
 
-        <View style={styles.intputContainer}>
-          <View style={styles.labelContainer}>
-            <Text style={styles.labelText}>Track Title</Text>
-          </View>
-          <TextInput
-            style={{
-              paddingVertical: 5,
-              paddingHorizontal: 10,
-              textAlign: "center",
-              textAlign: "left",
-              color: "white",
-            }}
-            value={title}
-            onChangeText={setTitile}
-            placeholder="Enter your track's title"
-            placeholderTextColor="white"
-          />
-        </View>
-        <View style={styles.intputContainer}>
-          <View style={styles.labelContainer}>
-            <Text style={styles.labelText}>Genre</Text>
-          </View>
-          <TextInput
-            style={{
-              paddingVertical: 5,
-              paddingHorizontal: 10,
-              textAlign: "center",
-              textAlign: "left",
-              color: "white",
-            }}
-            value={genre}
-            onChangeText={setGenre}
-            placeholder="Enter your track's genre"
-            placeholderTextColor="white"
-          />
-        </View>
-        <View style={styles.intputContainer}>
-          <View style={styles.labelContainer}>
-            <Text style={styles.labelText}>ISRC Code</Text>
-          </View>
-          <TextInput
-            style={{
-              paddingVertical: 5,
-              paddingHorizontal: 10,
-              textAlign: "center",
-              textAlign: "left",
-              color: "white",
-            }}
-            value={isrc}
-            onChangeText={setIsrc}
-            placeholder="Enter your track's ISRC Code"
-            placeholderTextColor="white"
-          />
-        </View>
-        <View style={{ alignItems: "center" }}>
-          <Text style={styles.uploadText}>Upload song</Text>
-          {/* File picker for audio */}
-          <View style={styles.filePickerContainer}>
-            <Text style={styles.filePickerTitle}>
-              Choose an audio file to upload
+      {!isLoading && (
+        <ScrollView contentContainerStyle={styles.scrollView}>
+          <TouchableOpacity
+            style={styles.backArrow}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.arrowText}>←</Text>
+          </TouchableOpacity>
+          <View style={{ backgroundColor: "black" }}>
+            <Text style={styles.trackText}>Track Details</Text>
+            <Text style={styles.innerText}>
+              Tell us more about your song or beat
             </Text>
-            <Text style={styles.fileFormatText}>WAV, MP3 or MPEG format</Text>
-
-            <TouchableOpacity
-              style={styles.browseButton}
-              onPress={pickDocument}
-            >
-              <Text style={styles.browseButtonText}>Browse File</Text>
-            </TouchableOpacity>
           </View>
-        </View>
 
-        {/** Display progress bar and upload track info */}
-
-        {(track || error) && (
-          <View>
-            <View style={styles.uploadContainer}>
-              {error ? (
-                <View style={{ flexDirection: "row" }}>
-                  <Text style={styles.uploadInfo1}>{name}</Text>
-                  <Text style={styles.uploadInfo2}>{uploadStatus}</Text>
-                </View>
-              ) : (
-                <Text style={styles.uploadInfo}>
-                  {name} •{" "}
-                  {uploadStatus == "uploading"
-                    ? "uploading"
-                    : "upload Successful"}
-                </Text>
-              )}
-
-              {!error && uploadProgress < 100 && (
-                <Text style={styles.uploadPercentage}>{uploadProgress}%</Text>
-              )}
+          <View style={styles.intputContainer}>
+            <View style={styles.labelContainer}>
+              <Text style={styles.labelText}>Track Title</Text>
+            </View>
+            <TextInput
+              style={{
+                paddingVertical: 5,
+                paddingHorizontal: 10,
+                textAlign: "center",
+                textAlign: "left",
+                color: "white",
+              }}
+              value={title}
+              onChangeText={setTitile}
+              placeholder="Enter your track's title"
+              placeholderTextColor="white"
+            />
+          </View>
+          <View style={styles.intputContainer}>
+            <View style={styles.labelContainer}>
+              <Text style={styles.labelText}>Genre</Text>
+            </View>
+            <TextInput
+              style={{
+                paddingVertical: 5,
+                paddingHorizontal: 10,
+                textAlign: "center",
+                textAlign: "left",
+                color: "white",
+              }}
+              value={genre}
+              onChangeText={setGenre}
+              placeholder="Enter your track's genre"
+              placeholderTextColor="white"
+            />
+          </View>
+          <View style={styles.intputContainer}>
+            <View style={styles.labelContainer}>
+              <Text style={styles.labelText}>ISRC Code</Text>
+            </View>
+            <TextInput
+              style={{
+                paddingVertical: 5,
+                paddingHorizontal: 10,
+                textAlign: "center",
+                textAlign: "left",
+                color: "white",
+              }}
+              value={isrc}
+              onChangeText={setIsrc}
+              placeholder="Enter your track's ISRC Code"
+              placeholderTextColor="white"
+            />
+          </View>
+          <View style={{ alignItems: "center" }}>
+            <Text style={styles.uploadText}>Upload song</Text>
+            {/* File picker for audio */}
+            <View style={styles.filePickerContainer}>
+              <Text style={styles.filePickerTitle}>
+                Choose an audio file to upload
+              </Text>
+              <Text style={styles.fileFormatText}>WAV, MP3 or MPEG format</Text>
 
               <TouchableOpacity
-                onPress={
-                  uploadStatus === "uploading" ? cancelUpload : deleteTrack
-                }
+                style={styles.browseButton}
+                onPress={pickDocument}
               >
-                <Ionicons
-                  name={
-                    uploadStatus === "uploading"
-                      ? "close-circle-outline"
-                      : "trash-outline"
-                  }
-                  size={20}
-                  color="red"
-                />
+                <Text style={styles.browseButtonText}>Browse File</Text>
               </TouchableOpacity>
             </View>
+          </View>
 
-            {/* Custom Progress bar */}
-            {error ? (
-              <Text style={styles.uploadError}>{error}</Text>
-            ) : (
-              uploadProgress < 100 && (
-                <View style={styles.progressBar}>
-                  <View
-                    style={{
-                      ...styles.progressFill,
-                      width: `${uploadProgress}%`,
-                    }}
+          {/** Display progress bar and upload track info */}
+
+          {(track || error) && (
+            <View>
+              <View style={styles.uploadContainer}>
+                {error ? (
+                  <View style={{ flexDirection: "row" }}>
+                    <Text style={styles.uploadInfo1}>{name}</Text>
+                    <Text style={styles.uploadInfo2}>{uploadStatus}</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.uploadInfo}>
+                    {name} •{" "}
+                    {uploadStatus == "uploading"
+                      ? "uploading"
+                      : "upload Successful"}
+                  </Text>
+                )}
+
+                {!error && uploadProgress < 100 && (
+                  <Text style={styles.uploadPercentage}>{uploadProgress}%</Text>
+                )}
+
+                <TouchableOpacity
+                  onPress={
+                    uploadStatus === "uploading" ? cancelUpload : deleteTrack
+                  }
+                >
+                  <Ionicons
+                    name={
+                      uploadStatus === "uploading"
+                        ? "close-circle-outline"
+                        : "trash-outline"
+                    }
+                    size={20}
+                    color="red"
                   />
-                </View>
-              )
-            )}
-
-            {/** display the size of the track if upload is successful */}
-            {uploadProgress >= 100 && (
-              <View >
-                <Text style={styles.trackSize}>{size}MB</Text>
-                <TouchableOpacity onPress={openRenameModal}>
-                  <Text style={styles.renameText}>Rename</Text>
                 </TouchableOpacity>
               </View>
-            )}
-          </View>
-        )}
 
-        {/* Modal for renaming track */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={modalVisible}
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>Rename Track</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Enter new track name"
-                value={newTrackName}
-                onChangeText={setNewTrackName}
-              />
-              <View style={styles.modalButtons}>
-                <Button
-                  title="Cancel"
-                  onPress={() => setModalVisible(false)}
-                  color="red"
+              {/* Custom Progress bar */}
+              {error ? (
+                <Text style={styles.uploadError}>{error}</Text>
+              ) : (
+                uploadProgress < 100 && (
+                  <View style={styles.progressBar}>
+                    <View
+                      style={{
+                        ...styles.progressFill,
+                        width: `${uploadProgress}%`,
+                      }}
+                    />
+                  </View>
+                )
+              )}
+
+              {/** display the size of the track if upload is successful */}
+              {uploadProgress >= 100 && (
+                <View>
+                  <Text style={styles.trackSize}>{size}MB</Text>
+                  <TouchableOpacity onPress={openRenameModal}>
+                    <Text style={styles.renameText}>Rename</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Modal for renaming track */}
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContainer}>
+                <Text style={styles.modalTitle}>Rename Track</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Enter new track name"
+                  value={newTrackName}
+                  onChangeText={setNewTrackName}
                 />
-                 <Button title="Save" onPress={saveNewTrackName} />
+                <View style={styles.modalButtons}>
+                  <Button
+                    title="Cancel"
+                    onPress={() => setModalVisible(false)}
+                    color="red"
+                  />
+                  <Button title="Save" onPress={saveNewTrackName} />
+                </View>
               </View>
             </View>
-          </View>
-        </Modal>
+          </Modal>
 
-        <View style={{ alignItems: "center" }}>
-          {/* File picker for lyrics */}
-          <Text style={styles.uploadText}>Upload lyrics</Text>
+          <View style={{ alignItems: "center" }}>
+            {/* File picker for lyrics */}
+            <Text style={styles.uploadText}>Upload lyrics</Text>
 
-          <View style={styles.filePickerContainer}>
-            <Text style={styles.filePickerTitle}>
-              Choose an lyrics file to upload
-            </Text>
-            <Text style={styles.fileFormatText}>TXT format</Text>
-
-            <TouchableOpacity style={styles.browseButton} onPress={pickLyrics}>
-              <Text style={styles.browseButtonText}>Browse File</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/** Display progress bar and upload lyrics info */}
-
-        {(lyrics || lyricsError) && (
-          <View>
-            <View style={styles.uploadContainer}>
-              {lyricsError ? (
-                <View style={{ flexDirection: "row" }}>
-                  <Text style={styles.uploadInfo1}>{lyricsName}</Text>
-                  <Text style={styles.uploadInfo2}>{lyricsUploadStatus}</Text>
-                </View>
-              ) : (
-                <Text style={styles.uploadInfo}>
-                  {lyricsName} •{" "}
-                  {lyricsUploadStatus == "uploading"
-                    ? "uploading"
-                    : "upload Successful"}
-                </Text>
-              )}
-
-              {!lyricsError && lyricsUploadProgress < 100 && (
-                <Text style={styles.uploadPercentage}>
-                  {lyricsUploadProgress}%
-                </Text>
-              )}
+            <View style={styles.filePickerContainer}>
+              <Text style={styles.filePickerTitle}>
+                Choose an lyrics file to upload
+              </Text>
+              <Text style={styles.fileFormatText}>TXT format</Text>
 
               <TouchableOpacity
-                onPress={
-                  lyricsUploadStatus === "uploading" ? cancelLyric : deleteLyric
-                }
+                style={styles.browseButton}
+                onPress={pickLyrics}
               >
-                <Ionicons
-                  name={
+                <Text style={styles.browseButtonText}>Browse File</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/** Display progress bar and upload lyrics info */}
+
+          {(lyrics || lyricsError) && (
+            <View>
+              <View style={styles.uploadContainer}>
+                {lyricsError ? (
+                  <View style={{ flexDirection: "row" }}>
+                    <Text style={styles.uploadInfo1}>{lyricsName}</Text>
+                    <Text style={styles.uploadInfo2}>{lyricsUploadStatus}</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.uploadInfo}>
+                    {lyricsName} •{" "}
+                    {lyricsUploadStatus == "uploading"
+                      ? "uploading"
+                      : "upload Successful"}
+                  </Text>
+                )}
+
+                {!lyricsError && lyricsUploadProgress < 100 && (
+                  <Text style={styles.uploadPercentage}>
+                    {lyricsUploadProgress}%
+                  </Text>
+                )}
+
+                <TouchableOpacity
+                  onPress={
                     lyricsUploadStatus === "uploading"
-                      ? "close-circle-outline"
-                      : "trash-outline"
+                      ? cancelLyric
+                      : deleteLyric
                   }
-                  size={20}
-                  color="red"
-                />
-              </TouchableOpacity>
-            </View>
-
-            {/* Custom Progress bar */}
-            {lyricsError ? (
-              <Text style={styles.uploadError}>{lyricsError}</Text>
-            ) : (
-              lyricsUploadProgress < 100 && (
-                <View style={styles.progressBar}>
-                  <View
-                    style={{
-                      ...styles.progressFill,
-                      width: `${lyricsUploadProgress}%`,
-                    }}
+                >
+                  <Ionicons
+                    name={
+                      lyricsUploadStatus === "uploading"
+                        ? "close-circle-outline"
+                        : "trash-outline"
+                    }
+                    size={20}
+                    color="red"
                   />
-                </View>
-              )
-            )}
+                </TouchableOpacity>
+              </View>
 
-            {/** display the size of the track if upload is successful */}
-            {lyricsUploadProgress >= 100 && (
-              <Text style={styles.trackSize}>{lyricsSize}B</Text>
-            )}
-          </View>
-        )}
-
-        <View style={{ alignItems: "center" }}>
-          {/* File picker for image */}
-          <Text style={styles.uploadText}>Upload Artwork</Text>
-
-          <View style={styles.filePickerContainer}>
-            <Text style={styles.filePickerTitle}>
-              Choose an image file to upload
-            </Text>
-            <Text style={styles.fileFormatText}>
-              PNG, JPEG, HEIC or JPG format
-            </Text>
-
-            <TouchableOpacity style={styles.browseButton} onPress={pickCover}>
-              <Text style={styles.browseButtonText}>Browse File</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/** Display progress bar and upload cover info */}
-
-        {(cover || coverError) && (
-          <View>
-            <View style={styles.uploadContainer}>
-              {coverError ? (
-                <View style={{ flexDirection: "row" }}>
-                  <Text style={styles.uploadInfo1}>{coverName}</Text>
-                  <Text style={styles.uploadInfo2}>{coverUploadStatus}</Text>
-                </View>
+              {/* Custom Progress bar */}
+              {lyricsError ? (
+                <Text style={styles.uploadError}>{lyricsError}</Text>
               ) : (
-                <Text style={styles.uploadInfo}>
-                  {coverName} •{" "}
-                  {coverUploadProgress == "uploading"
-                    ? "uploading"
-                    : "upload Successful"}
-                </Text>
+                lyricsUploadProgress < 100 && (
+                  <View style={styles.progressBar}>
+                    <View
+                      style={{
+                        ...styles.progressFill,
+                        width: `${lyricsUploadProgress}%`,
+                      }}
+                    />
+                  </View>
+                )
               )}
 
-              {!coverError && coverUploadProgress < 100 && (
-                <Text style={styles.uploadPercentage}>
-                  {coverUploadProgress}%
-                </Text>
+              {/** display the size of the track if upload is successful */}
+              {lyricsUploadProgress >= 100 && (
+                <Text style={styles.trackSize}>{lyricsSize}B</Text>
               )}
+            </View>
+          )}
 
-              <TouchableOpacity
-                onPress={
-                  coverUploadStatus === "uploading" ? deleteCover : deleteCover
-                }
-              >
-                <Ionicons
-                  name={
-                    coverUploadProgress === "uploading"
-                      ? "close-circle-outline"
-                      : "trash-outline"
-                  }
-                  size={20}
-                  color="red"
-                />
+          <View style={{ alignItems: "center" }}>
+            {/* File picker for image */}
+            <Text style={styles.uploadText}>Upload Artwork</Text>
+
+            <View style={styles.filePickerContainer}>
+              <Text style={styles.filePickerTitle}>
+                Choose an image file to upload
+              </Text>
+              <Text style={styles.fileFormatText}>
+                PNG, JPEG, HEIC or JPG format
+              </Text>
+
+              <TouchableOpacity style={styles.browseButton} onPress={pickCover}>
+                <Text style={styles.browseButtonText}>Browse File</Text>
               </TouchableOpacity>
             </View>
-
-            {/* Custom Progress bar */}
-            {coverError ? (
-              <Text style={styles.uploadError}>{coverError}</Text>
-            ) : (
-              coverUploadProgress < 100 && (
-                <View style={styles.progressBar}>
-                  <View
-                    style={{
-                      ...styles.progressFill,
-                      width: `${coverUploadProgress}%`,
-                    }}
-                  />
-                </View>
-              )
-            )}
-
-            {/** display the size of the track if upload is successful */}
-            {coverUploadProgress >= 100 && (
-              <Text style={styles.trackSize}>{coverSize}B</Text>
-            )}
           </View>
-        )}
 
-        <TouchableOpacity style={styles.saveButton} onPress={saveTrack}>
-          <Text style={styles.saveText}>Save</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          {/** Display progress bar and upload cover info */}
+
+          {(cover || coverError) && (
+            <View>
+              <View style={styles.uploadContainer}>
+                {coverError ? (
+                  <View style={{ flexDirection: "row" }}>
+                    <Text style={styles.uploadInfo1}>{coverName}</Text>
+                    <Text style={styles.uploadInfo2}>{coverUploadStatus}</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.uploadInfo}>
+                    {coverName} •{" "}
+                    {coverUploadProgress == "uploading"
+                      ? "uploading"
+                      : "upload Successful"}
+                  </Text>
+                )}
+
+                {!coverError && coverUploadProgress < 100 && (
+                  <Text style={styles.uploadPercentage}>
+                    {coverUploadProgress}%
+                  </Text>
+                )}
+
+                <TouchableOpacity
+                  onPress={
+                    coverUploadStatus === "uploading"
+                      ? deleteCover
+                      : deleteCover
+                  }
+                >
+                  <Ionicons
+                    name={
+                      coverUploadProgress === "uploading"
+                        ? "close-circle-outline"
+                        : "trash-outline"
+                    }
+                    size={20}
+                    color="red"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Custom Progress bar */}
+              {coverError ? (
+                <Text style={styles.uploadError}>{coverError}</Text>
+              ) : (
+                coverUploadProgress < 100 && (
+                  <View style={styles.progressBar}>
+                    <View
+                      style={{
+                        ...styles.progressFill,
+                        width: `${coverUploadProgress}%`,
+                      }}
+                    />
+                  </View>
+                )
+              )}
+
+              {/** display the size of the track if upload is successful */}
+              {coverUploadProgress >= 100 && (
+                <Text style={styles.trackSize}>{coverSize}B</Text>
+              )}
+            </View>
+          )}
+
+          <TouchableOpacity style={styles.saveButton} onPress={saveTrack}>
+            <Text style={styles.saveText}>Save</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      )}
     </View>
   );
 };
@@ -806,6 +809,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 20,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    color: "white",
+    marginTop: 10,
+    fontSize: 16,
+  },
   browseButton: {
     backgroundColor: "#6F2CFF",
     borderRadius: 8,
@@ -838,8 +851,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     alignItems: "center",
-    marginTop:25,
-    marginBottom:60,
+    marginTop: 25,
+    marginBottom: 60,
   },
   saveText: {
     fontSize: 16,

@@ -13,7 +13,9 @@ import React, { useState } from "react";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { tokenManager } from "../../../utils/tokenManager";
+import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
+import { Audio } from "expo-av"; // Import Audio module from expo-av
 
 const uploadTrackScreen = () => {
   const [title, setTitile] = useState("");
@@ -30,65 +32,77 @@ const uploadTrackScreen = () => {
   const [artwork, setArtwork] = useState(null);
   const [modalVisibleArtwork, setModalVisibleArtwork] = useState(false);
   const [newArtworkName, setNewArtworkName] = useState("");
+  const [nameMapping, setNameMapping] = useState({});
+  const [lyricsMapping, setLyricsMapping] = useState({});
 
 
   const artistId = tokenManager.getIdToken();
 
 
   {/** selects the track from device */}
+
   const pickTrack = async () => {
     try {
       console.log("pick track");
-
+  
       const result = await DocumentPicker.getDocumentAsync({
         type: "audio/*",
         copyToCacheDirectory: false,
       });
-
-      if (result && !result.canceled) {
+  
+      if (result && !result.canceled && result.assets?.length > 0) {
         console.log("pick track 1");
-
+  
         const file = result.assets[0];
         let trackSize = (file.size / (1024 * 1024)).toFixed(2);
         const allowedTypes = ["audio/mpeg", "audio/mp3", "audio/wav"];
-
+        const simplifiedName = file.name.replace(/\.[^/.]+$/, "");
+  
         if (!allowedTypes.includes(file.mimeType)) {
-          setTracks((prevTrack) => [
-            ...prevTrack,
-            {
-              name: file.name,
-              error: "Invalid file type. Only mp3, mpeg, or wav are allowed.",
-            },
-          ]);
+          Alert.alert("Error", "Invalid file type. Only MP3, WAV, or MPEG format is allowed.");
         } else if (trackSize > 10) {
-          setTracks((prevTrack) => [
-            ...prevTrack,
-            {
-              name: file.name,
-              error: "File is too large. Must be under 10MB.",
-            },
-          ]);
+          Alert.alert("Error", "Track is too large. Must be under 10MB.");
         } else {
-          // Add the new track and start upload
-          const newTrack = {
-            uri: file.uri,
-            name: file.name,
-            type: file.mimeType,
-            size: trackSize,
-            progress: 0,
-            status: "uploading",
-          };
-
-          // Add the new track to the list and start upload automatically
-          setTracks((prevTracks) => [...prevTracks, newTrack]);
-          startUpload(tracks.length);
-          console.log(tracks);
+          // Check track duration
+          console.log("Checking track duration...");
+          const { sound } = await Audio.Sound.createAsync({ uri: file.uri });
+          const status = await sound.getStatusAsync();
+          console.log("Track duration:", status.durationMillis);
+  
+          if (status.durationMillis < 30000) { // Less than 30 seconds audio file
+            Alert.alert("Error", "Track must be at least 30 seconds long.");
+            sound.unloadAsync(); // Unload sound to free resources
+          } else {
+            // Mapping each track
+            setNameMapping((prev) => ({
+              ...prev,
+              [file.name]: simplifiedName,
+            }));
+  
+            // Add the new track and start upload
+            const newTrack = {
+              uri: file.uri,
+              name: file.name,
+              type: file.mimeType,
+              size: trackSize,
+              progress: 0,
+              status: "uploading",
+            };
+  
+            // Add the new track to the list and start upload automatically
+            setTracks((prevTracks) => [...prevTracks, newTrack]);
+            startUpload(tracks.length);
+            console.log(tracks);
+  
+            sound.unloadAsync(); // Unload sound after successful duration check
+          }
         }
       }
     } catch (error) {
       Alert.alert("Error", error);
     }
   };
+  
 
 
   {/** start uploading the tracks */}
@@ -146,6 +160,12 @@ const uploadTrackScreen = () => {
 
   {/** selects the lyrics from device */}
   const pickLyrics = async () => {
+
+    if (tracks.length === 0) {
+      Alert.alert("Error", "Please select a track first before adding lyrics.");
+      return;
+    }
+
     try {
       console.log("pick lyrics");
 
@@ -154,31 +174,31 @@ const uploadTrackScreen = () => {
         copyToCacheDirectory: false,
       });
 
+      console.log(result);
+      
+
       if (result && !result.canceled) {
         console.log("pick lyrics 1");
 
         const file = result.assets[0];
         let lyricsSize = file.size;
-        const allowedTypes = ["text/plain"];
+        const allowedTypes = ["text/plain"]; 
+        const selectedTrack = tracks[tracks.length - 1];
+
+  
          
         {/** check if the choosen file if of allowed type or not */}
         if (!allowedTypes.includes(file.mimeType)) {
-          setLyrics((prevlyrics) => [
-            ...prevlyrics,
-            {
-              name: file.name,
-              error: "Invalid file type. Only TXT format is allowed.",
-            },
-          ]);
+          Alert.alert("Error", "Invalid file type. Only TXT format is allowed.");
         } else if (lyricsSize > 10 * 1024 * 1024) {  //check the size limit of the file
-          setLyrics((prevlyrics) => [
-            ...prevlyrics,
-            {
-              name: file.name,
-              error: "File is too large. Must be under 10MB.",
-            },
-          ]);
+          Alert.alert("Error", "File is too large. Must be under 10MB.");
         } else {
+         
+          //mapping each track to it's lyrics
+          setLyricsMapping((prev) => ({
+            ...prev,
+            [selectedTrack.name]: file.name,
+          }))
 
           // Add the new lyrics and start upload
           const newLyrics = {
@@ -264,13 +284,15 @@ const uploadTrackScreen = () => {
   try {
     console.log("pick artwork");
 
-    const result = await DocumentPicker.getDocumentAsync({
-      type: ["image/jpg", "image/png", "image/jpeg", "image/heic"],
-      copyToCacheDirectory: false,
-      multiple:false,
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, 
+      allowsEditing: true,
     });
 
-    if (result && !result.canceled) {
+    console.log(result);
+    
+
+    if (result && result.assets.length > 0) {
       console.log("pick artwork 1");
 
       const file = result.assets[0];
@@ -278,15 +300,9 @@ const uploadTrackScreen = () => {
       const allowedTypes = ["image/jpg", "image/png", "image/jpeg", "image/heic"];
 
       if (!allowedTypes.includes(file.mimeType)) {
-        setArtwork({
-          name: file.name,
-          error: "Invalid file type. Only png, jpeg, heic, or jpg are allowed.",
-        });
+        Alert.alert("Error", "Invalid file type. Only PNG, JPEG, HEIC or JPG format is allowed.");
       } else if (artworkSize > 10) {
-        setArtwork({
-          name: file.name,
-          error: "File is too large. Must be under 10MB.",
-        });
+        Alert.alert("Error", "Artwork is too large. Must be under 10MB.");
       } else {
         // Replace any existing artwork with the new artwork
         const newArtwork = {
@@ -354,28 +370,26 @@ const deleteArtwork = () => {
   
 }
 
-const saveAlbum = async() => {
+const nextScreen = () => {
 
-  console.log("token: ", token);
-
-  let token;
-  try {
-    token = await tokenManager.getAccessToken();
-    console.log("token: ", token);
-  } catch (error) {
-    Alert.alert("Error", "Failed to retrieve token.");
-    return;
-  }
-
-  // Ensure all required fields are filled before proceeding
-  if (!title || !isrc || !genre || !tracks || !artworks) {
-    Alert.alert("Error", "Please fill in all required fields.");
-    return;
-  }
-
- 
-
+   router.push({
+    pathname: '/editAlbumScreen',
+    params: {
+      title,
+      isrc,
+      genre,
+      tracks:JSON.stringify(tracks),
+      lyrics: JSON.stringify(lyrics),
+      artwork:JSON.stringify(artwork),
+      lyricsMapping: JSON.stringify(lyricsMapping),
+      nameMapping:  JSON.stringify(nameMapping),
+    }
+   });
 }
+
+
+
+
   return (
     <View style={styles.outerView}>
       <ScrollView contentContainerStyle={styles.scrollView}>
@@ -695,7 +709,7 @@ const saveAlbum = async() => {
                   <Text style={styles.errorText}>{artwork.error}</Text>
                 ) : artwork.progress >= 100 ? (
                   <View>
-                    <Text style={styles.successText}>{artwork.size}MB</Text>
+                    <Text style={styles.successText}>{artwork.size}</Text>
                     <TouchableOpacity onPress={openArtworkModal}>
                       <Text style={styles.renameText}>Rename</Text>
                     </TouchableOpacity>
@@ -732,10 +746,9 @@ const saveAlbum = async() => {
               </View>
             </View>
           )}
-        </View>
-
-        <TouchableOpacity style={styles.saveButton} onPress={saveAlbum}>
-          <Text style={styles.saveText}>Save</Text>
+        </View>   
+        <TouchableOpacity style={styles.saveButton} onPress={nextScreen}>
+          <Text style={styles.saveText}>Next</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

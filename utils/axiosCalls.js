@@ -18,6 +18,7 @@ const createAxiosRequest = async ({
   body,
   params,
   isAuthenticated = true,
+  contentType = "application/json",
 }) => {
   let accessToken;
 
@@ -42,7 +43,7 @@ const createAxiosRequest = async ({
   }
 
   const headers = {
-    "Content-Type": "application/json",
+    ...(method !== "GET" && { "Content-Type": contentType }),
     ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
   };
 
@@ -65,15 +66,16 @@ const createAxiosRequest = async ({
   try {
     console.log(`[AxiosRequest] Making ${method} request to:`, {
       url: finalUrl,
-      body,
       method,
+      headers,
+      ...(method === "GET" ? {} : { data: body }),
     });
 
     const response = await axios({
       url: finalUrl,
       method,
       headers,
-      data: body, // For DELETE requests with a body
+      data: body,
     });
 
     return response.data;

@@ -23,7 +23,8 @@ import {
 } from "@expo/vector-icons";
 import RadioButtonGroup, { RadioButtonItem } from "expo-radio-button";
 import ButtonComponent from "../components/ButtonComponents";
-import { router } from "expo-router";
+import { router } from 'expo-router';
+import useProfileStore from '../zusStore/userFormStore';
 
 WebBrowser.maybeCompleteAuthSession();
 const { width, height } = Dimensions.get("window");
@@ -43,6 +44,7 @@ const SignInScreen = () => {
   const [loading, setLoading] = useState(false);
   const [current, setCurrent] = useState(false);
   const navigation = useNavigation();
+  const {updateField } = useProfileStore();
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: GOOGLE_CLIENT_ID,
@@ -60,29 +62,29 @@ const SignInScreen = () => {
     }
   }, [response]);
 
-  const handleGoogleSignIn = useCallback(
-    async (idToken) => {
-      console.log(idToken);
-      try {
-        const result = await AuthService.googleSignIn(idToken);
-        console.log(result);
-        if (result.userCreated) {
-          router.push("userTypeChoice");
-        } else {
-          router.back();
-          router.replace("/homeIndex");
-          // router.setParams({ index: 0 })
-        }
-      } catch (error) {
-        console.error("Google Sign-In Error:", error);
-        Alert.alert(
-          "Sign In Error",
-          error.message || "An error occurred during Google sign-in."
-        );
+
+  const handleGoogleSignIn = useCallback(async (idToken) => {
+    console.log(idToken)
+    try {
+      const result = await AuthService.googleSignIn(idToken);
+      console.log(result);
+      if (result.userCreated) {
+        updateField('email', result.email);
+        updateField('password', result.password);
+        router.push("userTypeChoice");
+      } else {
+        router.back();
+        router.replace("/homeIndex");
+        // router.setParams({ index: 0 })
       }
-    },
-    [navigation]
-  );
+    } catch (error) {
+      console.error('Google Sign-In Error:', error);
+      Alert.alert(
+        "Sign In Error",
+        error.message || "An error occurred during Google sign-in."
+      );
+    }
+  }, [navigation]);
 
   const validateInputs = () => {
     setEmailError("");
