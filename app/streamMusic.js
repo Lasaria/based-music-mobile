@@ -193,15 +193,49 @@ const StreamMusic = () => {
 
   // Function: Handle Slider Value Change
   const handleSliderValueChange = (value) => {
+    console.log("[StreamMusic] Slider value changing:", value);
+
+    if (typeof value !== "number" || isNaN(value)) {
+      console.warn("[StreamMusic] Invalid slider value received:", value);
+      return;
+    }
+
     setIsSeeking(true);
     setLocalSliderValue(value);
   };
 
   // Function: Handle Slider Sliding Complete
-  const handleSlidingComplete = (value) => {
-    setIsSeeking(false);
-    seekTo(value);
-    setLocalSliderValue(null);
+  const handleSlidingComplete = async (value) => {
+    console.log("[StreamMusic] Sliding complete with value:", value);
+
+    if (typeof value !== "number" || isNaN(value)) {
+      console.warn("[StreamMusic] Invalid sliding complete value:", value);
+      setIsSeeking(false);
+      setLocalSliderValue(null);
+      return;
+    }
+
+    try {
+      // Ensure valid bounds
+      const clampedValue = Math.max(0, Math.min(value, duration || 0));
+      console.log("[StreamMusic] Attempting seek to:", clampedValue);
+
+      if (clampedValue !== value) {
+        console.log(
+          "[StreamMusic] Value clamped from",
+          value,
+          "to",
+          clampedValue
+        );
+      }
+
+      await seekTo(clampedValue);
+    } catch (err) {
+      console.error("[StreamMusic] Seek error:", err);
+    } finally {
+      setIsSeeking(false);
+      setLocalSliderValue(null);
+    }
   };
 
   // Function: Navigate to Playlist
@@ -243,7 +277,7 @@ const StreamMusic = () => {
       <StatusBar style="light" />
 
       {/* Debug View */}
-      {__DEV__ && (
+      {/* {__DEV__ && (
         <View style={styles.debugContainer}>
           <Text style={styles.debugText}>
             Ready: {isPlayerReady ? "Yes" : "No"}
@@ -255,7 +289,7 @@ const StreamMusic = () => {
             Error: {playerError ? playerError.message : "None"}
           </Text>
         </View>
-      )}
+      )} */}
 
       {/* Header */}
       <View style={styles.headerView}>
@@ -321,7 +355,7 @@ const StreamMusic = () => {
         <Slider
           style={styles.progressBar}
           minimumValue={0}
-          maximumValue={duration || 0}
+          maximumValue={duration || 100} // Provide a default max
           value={isSeeking ? localSliderValue : currentTime || 0}
           onValueChange={handleSliderValueChange}
           onSlidingComplete={handleSlidingComplete}
@@ -329,6 +363,7 @@ const StreamMusic = () => {
           maximumTrackTintColor="gray"
           thumbTintColor="purple"
           disabled={!isPlayerReady}
+          step={1} // Add step to ensure integer values
         />
         <View style={styles.timeContainer}>
           <Text style={styles.timeText}>{formatTime(currentTime)}</Text>

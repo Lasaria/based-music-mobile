@@ -189,63 +189,7 @@ function MusicScreen() {
     );
   };
 
-  const handlePlay = async (item) => {
-    const startTime = performance.now(); // Start timing
-    console.log("\n=== HANDLE PLAY START ===");
-    console.log("[handlePlay()] Initial state:", {
-      content_type: item.content_type,
-      track_id: item.track_id,
-      currentTrackInfo: trackInfo,
-      isPlayerReady,
-      soundRef: soundRef.current ? "exists" : "null",
-    });
 
-    if (item.content_type === "song") {
-      try {
-        // Check if already loaded
-        if (trackInfo?.track_id === item.track_id && isPlayerReady) {
-          console.log("[handlePlay()] Track already loaded, toggling playback");
-          await togglePlayPause();
-          return;
-        }
-
-        console.log("[handlePlay()] Starting track update");
-        await updateCurrentTrack(item.track_id);
-        console.log("[handlePlay()] Track update complete");
-
-        // Directly toggle playback after updating the track
-        console.log("[handlePlay()] Starting playback");
-        await togglePlayPause();
-      } catch (error) {
-        console.error("[handlePlay()] Error playing track:", {
-          message: error.message,
-          stack: error.stack,
-          state: {
-            isPlayerReady,
-            trackInfo: trackInfo?.track_id,
-          },
-        });
-
-        Toast.show({
-          type: "error",
-          text1: "Playback Error",
-          text2: error.message || "Failed to play track. Please try again.",
-        });
-      }
-    } else if (item.content_type === "artist") {
-      router.push({
-        pathname: "/artistDetail",
-        params: { artistId: item.artist_id },
-      });
-    }
-    const endTime = performance.now(); // End timing
-    console.log(
-      `\n \n \n ----------handlePlay() EXECUTED IN ${
-        endTime - startTime
-      } milliseconds---------- \n \n \n`
-    );
-    console.log("=== HANDLE PLAY END ===\n");
-  };
 
   const displayPlaylist = () => {
     setIsPlaylist(true);

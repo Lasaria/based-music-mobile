@@ -7,9 +7,36 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export const AudioContext = createContext();
 
 const debug = (message, data = null) => {
-  const timestamp = new Date().toISOString();
-  const readableTimestamp = new Date(timestamp).toLocaleString();
+  const timestamp = new Date().getTime();
+  const readableTimestamp = new Date(timestamp).toLocaleString("en-US", {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    fractionalSecondDigits: 3,
+  });
   console.log(`[AudioContext ${readableTimestamp}]`, message, data ? data : "");
+};
+
+const PERFORMANCE_TARGETS = {
+  loadAudio: {
+    total: 150,
+    initialStateSetup: 10,
+    audioSessionConfig: 10,
+    soundObjectCreation: 30,
+    bufferAllocation: 20,
+    initialChunkDownload: 50,
+    stateVerification: 20,
+    statusCallbackProcessing: 10,
+  },
+  togglePlayPause: {
+    total: 50,
+    statusCheck: 5,
+    playerReadyState: 5,
+    bufferCheck: 10,
+    playCommand: 20,
+    statusUpdate: 10,
+  },
 };
 
 // Performance tracking singleton
@@ -56,7 +83,8 @@ const createSoundConfig = (volume = 1.0) => ({
   rate: 1.0,
   shouldCorrectPitch: true,
 });
-
+const CACHE_PREFIX = "audio_metadata_";
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 // Metadata cache implementation
 class MetadataCache {
   async get(trackId) {
@@ -92,6 +120,16 @@ class MetadataCache {
 }
 
 const metadataCache = new MetadataCache();
+
+const measurePerformance = (phase, targetTime, actualTime) => {
+  const diff = actualTime - targetTime;
+  const status = diff <= 0 ? "within target" : "exceeded target";
+  console.log(
+    `[Performance] ${phase}: ${actualTime.toFixed(
+      2
+    )}ms (${status} by ${Math.abs(diff).toFixed(2)}ms)`
+  );
+};
 
 export const AudioProvider = ({ children }) => {
   // State Management - Using refs for values that don't need re-renders
@@ -244,7 +282,7 @@ export const AudioProvider = ({ children }) => {
 
   // Function: Load Audio
   const loadAudio = async (track) => {
-    const startTime = performance.now();
+    const totalStartTime = performance.now();
     debug("=== LOAD AUDIO STARTING ===");
     debug("[loadAudio()] Initial state:", {
       trackId: track.track_id,
@@ -270,6 +308,9 @@ export const AudioProvider = ({ children }) => {
     }, 15000);
 
     try {
+      // Initial state setup
+      const setupStartTime = performance.now();
+
       // Prevent multiple simultaneous load attempts
       if (isLoading.current) {
         debug("[loadAudio()] BLOCKED: Already loading audio, skipping");
@@ -279,7 +320,12 @@ export const AudioProvider = ({ children }) => {
       debug("loadAudio() Setting loading flag to true");
       setIsLoading(true);
       isLoading.current = true;
-
+      const setupEndTime = performance.now();
+      measurePerformance(
+        "Initial State Setup",
+        PERFORMANCE_TARGETS.loadAudio.initialStateSetup,
+        setupEndTime - setupStartTime
+      );
       // Clean up existing audio
       if (soundRef.current) {
         debug("Unloading existing sound");
@@ -293,20 +339,24 @@ export const AudioProvider = ({ children }) => {
       }
 
       // Configure audio session
+      const configStartTime = performance.now();
       debug("[loadAudio()] Configuring audio session");
       await Audio.setAudioModeAsync(AUDIO_MODE_CONFIG);
+      const configEndTime = performance.now();
+      measurePerformance(
+        "Audio Session Config",
+        PERFORMANCE_TARGETS.loadAudio.audioSessionConfig,
+        configEndTime - configStartTime
+      );
 
       // Create configurations
       debug("[loadAudio()] Creating audio and sound configurations");
+
+      const soundStartTime = performance.now();
       const audioConfig = createAudioConfig(track.track_id);
       const soundConfig = createSoundConfig(volume);
 
       debug("Using stream URL:", audioConfig.uri);
-
-      // // Add range request for initial chunk
-      // const initialHeaders = {
-      //   Range: `bytes=0-${65536}`, // Request first 64KB
-      // };
 
       debug("[loadAudio] Creating sound object with range request");
       const { sound, status } = await Audio.Sound.createAsync(
@@ -318,10 +368,15 @@ export const AudioProvider = ({ children }) => {
             trackId: track.track_id,
             currentAudioStateTrackId: currentAudioState.current.trackId,
           });
-
+          const soundEndTime = performance.now();
+          measurePerformance(
+            "Sound Object Creation",
+            PERFORMANCE_TARGETS.loadAudio.soundObjectCreation,
+            soundEndTime - soundStartTime
+          );
           if (status.isLoaded) {
             debug("[loadAudio()] Setting player ready state");
-            if (currentAudioState.current.trackId === track.track_id) {
+            if (track.track_id === currentAudioState.current.trackId) {
               setIsPlayerReady(true);
               isPlayerReadyRef.current = true;
               if (status.durationMillis) {
@@ -365,12 +420,20 @@ export const AudioProvider = ({ children }) => {
 
       // Save reference and verify
       debug("[loadAudio()] Sound created, saving reference");
+      const bufferStartTime = performance.now();
       soundRef.current = sound;
 
       debug("[loadAudio()] Verifying initial sound status");
       const initialStatus = await sound.getStatusAsync();
       debug("Initial sound status:", initialStatus);
+      const bufferEndTime = performance.now();
+      measurePerformance(
+        "Buffer Allocation",
+        PERFORMANCE_TARGETS.loadAudio.bufferAllocation,
+        bufferEndTime - bufferStartTime
+      );
 
+      const verifyStartTime = performance.now();
       if (!initialStatus.isLoaded) {
         throw new Error("[loadAudio()] Initial sound verification failed");
       }
@@ -388,6 +451,12 @@ export const AudioProvider = ({ children }) => {
 
       setIsPlayerReady(true);
       debug("[loadAudio()] PlayerReady states set");
+      const verifyEndTime = performance.now();
+      measurePerformance(
+        "State Verification",
+        PERFORMANCE_TARGETS.loadAudio.stateVerification,
+        verifyEndTime - verifyStartTime
+      );
 
       if (initialStatus.durationMillis) {
         setDuration(initialStatus.durationMillis / 1000);
@@ -402,6 +471,7 @@ export const AudioProvider = ({ children }) => {
       };
 
       // Final verification
+
       const verifyStatus = await soundRef.current.getStatusAsync();
       debug("[loadAudio()] Verify status:", verifyStatus);
 
@@ -410,6 +480,13 @@ export const AudioProvider = ({ children }) => {
       }
 
       loadAttempts.current = 0;
+
+      const totalEndTime = performance.now();
+      measurePerformance(
+        "Total Load Audio Time",
+        PERFORMANCE_TARGETS.loadAudio.total,
+        totalEndTime - totalStartTime
+      );
       debug("=== LOAD AUDIO SUCCESS ===\n");
       return true;
     } catch (err) {
@@ -444,7 +521,7 @@ export const AudioProvider = ({ children }) => {
       const endTime = performance.now();
       console.log(
         `\n \n \n ----------loadAudio() EXECUTED IN ${
-          endTime - startTime
+          endTime - totalStartTime
         } milliseconds---------- \n \n \n`
       );
     }
@@ -661,64 +738,70 @@ export const AudioProvider = ({ children }) => {
   };
 
   // Function: Toggle Play/Pause
-const togglePlayPause = async () => {
-  const startTime = performance.now();
-  debug("\n=== TOGGLE PLAY/PAUSE START ===");
-  debug("[togglePlayPause()] Initial state:", {
-    currentAudioState: currentAudioState.current,
-    currentTrackId,
-    hasSound: !!soundRef.current,
-    isBuffering,
-    isPlayerReady,
-    trackInfo: trackInfo?.track_id
-  });
-
-  try {
-    // If sound isn't loaded yet, load it and start playing immediately
-    if (!soundRef.current || !currentAudioState.current.isLoaded) {
-      debug("[togglePlayPause()] Sound not loaded, loading and playing");
-      await loadAudio(trackInfo);
-      await soundRef.current.playAsync();
-      batchStateUpdate({
-        isPlaying: true,
-        isBuffering: false
-      });
-      debug("[togglePlayPause()] Initial load and play complete");
-      return;
-    }
-
-    // Sound is loaded, just toggle play state
-    const status = await soundRef.current.getStatusAsync();
-    const shouldPlay = !status.isPlaying;
-
-    debug(`[togglePlayPause()] Executing ${shouldPlay ? 'playAsync' : 'pauseAsync'}`);
-    await soundRef.current[shouldPlay ? 'playAsync' : 'pauseAsync']();
-    
-    batchStateUpdate({
-      isPlaying: shouldPlay,
-      isBuffering: false
+  const togglePlayPause = async () => {
+    const startTime = performance.now();
+    debug("\n=== TOGGLE PLAY/PAUSE START ===");
+    debug("[togglePlayPause()] Initial state:", {
+      currentAudioState: currentAudioState.current,
+      currentTrackId,
+      hasSound: !!soundRef.current,
+      isBuffering,
+      isPlayerReady,
+      trackInfo: trackInfo?.track_id,
     });
 
-    debug(`[togglePlayPause()] ${shouldPlay ? 'Play' : 'Pause'} complete`);
-  } catch (err) {
-    debug("=== TOGGLE PLAY/PAUSE FAILED ===", {
-      error: err.message,
-      stack: err.stack
-    });
-
-    batchStateUpdate({
-      isBuffering: false,
-      isPlaying: false,
-      error: {
-        message: "Failed to toggle playback",
-        details: err.message
+    try {
+      // If sound isn't loaded yet, load it and start playing immediately
+      if (!soundRef.current || !currentAudioState.current.isLoaded) {
+        debug("[togglePlayPause()] Sound not loaded, loading and playing");
+        await loadAudio(trackInfo);
+        await soundRef.current.playAsync();
+        batchStateUpdate({
+          isPlaying: true,
+          isBuffering: false,
+        });
+        debug("[togglePlayPause()] Initial load and play complete");
+        return;
       }
-    });
-  } finally {
-    const executionTime = performance.now() - startTime;
-    console.log(`\n \n \n ----------togglePlayPause() EXECUTED IN ${executionTime} milliseconds---------- \n \n \n`);
-  }
-};
+
+      // Sound is loaded, just toggle play state
+      const status = await soundRef.current.getStatusAsync();
+      const shouldPlay = !status.isPlaying;
+
+      debug(
+        `[togglePlayPause()] Executing ${
+          shouldPlay ? "playAsync" : "pauseAsync"
+        }`
+      );
+      await soundRef.current[shouldPlay ? "playAsync" : "pauseAsync"]();
+
+      batchStateUpdate({
+        isPlaying: shouldPlay,
+        isBuffering: false,
+      });
+
+      debug(`[togglePlayPause()] ${shouldPlay ? "Play" : "Pause"} complete`);
+    } catch (err) {
+      debug("=== TOGGLE PLAY/PAUSE FAILED ===", {
+        error: err.message,
+        stack: err.stack,
+      });
+
+      batchStateUpdate({
+        isBuffering: false,
+        isPlaying: false,
+        error: {
+          message: "Failed to toggle playback",
+          details: err.message,
+        },
+      });
+    } finally {
+      const executionTime = performance.now() - startTime;
+      console.log(
+        `\n \n \n ----------togglePlayPause() EXECUTED IN ${executionTime} milliseconds---------- \n \n \n`
+      );
+    }
+  };
 
   // Function: Handle Volume Change
   const handleVolumeChange = async (newVolume) => {
@@ -737,16 +820,95 @@ const togglePlayPause = async () => {
     }
   };
 
+  // Function: Validate and Convert Seek Time
+  const validateAndConvertSeekTime = (seconds) => {
+    if (typeof seconds !== "number" || isNaN(seconds)) {
+      throw new Error("Invalid seek position");
+    }
+    return Math.max(0, Math.floor(seconds * 1000)); // Ensure positive and convert to ms
+  };
+  
   // Function: Seek to Position
-  const seekTo = async (position) => {
-    try {
-      if (!soundRef.current || !isPlayerReady) return;
+  const seekTo = async (seconds) => {
+    debug("[seekTo] Starting seek operation with seconds:", seconds);
 
-      debug("Seeking to position", position);
-      await soundRef.current.setPositionAsync(position * 1000);
-      setCurrentTime(position);
+    try {
+      // Early validation
+      if (!soundRef.current) {
+        debug("[seekTo] No sound object available");
+        return;
+      }
+
+      // Convert and validate the seek position
+      const milliseconds = validateAndConvertSeekTime(seconds);
+      debug("[seekTo] Converted milliseconds:", milliseconds);
+
+      // Get current status
+      const status = await soundRef.current.getStatusAsync();
+      if (!status.isLoaded) {
+        debug("[seekTo] Sound not loaded", status);
+        return;
+      }
+
+      debug("[seekTo] Current status:", {
+        position: status.positionMillis,
+        duration: status.durationMillis,
+        isPlaying: status.isPlaying,
+        isLoaded: status.isLoaded,
+      });
+
+      // Store playing state
+      const wasPlaying = status.isPlaying;
+
+      // Create a promise that will reject if seeking takes too long
+      const seekOperation = new Promise(async (resolve, reject) => {
+        try {
+          // Ensure we're paused
+          if (wasPlaying) {
+            await soundRef.current.pauseAsync();
+            debug("[seekTo] Paused playback for seeking");
+          }
+
+          // Perform the seek
+          debug("[seekTo] Executing setPositionAsync:", milliseconds);
+          await soundRef.current.setPositionAsync(milliseconds);
+          debug("[seekTo] Seek completed successfully");
+
+          // Resume if needed
+          if (wasPlaying) {
+            await soundRef.current.playAsync();
+            debug("[seekTo] Resumed playback");
+          }
+
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      });
+
+      // Wait for seek with timeout
+      await Promise.race([
+        seekOperation,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Seek timeout")), 3000)
+        ),
+      ]);
+
+      // Update UI state
+      setCurrentTime(seconds);
+      debug("[seekTo] State updated successfully");
     } catch (err) {
-      debug("Error seeking", err);
+      debug("[seekTo] Error:", err);
+      // Try to restore playback state
+      try {
+        const currentStatus = await soundRef.current?.getStatusAsync();
+        if (currentStatus?.isLoaded && !currentStatus?.isPlaying) {
+          await soundRef.current?.playAsync();
+        }
+      } catch (restoreErr) {
+        debug("[seekTo] Error restoring state:", restoreErr);
+      }
+
       setError({
         message: "Failed to seek",
         details: err.message,
