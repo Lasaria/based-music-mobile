@@ -20,24 +20,171 @@ import { CommentsSection } from './CommentsSection';
 import { CommentCard } from './CommentCard';
 import { CommentInput } from './CommentInput';
 import { formatDate } from '../utils/functions';
+import { LikesModal } from './LikesModal';
+import { confirmDelete } from './DeleteConfirmDialog';
+import { deleteComment } from './DeleteActions';
 
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
 
 const API_URL = SERVER_URL;
 
 // PostCard.js - Component for individual posts
-export const PostCard = ({ post, onLike, onUnlike, onPressLikes, currentUserId, onPostDeleted,
-    onEditPost }) => {
+export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => {
     const [showComments, setShowComments] = useState(false);
 
     const [comments, setComments] = useState([]);
+    const [isLoadingComments, setIsLoadingComments] = useState(false);
+    const [isLiked, setIsLiked] = useState(post.liked || false);
+    const [likeCount, setLikeCount] = useState(post.like_count || 0);
+    const [commentCount, setCommentCount] = useState(post.comment_count || 0);
+    const [likesModalVisible, setLikesModalVisible] = useState(false);
+    const [selectedLikes, setSelectedLikes] = useState([]);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    useEffect(() => {
+        checkLikeStatus();
+      }, []);
+
+    // Fetch comments when comments section is opened
+  useEffect(() => {
+    if (showComments) {
+      fetchComments();
+    }
+  }, [showComments]);
+
+    const fetchComments = async () => {
+        setIsLoadingComments(true);
+        try {
+          const token = await tokenManager.getAccessToken();
+          const response = await fetch(`${API_URL}/posts/${post.post_id}/comments`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (!response.ok) throw new Error('Failed to fetch comments');
+          const data = await response.json();
+          setComments(data.comments);
+        } catch (error) {
+          console.error('Error fetching comments:', error);
+        } finally {
+          setIsLoadingComments(false);
+        }
+      };
+
+      const checkLikeStatus = async () => {
+        try {
+          const token = await tokenManager.getAccessToken();
+          const response = await fetch(
+            `${API_URL}/posts/${post.post_id}/like-status`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            }
+          );
+          
+          if (!response.ok) throw new Error('Failed to check like status');
+          const data = await response.json();
+          setIsLiked(data.liked);
+        } catch (error) {
+          console.error('Error checking like status:', error);
+        }
+      };
+    
+      const handleLike = async () => {
+        try {
+          const token = await tokenManager.getAccessToken();
+          const response = await fetch(`${API_URL}/posts/${post.post_id}/like`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+    
+          if (!response.ok) throw new Error('Failed to like post');
+          
+          setIsLiked(true);
+          setLikeCount(prev => prev + 1);
+        } catch (error) {
+          console.error('Error liking post:', error);
+          Alert.alert('Error', 'Failed to like post');
+        }
+      };
+    
+      const handleUnlike = async () => {
+        try {
+          const token = await tokenManager.getAccessToken();
+          const response = await fetch(`${API_URL}/posts/${post.post_id}/unlike`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+    
+          if (!response.ok) throw new Error('Failed to unlike post');
+          
+          setIsLiked(false);
+          setLikeCount(prev => Math.max(0, prev - 1));
+        } catch (error) {
+          console.error('Error unliking post:', error);
+          Alert.alert('Error', 'Failed to unlike post');
+        }
+      };
+    
+      const handlePressLikes = async () => {
+        try {
+          const token = await tokenManager.getAccessToken();
+          const response = await fetch(
+            `${API_URL}/posts/${post.post_id}/likes`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            }
+          );
+          
+          if (!response.ok) throw new Error('Failed to fetch likes');
+          
+          const data = await response.json();
+          setSelectedLikes(data.likes);
+          setLikesModalVisible(true);
+        } catch (error) {
+          console.error('Error fetching likes:', error);
+          Alert.alert('Error', 'Failed to load likes');
+        }
+      };
 
     // Add this handler
-    const handleCommentAdded = (newComment) => {
-        setComments([newComment, ...comments]);
-        // Update comment count in post
-        post.comment_count += 1;
-    };
+  const handleCommentAdded = (newComment) => {
+    // Add the new comment to the beginning of the comments array
+    setComments(prevComments => [newComment, ...prevComments]);
+    // Update comment count in post
+    // post.comment_count += 1;
+    setCommentCount(commentCount+ 1);
+    // Show comments section if it's not already shown
+    if (!showComments) {
+      setShowComments(true);
+    }
+  };
+
+  const handleDeleteComment = async (comment) => {
+    if (isDeleting) return;
+    console.log("COMMENT IN COMMENT CARD: ", comment)
+
+    confirmDelete('comment', async () => {
+      setIsDeleting(true);
+      try {
+        await deleteComment(post.post_id, comment.comment_id);
+        setCommentCount(commentCount - 1);
+        setComments(prevComments => prevComments.filter(c => c.comment_id !== comment.comment_id));
+      } catch (error) {
+        onError('Failed to delete comment');
+      } finally {
+        setIsDeleting(false);
+      }
+    });
+  };
   
     return (
       <View style={styles.postCard}>
@@ -76,41 +223,56 @@ export const PostCard = ({ post, onLike, onUnlike, onPressLikes, currentUserId, 
   
         {/* Like and Comment Counts */}
         <View style={styles.interactionBar}>
-          <TouchableOpacity 
-            style={styles.likeButton} 
-            onPress={() => post.liked ? onUnlike(post.post_id) : onLike(post.post_id)}
-          >
-            <Ionicons
-              name={post.liked ? "heart" : "heart-outline"}
-              size={24}
-              color={post.liked ? "red" : "black"}
-            />
-          </TouchableOpacity>
-          
-          <TouchableOpacity onPress={() => onPressLikes(post.post_id)}>
-            <Text style={styles.countText}>{post.like_count} likes</Text>
-          </TouchableOpacity>
-  
-          <TouchableOpacity onPress={() => setShowComments(!showComments)}>
-            <Text style={styles.countText}>{post.comment_count} comments</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity 
+          style={styles.likeButton} 
+          onPress={() => isLiked ? handleUnlike() : handleLike()}
+        >
+          <Ionicons
+            name={isLiked ? "heart" : "heart-outline"}
+            size={24}
+            color={isLiked ? "red" : "black"}
+          />
+        </TouchableOpacity>
+        
+        <TouchableOpacity onPress={handlePressLikes}>
+          <Text style={styles.countText}>{likeCount} likes</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => setShowComments(!showComments)}>
+          <Text style={styles.countText}>{commentCount} comments</Text>
+        </TouchableOpacity>
+      </View>
   
         {/* Comments Section */}
-        {showComments && (
+      {showComments && (
         <>
+          {isLoadingComments ? (
+            <ActivityIndicator size="small" color="#0000ff" style={styles.loadingIndicator} />
+          ) : (
+            <CommentsSection
+              onCommentDeleted={handleDeleteComment}
+              isDeleting={isDeleting}
+              isLoadingComments={isLoadingComments}
+              postId={post.post_id} 
+              comments={comments}
+              commentCount={commentCount}
+              setCommentCount={setCommentCount}
+              currentUserId={currentUserId}
+            />
+          )}
           <CommentInput 
             postId={post.post_id} 
             onCommentAdded={handleCommentAdded}
           />
-          <CommentsSection 
-            postId={post.post_id} 
-            comments={comments}
-            currentUserId={currentUserId}
-          />
         </>
       )}
-      </View>
+
+        <LikesModal
+        visible={likesModalVisible}
+        onClose={() => setLikesModalVisible(false)}
+        likes={selectedLikes}
+        />
+        </View>
     );
   };
 
@@ -510,5 +672,8 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 12,
     color: '#666',
+  },
+  loadingIndicator: {
+    padding: 20,
   },
 });

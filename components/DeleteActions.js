@@ -7,6 +7,7 @@ const API_URL = SERVER_URL;
 export const deleteComment = async (postId, commentId) => {
   try {
     const token = await tokenManager.getAccessToken();
+    console.log("DELETE COMMENT ACTIONS", postId, commentId)
     const response = await fetch(
       `${API_URL}/posts/${postId}/comments/${commentId}`,
       {
