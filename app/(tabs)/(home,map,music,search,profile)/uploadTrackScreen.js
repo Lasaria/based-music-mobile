@@ -17,6 +17,8 @@ import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { tokenManager } from "../../../utils/tokenManager";
 import { Audio } from "expo-av";
+import { axiosPost } from "../../../utils/axiosCalls";
+import { SERVER_URL, AUTHSERVER_URL } from '@env';
 
 const uploadTrackScreen = () => {
   const [title, setTitile] = useState("");
@@ -325,13 +327,7 @@ const uploadTrackScreen = () => {
     }
 
     try {
-      // console.log(formData);
-      // // Use axiosPost to make the API request
-      // const result = await axiosPost({
-      //   url: "http://localhost:3000/tracks",
-      //   formData: formData,
-      // });
-      const response = await fetch("http://10.0.0.235:3000/tracks", {
+      const response = await fetch(`${SERVER_URL}/tracks`, {
         method: "POST",
         headers: {
           Accept: "application/json",

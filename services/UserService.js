@@ -6,8 +6,10 @@ import { tokenManager } from '../utils/tokenManager';
 import { uploadImage } from '../utils/imageUploadManager';
 import useProfileStore from '../zusStore/userFormStore';
 import { AuthService } from './AuthService';
+import { SERVER_URL, AUTHSERVER_URL } from '@env';
 
-const serverURL = 'http://localhost:3000';
+const serverURL = SERVER_URL;
+
 
 export const UserService = {
     setUserType: async (userType) => {
@@ -56,7 +58,15 @@ export const UserService = {
             const genreNames = selectedGenres.map(genre => genre.name);
 
             // Logging in here, finally, before setting up profile
-            await AuthService.signIn(email, password)
+            //await AuthService.signIn(email, password)
+
+                // Logging in with AuthService when email starts with "google-"
+                await AuthService.signIn(email, password);
+                console.log('Login successful');
+                // Add any additional logic here, like navigating to the next screen
+
+
+            const sub = await tokenManager.getUserId();
 
             // First API call: Send non-image data
             const profileResponse = await axiosPost({

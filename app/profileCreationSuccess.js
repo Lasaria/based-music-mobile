@@ -22,7 +22,7 @@ const SuccessModal = ({ visible, onClose }) => {
       // Try different navigation approaches
       try {
         // Option 1: Using router.replace
-        router.replace('/(tabs)');
+        router.replace('/homeIndex');
       } catch (error) {
         console.error("First navigation attempt failed:", error);
         

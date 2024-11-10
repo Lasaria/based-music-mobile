@@ -73,7 +73,7 @@ const SignInScreen = () => {
         updateField('password', result.password);
         router.push("userTypeChoice");
       } else {
-        router.back()
+        router.back();
         router.replace("/homeIndex");
         // router.setParams({ index: 0 })
       }
