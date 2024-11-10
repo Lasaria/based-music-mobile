@@ -25,7 +25,7 @@ const SearchResultItem = ({ item, onPress }) => {
       case "playlist":
         return `${item.track_count} songs`;
       case "venue":
-        return item.location;
+        return item.address;
       case "artist":
         return `${item.follower_count || 0} followers`;
       default:

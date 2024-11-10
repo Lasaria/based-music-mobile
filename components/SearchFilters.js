@@ -3,9 +3,9 @@ import { ScrollView, TouchableOpacity, Text, StyleSheet } from "react-native";
 
 const filters = [
   { id: "all", label: "All" },
-  { id: "artists", label: "Artists" },
+  { id: "artists", label: "People" },
   { id: "venues", label: "Venues" },
-  { id: "songs", label: "Songs" },
+  { id: "songs", label: "Music" },
   { id: "playlists", label: "Playlists" },
 ];
 

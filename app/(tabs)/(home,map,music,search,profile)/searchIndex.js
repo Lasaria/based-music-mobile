@@ -1,4 +1,10 @@
-import React, { useState, useCallback } from "react";
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import {
   View,
   TextInput,
@@ -25,162 +31,324 @@ const SearchScreen = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchResults, setSearchResults] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [lastEvaluatedKey, setLastEvaluatedKey] = useState(null);
-  const [hasMore, setHasMore] = useState(true);
 
-  // Perform the actual search operation with pagination support
-  const performSearch = async (isNewSearch = true) => {
-    console.log("\n=== [START] SearchScreen.performSearch ===");
-    console.log("[SearchScreen] Search parameters:", {
-      query: searchQuery,
-      filter: activeFilter,
-      isNewSearch,
-      hasLastKey: !!lastEvaluatedKey,
-    });
+  const [paginationState, setPaginationState] = useState({
+    hasMore: true,
+    lastEvaluatedKey: null,
+    loading: false,
+    currentPage: 0,
+  });
 
-    if (!searchQuery.trim() || loading) {
-      console.log("[SearchScreen] Search aborted:", {
-        emptyQuery: !searchQuery.trim(),
-        isLoading: loading,
+  // Refs for tracking component state
+  const isMounted = useRef(true);
+  const loadMoreInProgress = useRef(false);
+  const currentSearchRef = useRef("");
+  const activeFilterRef = useRef(activeFilter);
+
+  useEffect(() => {
+    console.log(
+      "\n--------------------------!! SEARCH SCREEN MOUNTED !!-------------------------------"
+    );
+    isMounted.current = true;
+    return () => {
+      console.log(
+        "\n--------------------------!! SEARCH SCREEN UNMOUNTED !!---------------------------"
+      );
+      isMounted.current = false;
+      debouncedSearch.cancel();
+    };
+  }, []);
+
+  // Keep activeFilterRef in sync
+  useEffect(() => {
+    activeFilterRef.current = activeFilter;
+  }, [activeFilter]);
+
+  // Perform the actual search operation
+  const performSearch = useCallback(
+    async (queryToSearch, isNewSearch = true) => {
+      console.log("\n=== [START] SearchScreen.performSearch ===");
+
+      if (!isMounted.current) {
+        console.log("[SearchScreen] Component unmounted, aborting search");
+        return;
+      }
+
+      // Use the current filter value from ref to avoid closure issues
+      const currentFilter = activeFilterRef.current;
+
+      console.log("[SearchScreen] Search parameters:", {
+        query: queryToSearch,
+        filter: currentFilter,
+        isNewSearch,
+        currentPage: paginationState.currentPage,
+      });
+
+      if (typeof queryToSearch !== "string" || !queryToSearch.trim()) {
+        console.log("[SearchScreen] Search aborted: Empty query");
+        setSearchResults([]);
+        return;
+      }
+
+      if (paginationState.loading) {
+        console.log("[SearchScreen] Search aborted: Search in progress");
+        return;
+      }
+
+      try {
+        setPaginationState((prev) => ({ ...prev, loading: true }));
+        setError(null);
+
+        const queryParams = new URLSearchParams({
+          query: queryToSearch.trim(),
+          type: currentFilter,
+          limit: "20",
+        });
+
+        // Only include lastEvaluatedKey if this is not a new search and we have one
+        if (!isNewSearch && paginationState.lastEvaluatedKey) {
+          queryParams.append(
+            "lastEvaluatedKey",
+            paginationState.lastEvaluatedKey
+          );
+        }
+
+        const requestUrl = `${MAIN_SERVER_URL}/search?${queryParams.toString()}`;
+        console.log("[SearchScreen] Executing search:", {
+          query: queryToSearch,
+          filter: currentFilter,
+          isNewSearch,
+          url: requestUrl,
+          page: paginationState.currentPage,
+        });
+
+        const response = await axiosGet({
+          url: requestUrl,
+          isAuthenticated: true,
+        });
+
+        console.log("[SearchScreen] Search results:", {
+          query: queryToSearch,
+          count: response?.items?.length || 0,
+          hasMore: response?.pagination?.hasMore || false,
+          newKey: !!response?.pagination?.lastEvaluatedKey,
+        });
+
+        if (!isMounted.current) {
+          console.log(
+            "[SearchScreen] Component unmounted during search, aborting update"
+          );
+          return;
+        }
+
+        if (!response) {
+          throw new Error("Invalid response received");
+        }
+
+        setSearchResults((prev) =>
+          isNewSearch ? response.items : [...prev, ...response.items]
+        );
+
+        setPaginationState((prev) => ({
+          hasMore: response.pagination?.hasMore || false,
+          lastEvaluatedKey: response.pagination?.lastEvaluatedKey || null,
+          loading: false,
+          currentPage: isNewSearch ? 0 : prev.currentPage + 1,
+        }));
+      } catch (err) {
+        console.error("[SearchScreen] Search error:", {
+          message: err.message,
+          stack: err.stack,
+        });
+
+        if (!isMounted.current) return;
+
+        setError("Failed to perform search");
+        setPaginationState((prev) => ({
+          ...prev,
+          loading: false,
+          hasMore: false,
+        }));
+      }
+    },
+    [paginationState.lastEvaluatedKey] // Remove activeFilter from dependencies
+  );
+
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((query, isNewSearch) => {
+        console.log("[SearchScreen] Debounced search triggered:", {
+          query,
+          isNewSearch,
+          filter: activeFilterRef.current,
+          timestamp: new Date().toISOString(),
+        });
+        currentSearchRef.current = query;
+        performSearch(query, isNewSearch);
+      }, 250),
+    [performSearch]
+  );
+
+  // Handle search input changes
+  const handleSearchChange = useCallback(
+    (text) => {
+      console.log("[SearchScreen] Search input changed:", {
+        text,
+        length: text.length,
+        filter: activeFilterRef.current,
+      });
+
+      setSearchQuery(text);
+
+      if (!text.trim()) {
+        console.log("[SearchScreen] Clearing search results and state");
+        setSearchResults([]);
+        setPaginationState({
+          hasMore: true,
+          lastEvaluatedKey: null,
+          loading: false,
+          currentPage: 0,
+        });
+        debouncedSearch.cancel();
+        return;
+      }
+
+      console.log("[SearchScreen] Resetting pagination for new search");
+      setPaginationState({
+        hasMore: true,
+        lastEvaluatedKey: null,
+        loading: false,
+        currentPage: 0,
+      });
+
+      debouncedSearch(text, true);
+    },
+    [debouncedSearch]
+  );
+
+  // Handle filter changes
+  const handleFilterChange = useCallback(
+    (filter) => {
+      console.log("[SearchScreen] Filter change requested:", {
+        current: activeFilter,
+        new: filter,
+      });
+
+      if (filter === activeFilter) {
+        console.log("[SearchScreen] Filter unchanged, skipping update");
+        return;
+      }
+
+      // Cancel any pending searches
+      console.log("[SearchScreen] Cancelling pending searches");
+      debouncedSearch.cancel();
+
+      // Update filter and reset search state
+      console.log("[SearchScreen] Updating filter and resetting search state");
+      setActiveFilter(filter);
+      setSearchResults([]);
+      setPaginationState({
+        hasMore: true,
+        lastEvaluatedKey: null,
+        loading: false,
+        currentPage: 0,
+      });
+
+      // Only perform new search if there's a query
+      if (searchQuery.trim()) {
+        console.log("[SearchScreen] Initiating new search with filter:", {
+          query: searchQuery,
+          filter,
+        });
+        // Short timeout to ensure state updates have propagated
+        setTimeout(() => {
+          performSearch(searchQuery, true);
+        }, 0);
+      } else {
+        console.log("[SearchScreen] No query present, skipping search");
+      }
+    },
+    [activeFilter, searchQuery, performSearch, debouncedSearch]
+  );
+
+  // Handle infinite scroll
+  const handleLoadMore = useCallback(() => {
+    if (loadMoreInProgress.current) {
+      console.log("[SearchScreen] Load more aborted: Already in progress");
+      return;
+    }
+
+    if (
+      !searchQuery.trim() ||
+      !paginationState.hasMore ||
+      paginationState.loading
+    ) {
+      console.log("[SearchScreen] Load more aborted:", {
+        hasQuery: !!searchQuery.trim(),
+        hasMore: paginationState.hasMore,
+        isLoading: paginationState.loading,
       });
       return;
     }
 
-    try {
-      setLoading(true);
-      setError(null);
+    console.log("[SearchScreen] Loading more results", {
+      page: paginationState.currentPage + 1,
+      lastKey: paginationState.lastEvaluatedKey,
+      filter: activeFilterRef.current,
+    });
 
-      // Construct query parameters
-      const queryParams = new URLSearchParams({
-        query: searchQuery,
-        type: activeFilter,
-        limit: "20",
+    loadMoreInProgress.current = true;
+    performSearch(searchQuery, false).finally(() => {
+      loadMoreInProgress.current = false;
+    });
+  }, [searchQuery, paginationState, performSearch]);
+
+  // Navigation handler
+  const navigateToDetail = useCallback(
+    (item) => {
+      console.log("[SearchScreen] Navigating to detail:", {
+        type: item.type,
+        id: item.id,
+        timestamp: new Date().toISOString(),
       });
 
-      // Add pagination key if continuing a previous search
-      if (!isNewSearch && lastEvaluatedKey) {
-        queryParams.append("lastEvaluatedKey", lastEvaluatedKey);
+      const routes = {
+        artist: {
+          path: "/artistDetail",
+          param: "artistId",
+        },
+        venue: {
+          path: "/venueDetail",
+          param: "venueId",
+        },
+        song: {
+          path: "/songDetail",
+          param: "songId",
+        },
+        playlist: {
+          path: "/playlistDetail",
+          param: "playlistId",
+        },
+      };
+
+      const route = routes[item.type];
+      if (route) {
+        router.push({
+          pathname: route.path,
+          params: { [route.param]: item.id },
+        });
       }
-
-      console.log("[SearchScreen] Executing search request:", {
-        url: `${MAIN_SERVER_URL}/search?${queryParams.toString()}`,
-      });
-
-      const response = await axiosGet({
-        url: `${MAIN_SERVER_URL}/search?${queryParams.toString()}`,
-        isAuthenticated: true,
-      });
-
-      console.log("[SearchScreen] Search results received:", {
-        count: response.items.length,
-        hasMore: response.pagination.hasMore,
-      });
-
-      // Update results based on whether this is a new search or pagination
-      setSearchResults((prev) =>
-        isNewSearch ? response.items : [...prev, ...response.items]
-      );
-      setLastEvaluatedKey(response.pagination.lastEvaluatedKey);
-      setHasMore(response.pagination.hasMore);
-    } catch (err) {
-      console.error("[SearchScreen] Search error:", {
-        message: err.message,
-        stack: err.stack,
-      });
-      setError("Failed to perform search");
-    } finally {
-      setLoading(false);
-      console.log("=== [END] SearchScreen.performSearch ===\n");
-    }
-  };
-
-  // Debounce search to prevent too many API calls
-  const debouncedSearch = useCallback(
-    debounce((isNewSearch) => performSearch(isNewSearch), 300),
-    []
+    },
+    [router]
   );
 
-  // Handle search input changes
-  const handleSearchChange = (text) => {
-    console.log("[SearchScreen] Search input changed:", { text });
-    setSearchQuery(text);
+  const keyExtractor = useCallback((item, index) => {
+    // Create a unique key combining type, id, and index for absolute uniqueness
+    const baseKey = item.id || item.venue_id || `index-${index}`;
+    return `${item.type}-${baseKey}-${index}`;
+  }, []);
 
-    if (text.trim()) {
-      // Reset search state for new query
-      setSearchResults([]);
-      setLastEvaluatedKey(null);
-      setHasMore(true);
-      debouncedSearch(true);
-    } else {
-      // Clear results when search is empty
-      console.log("[SearchScreen] Clearing search results");
-      setSearchResults([]);
-    }
-  };
-
-  // Handle filter changes
-  const handleFilterChange = (filter) => {
-    console.log("[SearchScreen] Filter changed:", { filter });
-    setActiveFilter(filter);
-
-    if (searchQuery.trim()) {
-      // Reset and perform new search with filter
-      setSearchResults([]);
-      setLastEvaluatedKey(null);
-      setHasMore(true);
-      performSearch(true);
-    }
-  };
-
-  // Handle infinite scroll
-  const handleLoadMore = () => {
-    console.log("[SearchScreen] Load more triggered:", {
-      hasMore,
-      isLoading: loading,
-    });
-    if (hasMore && !loading) {
-      debouncedSearch(false);
-    }
-  };
-
-  // Handle navigation to detail screens
-  const navigateToDetail = (item) => {
-    console.log("[SearchScreen] Navigating to detail:", {
-      type: item.type,
-      id: item.id,
-    });
-
-    switch (item.type) {
-      case "artist":
-        router.push({
-          pathname: "/artistDetail",
-          params: { artistId: item.id },
-        });
-        break;
-      case "venue":
-        router.push({
-          pathname: "/venueDetail",
-          params: { venueId: item.id },
-        });
-        break;
-      case "song":
-        router.push({
-          pathname: "/songDetail",
-          params: { songId: item.id },
-        });
-        break;
-      case "playlist":
-        router.push({
-          pathname: "/playlistDetail",
-          params: { playlistId: item.id },
-        });
-        break;
-    }
-  };
-
-  // Keep the rest of the component the same...
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -219,14 +387,22 @@ const SearchScreen = () => {
         renderItem={({ item }) => (
           <SearchResultItem item={item} onPress={navigateToDetail} />
         )}
-        keyExtractor={(item) => `${item.type}-${item.id}`}
+        keyExtractor={keyExtractor}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
+        onMomentumScrollBegin={() => {
+          loadMoreInProgress.current = false;
+        }}
         ListEmptyComponent={
-          <SearchEmptyState query={searchQuery} isSearching={loading} />
+          <SearchEmptyState
+            query={searchQuery}
+            isSearching={paginationState.loading}
+          />
         }
         ListFooterComponent={
-          loading && <ActivityIndicator color="purple" style={styles.loader} />
+          paginationState.loading && (
+            <ActivityIndicator color="purple" style={styles.loader} />
+          )
         }
         contentContainerStyle={styles.listContainer}
       />
@@ -234,7 +410,6 @@ const SearchScreen = () => {
   );
 };
 
-// Keep styles the same...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
