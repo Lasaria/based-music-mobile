@@ -47,12 +47,30 @@ const FeedScreen = () => {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    fetchPosts(1);
-    fetchCurrentUser();
-  }, []);
+    // Only fetch on initial mount
+    if (isInitialLoad) {
+      fetchInitialData();
+      setIsInitialLoad(false);
+    }
+  }, [isInitialLoad]);
+
+  const fetchInitialData = async () => {
+    try {
+      await Promise.all([
+        fetchPosts(1),
+        fetchCurrentUser()
+      ]);
+    } catch (error) {
+      console.error('Error in initial data fetch:', error);
+      setError('Failed to load initial data');
+    } finally {
+      setLoading(false);
+    }
+  };
   
 
   const handlePostDeleted = (postId) => {

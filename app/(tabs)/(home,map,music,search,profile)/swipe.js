@@ -54,7 +54,7 @@ export default function SwipeScreen() {
       const token = await tokenManager.getAccessToken();
       const action = direction === 'right' ? 'like' : 'dislike';
       
-      const response = await fetch(`${API_URL}/match/`, {
+      const response = await fetch(`${API_URL}/match`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
