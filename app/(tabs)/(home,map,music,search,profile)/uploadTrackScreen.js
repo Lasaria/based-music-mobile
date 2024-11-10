@@ -188,17 +188,22 @@ const uploadTrackScreen = () => {
   };
 
   const addTag = () => {
-    if (currentTag.trim()) {
+    trimmedTag = currentTag.trim();
+    if (trimmedTag) {
+      if (trimmedTag.length > 20) {
+        Alert.alert("Too Long", "Tags must be 20 characters or less");
+        return;
+      }
       if (tags.length >= 5) {
-        Alert.alert("Limit Reached", "Maximum 5 tags allowed");
+        Alert.alert("Maximum Tags", "You can only add up to 5 tags.");
         return;
       }
-      if (tags.includes(currentTag.trim())) {
-        Alert.alert("Duplicate Tag", "This tag already exists");
-        return;
+      if (!tags.includes(currentTag.trim())) {
+        setTags([...tags, currentTag.trim()]);
+        setCurrentTag("");
+      } else {
+        Alert.alert("Duplicate Tag", "This tag already exists.");
       }
-      setTags([...tags, currentTag.trim()]);
-      setCurrentTag("");
     }
   };
 
