@@ -6,8 +6,10 @@ import { tokenManager } from '../utils/tokenManager';
 import { uploadImage } from '../utils/imageUploadManager';
 import useProfileStore from '../zusStore/userFormStore';
 import { AuthService } from './AuthService';
+import { SERVER_URL, AUTHSERVER_URL } from '@env';
 
-const serverURL = 'http://localhost:3000';
+const serverURL = SERVER_URL;
+
 
 export const UserService = {
     setUserType: async (userType) => {
