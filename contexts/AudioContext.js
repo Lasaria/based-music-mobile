@@ -12,16 +12,24 @@ const debug = (message, data = null) => {
   console.log(`[AudioContext ${readableTimestamp}]`, message, data ? data : "");
 };
 
+// Performance tracking singleton
+const StateTracker = {
+  lastUpdateTime: 0,
+  lastPosition: 0,
+  lastPlayingState: false,
+  isUpdating: false,
+  minimumUpdateInterval: 250, // ms between updates
+  significantPositionChange: 100, // ms position change threshold
+};
+
 // Constants for optimized streaming
 const BASE_URL = "http://localhost:3000";
-const CHUNK_SIZE = 1024 * 1024; // 1MB chunks for efficient streaming
-const CACHE_PREFIX = "audio_metadata_";
-const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
-const STATUS_UPDATE_INTERVAL = 500; // 500ms
-const LOADING_TIMEOUT = 15000; // 15 seconds
-const BUFFER_CONFIG = {
-  initialChunkSize: CHUNK_SIZE,
-  preloadSize: CHUNK_SIZE * 2, // Pre-buffer 2MB
+const STREAMING_CONFIG = {
+  CHUNK_SIZE: 256 * 1024, // 256KB - smaller chunks for faster initial load
+  INITIAL_CHUNK: 512 * 1024, // 512KB - larger initial chunk for better startup
+  MAX_CHUNK: 1024 * 1024, // 1MB - maximum chunk size for steady state
+  STATUS_INTERVAL: 250, // More frequent updates for smoother progress
+  BUFFER_THRESHOLD: 0.8, // Start buffering next chunk at 80% of current
 };
 
 // Audio session configuration
@@ -36,21 +44,17 @@ const AUDIO_MODE_CONFIG = {
 // Create standard configurations
 const createAudioConfig = (trackId) => ({
   uri: `${BASE_URL}/tracks/stream/${trackId}`,
-  headers: {
-    Range: `bytes=0-${BUFFER_CONFIG.initialChunkSize}`,
-  },
-  progressUpdateIntervalMillis: STATUS_UPDATE_INTERVAL,
+  progressUpdateIntervalMillis: STREAMING_CONFIG.STATUS_INTERVAL,
   androidImplementation: "MediaPlayer",
 });
 
 const createSoundConfig = (volume = 1.0) => ({
   shouldPlay: false,
-  progressUpdateIntervalMillis: STATUS_UPDATE_INTERVAL,
+  progressUpdateIntervalMillis: STREAMING_CONFIG.STATUS_INTERVAL,
   positionMillis: 0,
   volume,
   rate: 1.0,
   shouldCorrectPitch: true,
-  preloadBufferSizeInBytes: BUFFER_CONFIG.preloadSize,
 });
 
 // Metadata cache implementation
@@ -90,7 +94,7 @@ class MetadataCache {
 const metadataCache = new MetadataCache();
 
 export const AudioProvider = ({ children }) => {
-  // State Variables
+  // State Management - Using refs for values that don't need re-renders
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPlayerReady, setIsPlayerReady] = useState(false);
   const [trackInfo, setTrackInfo] = useState(null);
@@ -110,10 +114,40 @@ export const AudioProvider = ({ children }) => {
   const loadAttempts = useRef(0);
   const isPlayerReadyRef = useRef(isPlayerReady);
   const trackInfoRef = useRef(trackInfo);
+  const stateUpdatesRef = useRef({});
+  const stateUpdateTimeoutRef = useRef(null);
   const currentAudioState = useRef({
     trackId: null,
     isLoaded: false,
   });
+
+  // Batch state updates for better performance
+  const batchStateUpdate = (updates) => {
+    Object.assign(stateUpdatesRef.current, updates);
+
+    if (stateUpdateTimeoutRef.current) {
+      clearTimeout(stateUpdateTimeoutRef.current);
+    }
+
+    stateUpdateTimeoutRef.current = setTimeout(() => {
+      const updates = stateUpdatesRef.current;
+
+      if (updates.isPlaying !== undefined) setIsPlaying(updates.isPlaying);
+      if (updates.isPlayerReady !== undefined)
+        setIsPlayerReady(updates.isPlayerReady);
+      if (updates.trackInfo !== undefined) setTrackInfo(updates.trackInfo);
+      if (updates.error !== undefined) setError(updates.error);
+      if (updates.currentTime !== undefined)
+        setCurrentTime(updates.currentTime);
+      if (updates.duration !== undefined) setDuration(updates.duration);
+      if (updates.currentTrackId !== undefined)
+        setCurrentTrackId(updates.currentTrackId);
+      if (updates.isBuffering !== undefined)
+        setIsBuffering(updates.isBuffering);
+
+      stateUpdatesRef.current = {};
+    }, 16); // One frame at 60fps
+  };
 
   useEffect(() => {
     const initUserId = async () => {
@@ -137,52 +171,25 @@ export const AudioProvider = ({ children }) => {
     };
   }, []);
 
-  // These two useEffect hooks are used to keep the `useRef` variables `isPlayerReadyRef` and `trackInfoRef`
-  // synchronized with the latest values of `isPlayerReady` and `trackInfo`, respectively.
-  //
-  // By storing these state values in refs, we create persistent references to the current values
-  // without causing re-renders when they change. This is especially useful in scenarios where
-  // the latest values need to be accessed by functions or event handlers outside of the React render cycle.
-  //
-  // Specifically:
-  // - `isPlayerReadyRef` is updated whenever `isPlayerReady` changes, allowing us to access the latest
-  //   player readiness status without triggering a re-render.
-  // - `trackInfoRef` is updated whenever `trackInfo` changes, enabling access to the most recent track information
-  //   for use in asynchronous functions, callbacks, or other parts of the component that need up-to-date values.
-  //
-  // Using refs this way optimizes performance by avoiding unnecessary re-renders while ensuring that the most
-  // current data is accessible to any logic that relies on these values.
+  useEffect(() => {
+    isPlayerReadyRef.current = isPlayerReady;
+  }, [isPlayerReady]);
 
-  //todo: @Deprecated =  Effect: Update Refs for Player Ready and Track Info
-  //todo: I think it is slowing down the streaming by 300 milliseconds
-  // useEffect(() => {
-  //   isPlayerReadyRef.current = isPlayerReady;
-  // }, [isPlayerReady]);
+  useEffect(() => {
+    trackInfoRef.current = trackInfo;
+  }, [trackInfo]);
 
-  // useEffect(() => {
-  //   trackInfoRef.current = trackInfo;
-  // }, [trackInfo]);
+  const THROTTLE_INTERVAL = 250; // ms
+  let lastUpdate = 0;
 
-  //TODO: @Deprecated =  Effect: Initialize Audio When Track ID Changes
-  // useEffect(() => {
-  //   if (currentTrackId) {
-  //     debug("Track ID changed, initializing audio", currentTrackId);
-  //     if (!isInitializing.current) {
-  //       isInitializing.current = true;
-  //       initializeAudio(currentTrackId).finally(() => {
-  //         isInitializing.current = false;
-  //       });
-  //     }
-  //   }
-
-  //   return () => {
-  //     if (soundRef.current) {
-  //       debug("Cleaning up sound object");
-  //       soundRef.current.unloadAsync();
-  //       soundRef.current = null;
-  //     }
-  //   };
-  // }, [currentTrackId]);
+  const throttledStatusUpdate = (status) => {
+    const now = Date.now();
+    if (now - lastUpdate < THROTTLE_INTERVAL) {
+      return;
+    }
+    lastUpdate = now;
+    onPlaybackStatusUpdate(status);
+  };
 
   // Function: Configure Audio Session
   const configureAudioSession = async () => {
@@ -232,134 +239,6 @@ export const AudioProvider = ({ children }) => {
       debug("Error fetching track info", err);
       setError({ message: "Failed to fetch track info", details: err.message });
       return null;
-    }
-  };
-
-  //TODO: @Depricated = Function: Initialize Audio System
-  const initializeAudio = async (trackId) => {
-    debug("Initializing audio system for track", trackId);
-    if (isInitializing.current) {
-      debug("Already initializing, skipping");
-      return;
-    }
-
-    try {
-      setIsInitializing(true);
-      setIsPlayerReady(false);
-      setError(null);
-
-      // Configure audio session
-      const isConfigured = await configureAudioSession();
-      debug("Audio session configured:", isConfigured);
-      if (!isConfigured) {
-        throw new Error("Failed to configure audio session");
-      }
-
-      // Fetch track info first and wait for it
-      const track = await fetchTrackInfo(trackId);
-      debug("Track info fetched:", track);
-      if (!track) {
-        throw new Error("Track not found");
-      }
-
-      // Set track info before loading audio
-      setTrackInfo(track);
-
-      // Load audio
-      await loadAudio(track);
-      debug("Audio loaded successfully");
-
-      setIsPlayerReady(true);
-      debug("Audio system initialized successfully");
-    } catch (err) {
-      debug("Audio initialization error", err);
-      setError({
-        message: "Failed to initialize audio system",
-        details: err.message,
-      });
-      setIsPlayerReady(false);
-    } finally {
-      setIsInitializing(false);
-    }
-  };
-
-  //TODO: @Depricated = Helper Function: Create Sound Object
-
-  const createSound = async (audioConfig, soundConfig, statusCallback) => {
-    try {
-      debug("=== Starting Sound Creation ===");
-      debug("Audio Config:", audioConfig);
-      debug("Sound Config:", soundConfig);
-
-      // Validate inputs
-      if (!audioConfig.uri) {
-        throw new Error("Invalid audio configuration: missing URI");
-      }
-
-      debug("Attempting to create sound object...");
-      const createResult = await Audio.Sound.createAsync(
-        audioConfig,
-        {
-          ...soundConfig,
-          progressUpdateIntervalMillis: 500,
-          shouldPlay: false,
-        },
-        (status) => {
-          debug("Detailed Status Update:", {
-            isLoaded: status.isLoaded,
-            isBuffering: status.isBuffering,
-            positionMillis: status.positionMillis,
-            durationMillis: status.durationMillis,
-            didJustFinish: status.didJustFinish,
-            error: status.error,
-            isPlaying: status.isPlaying,
-            rate: status.rate,
-            shouldPlay: status.shouldPlay,
-            volume: status.volume,
-          });
-          statusCallback(status);
-        }
-      );
-
-      debug("Initial creation result:", {
-        hasSound: !!createResult.sound,
-        status: {
-          isLoaded: createResult.status.isLoaded,
-          error: createResult.status.error,
-          durationMillis: createResult.status.durationMillis,
-        },
-      });
-
-      // Verify sound creation
-      if (!createResult.sound) {
-        throw new Error("Sound creation failed - no sound object returned");
-      }
-
-      debug("Checking sound status...");
-      const statusCheck = await createResult.sound.getStatusAsync();
-      debug("Sound status check:", {
-        isLoaded: statusCheck.isLoaded,
-        error: statusCheck.error,
-        durationMillis: statusCheck.durationMillis,
-        isBuffering: statusCheck.isBuffering,
-      });
-
-      if (!statusCheck.isLoaded) {
-        throw new Error(
-          `Sound not properly loaded: ${statusCheck.error || "Unknown error"}`
-        );
-      }
-
-      debug("=== Sound Creation Successful ===");
-      return createResult;
-    } catch (err) {
-      debug("=== Sound Creation Failed ===");
-      debug("Error details:", {
-        message: err.message,
-        code: err.code,
-        stack: err.stack,
-      });
-      throw err;
     }
   };
 
@@ -573,7 +452,28 @@ export const AudioProvider = ({ children }) => {
 
   // Callback: Playback Status Update
   const onPlaybackStatusUpdate = (status) => {
-    const statusTime = performance.now();
+    const startTime = performance.now();
+    const now = Date.now();
+
+    // Skip updates that are too frequent
+    if (
+      now - StateTracker.lastUpdateTime <
+      StateTracker.minimumUpdateInterval
+    ) {
+      return;
+    }
+
+    // Skip if position change is insignificant
+    const positionChange = Math.abs(
+      (status.positionMillis || 0) - StateTracker.lastPosition
+    );
+    if (
+      !status.isPlaying !== StateTracker.lastPlayingState &&
+      positionChange < StateTracker.significantPositionChange
+    ) {
+      return;
+    }
+
     debug("[onPlayBackStatusUpdate()] Status update received:", {
       isLoaded: status.isLoaded,
       error: status.error,
@@ -585,111 +485,74 @@ export const AudioProvider = ({ children }) => {
     });
 
     try {
-      // Early return if status hasn't changed significantly
       if (!status || !currentAudioState.current.isLoaded) {
-        debug(
-          "[onPlayBackStatusUpdate()] Skipping update - no significant changes"
-        );
         return;
       }
 
-      // Batch state updates for performance
-      const stateUpdates = [];
+      const updates = {};
 
-      // Handle loading state
       if (status.isLoaded) {
-        stateUpdates.push(() => setIsPlayerReady(true));
+        updates.isPlayerReady = true;
+        updates.isBuffering = status.isBuffering || false;
 
-        // Update buffering state
-        if (status.isBuffering !== undefined) {
-          stateUpdates.push(() => setIsBuffering(status.isBuffering));
-          debug(
-            "[onPlayBackStatusUpdate()] Buffering state:",
-            status.isBuffering
-          );
+        if (status.durationMillis) {
+          updates.duration = status.durationMillis / 1000;
         }
 
-        // Track playback progress
-        if (status.playableDurationMillis) {
-          const progress =
-            (status.playableDurationMillis / status.durationMillis) * 100;
-          debug(
-            "[onPlayBackStatusUpdate()] Loading progress:",
-            `${progress.toFixed(2)}%`
-          );
+        if (status.positionMillis !== undefined) {
+          updates.currentTime = status.positionMillis / 1000;
         }
 
-        // Handle duration update
-        if (status.durationMillis && status.durationMillis > 0) {
-          stateUpdates.push(() => setDuration(status.durationMillis / 1000));
-          debug(
-            "[onPlayBackStatusUpdate()] Duration updated:",
-            status.durationMillis / 1000
-          );
+        updates.isPlaying = status.isPlaying || false;
+
+        if (status.didJustFinish) {
+          updates.isPlaying = false;
+          if (soundRef.current) {
+            soundRef.current.setPositionAsync(0).catch((err) => {
+              debug(
+                "[onPlayBackStatusUpdate()] Error resetting position:",
+                err
+              );
+            });
+          }
         }
       } else {
-        stateUpdates.push(() => setIsPlayerReady(false));
-
+        updates.isPlayerReady = false;
         if (status.error) {
-          debug(
-            "[onPlayBackStatusUpdate()] Playback error encountered:",
-            status.error
-          );
-          stateUpdates.push(() =>
-            setError({
-              message: "Playback error",
-              details: status.error,
-            })
-          );
+          updates.error = {
+            message: "Playback error",
+            details: status.error,
+          };
         }
       }
 
-      // Update playing state
-      const newIsPlaying = status.isPlaying || false;
-      stateUpdates.push(() => setIsPlaying(newIsPlaying));
-      debug("[onPlayBackStatusUpdate()] Playing state:", newIsPlaying);
+      batchStateUpdate(updates);
 
-      // Update time position if changed
-      if (status.positionMillis !== undefined) {
-        const newPosition = status.positionMillis / 1000;
-        stateUpdates.push(() => setCurrentTime(newPosition));
-        debug("[onPlayBackStatusUpdate()] Position updated:", newPosition);
-      }
-
-      // Handle track completion
-      if (status.didJustFinish) {
-        debug("[onPlayBackStatusUpdate()] Track finished playing");
-        stateUpdates.push(() => setIsPlaying(false));
-
-        if (soundRef.current) {
-          soundRef.current.setPositionAsync(0).catch((err) => {
-            debug("[onPlayBackStatusUpdate()] Error resetting position:", err);
-          });
-        }
-      }
-
-      // Apply all state updates in one batch
-      debug("[onPlayBackStatusUpdate()] Applying batch state updates");
-      stateUpdates.forEach((update) => update());
+      // Update tracking state
+      StateTracker.lastUpdateTime = now;
+      StateTracker.lastPosition = status.positionMillis || 0;
+      StateTracker.lastPlayingState = status.isPlaying || false;
     } catch (err) {
       debug("[onPlayBackStatusUpdate()] Error processing status update:", err);
-      setError({
-        message: "Status update error",
-        details: err.message,
+      batchStateUpdate({
+        error: {
+          message: "Status update error",
+          details: err.message,
+        },
       });
-    } finally {
-      const endTime = performance.now();
-      if (endTime - statusTime > 16.67) {
-        // Longer than one frame (60fps)
-        debug("[onPlayBackStatusUpdate()] Status update took too long:", {
-          duration: `${(endTime - statusTime).toFixed(2)}ms`,
-          status: {
-            isPlaying: status.isPlaying,
-            position: status.positionMillis,
-            buffering: status.isBuffering,
-          },
-        });
-      }
+    }
+
+    const endTime = performance.now();
+    if (endTime - startTime > 16.67) {
+      // Longer than one frame
+      debug("[onPlayBackStatusUpdate()] Status update took too long:", {
+        duration: `${(endTime - startTime).toFixed(2)}ms`,
+        status: {
+          buffering: status.isBuffering,
+          isPlaying: status.isPlaying,
+          position: status.positionMillis,
+        },
+      });
     }
   };
 
@@ -798,153 +661,65 @@ export const AudioProvider = ({ children }) => {
   };
 
   // Function: Toggle Play/Pause
-  const togglePlayPause = async () => {
-    const startTime = performance.now();
-    debug("\n=== TOGGLE PLAY/PAUSE START ===");
-    debug("[togglePlayPause()] Initial state:", {
-      hasSound: soundRef.current ? true : false,
-      isPlayerReady,
-      currentTrackId,
-      trackInfo: trackInfo?.track_id,
-      isBuffering: false,
-      currentAudioState: currentAudioState.current,
+const togglePlayPause = async () => {
+  const startTime = performance.now();
+  debug("\n=== TOGGLE PLAY/PAUSE START ===");
+  debug("[togglePlayPause()] Initial state:", {
+    currentAudioState: currentAudioState.current,
+    currentTrackId,
+    hasSound: !!soundRef.current,
+    isBuffering,
+    isPlayerReady,
+    trackInfo: trackInfo?.track_id
+  });
+
+  try {
+    // If sound isn't loaded yet, load it and start playing immediately
+    if (!soundRef.current || !currentAudioState.current.isLoaded) {
+      debug("[togglePlayPause()] Sound not loaded, loading and playing");
+      await loadAudio(trackInfo);
+      await soundRef.current.playAsync();
+      batchStateUpdate({
+        isPlaying: true,
+        isBuffering: false
+      });
+      debug("[togglePlayPause()] Initial load and play complete");
+      return;
+    }
+
+    // Sound is loaded, just toggle play state
+    const status = await soundRef.current.getStatusAsync();
+    const shouldPlay = !status.isPlaying;
+
+    debug(`[togglePlayPause()] Executing ${shouldPlay ? 'playAsync' : 'pauseAsync'}`);
+    await soundRef.current[shouldPlay ? 'playAsync' : 'pauseAsync']();
+    
+    batchStateUpdate({
+      isPlaying: shouldPlay,
+      isBuffering: false
     });
 
-    try {
-      // Early validation checks
-      if (!soundRef.current) {
-        debug("[togglePlayPause()] BLOCKED: No sound object");
-        return;
-      }
+    debug(`[togglePlayPause()] ${shouldPlay ? 'Play' : 'Pause'} complete`);
+  } catch (err) {
+    debug("=== TOGGLE PLAY/PAUSE FAILED ===", {
+      error: err.message,
+      stack: err.stack
+    });
 
-      if (!isPlayerReadyRef.current) {
-        debug("[togglePlayPause()] BLOCKED: Player not ready");
-        setError({
-          message: "Player not ready",
-          details: "Attempting to play before audio is loaded",
-        });
-        return;
-      }
-
-      // Get current status with timeout protection
-      debug("[togglePlayPause()] Getting current status");
-      const statusPromise = soundRef.current.getStatusAsync();
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Status check timed out")), 3000)
-      );
-
-      const status = await Promise.race([statusPromise, timeoutPromise]).catch(
-        (err) => {
-          debug("[togglePlayPause()] Status check failed:", err);
-          throw err;
-        }
-      );
-
-      debug("[togglePlayPause()] Current status:", status);
-
-      // Handle unloaded state
-      if (!status.isLoaded) {
-        debug("[togglePlayPause()] Sound not loaded, attempting reload");
-        if (trackInfoRef.current) {
-          debug("[togglePlayPause()] Reloading audio");
-          await loadAudio(trackInfo);
-
-          // Verify reload success
-          const newStatus = await soundRef.current.getStatusAsync();
-          debug("[togglePlayPause()] Status after reload:", newStatus);
-
-          if (!newStatus.isLoaded) {
-            debug("[togglePlayPause()] BLOCKED: Reload failed");
-            throw new Error("Failed to reload audio");
-          }
-        } else {
-          debug("[togglePlayPause()] BLOCKED: No track info for reload");
-          return;
-        }
-      }
-
-      // Performance optimization: Prepare next action before executing
-      const shouldPlay = !status.isPlaying;
-      const action = shouldPlay ? "playAsync" : "pauseAsync";
-
-      debug(`[togglePlayPause()] Executing ${action}`);
-      setIsBuffering(true);
-
-      // Execute playback toggle with timeout protection
-      const actionPromise = soundRef.current[action]();
-      const actionTimeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`${action} timed out`)), 5000)
-      );
-
-      await Promise.race([actionPromise, actionTimeout]);
-
-      // Update state
-      setIsPlaying(shouldPlay);
-      setIsBuffering(false);
-
-      debug(`[togglePlayPause()] ${shouldPlay ? "Play" : "Pause"} complete`);
-
-      // Verify final state
-      const finalStatus = await soundRef.current.getStatusAsync();
-      if (finalStatus.isPlaying !== shouldPlay) {
-        debug("[togglePlayPause()] State mismatch after toggle:", {
-          expected: shouldPlay,
-          actual: finalStatus.isPlaying,
-        });
-
-        // Attempt to correct state
-        setIsPlaying(finalStatus.isPlaying);
-      }
-
-      debug("=== TOGGLE PLAY/PAUSE SUCCESS ===\n");
-    } catch (err) {
-      debug("=== TOGGLE PLAY/PAUSE FAILED ===");
-      debug("Error details:", {
-        message: err.message,
-        stack: err.stack,
-        state: {
-          isPlayerReady,
-          currentTrackId,
-          hasSound: !!soundRef.current,
-        },
-      });
-
-      // Reset states on error
-      setIsBuffering(false);
-      setIsPlaying(false);
-
-      setError({
+    batchStateUpdate({
+      isBuffering: false,
+      isPlaying: false,
+      error: {
         message: "Failed to toggle playback",
-        details: err.message,
-      });
-
-      // Attempt to recover player state
-      try {
-        if (soundRef.current) {
-          const recoveryStatus = await soundRef.current.getStatusAsync();
-          setIsPlaying(recoveryStatus.isPlaying || false);
-        }
-      } catch (recoveryErr) {
-        debug("[togglePlayPause()] Recovery attempt failed:", recoveryErr);
+        details: err.message
       }
-    } finally {
-      const endTime = performance.now();
-      const executionTime = endTime - startTime;
+    });
+  } finally {
+    const executionTime = performance.now() - startTime;
+    console.log(`\n \n \n ----------togglePlayPause() EXECUTED IN ${executionTime} milliseconds---------- \n \n \n`);
+  }
+};
 
-      // Log warning if toggle takes too long
-      if (executionTime > 150) {
-        // More than 150ms is considered slow
-        debug("[togglePlayPause()] Warning: Toggle operation was slow", {
-          executionTime: `${executionTime.toFixed(2)}ms`,
-          threshold: "150ms",
-        });
-      }
-
-      console.log(
-        `\n \n \n ----------togglePlayPause() EXECUTED IN ${executionTime} milliseconds---------- \n \n \n`
-      );
-    }
-  };
   // Function: Handle Volume Change
   const handleVolumeChange = async (newVolume) => {
     try {

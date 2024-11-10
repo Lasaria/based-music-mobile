@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useMemo,
   useRef,
+  useContext,
 } from "react";
 import {
   View,
@@ -22,6 +23,7 @@ import { axiosGet } from "../../../utils/axiosCalls";
 import SearchFilters from "../../../components/SearchFilters";
 import SearchResultItem from "../../../components/SearchResultItem";
 import SearchEmptyState from "../../../components/SearchEmptyState";
+import { AudioContext } from "../../../contexts/AudioContext";
 
 const MAIN_SERVER_URL = "http://localhost:3000";
 
@@ -32,6 +34,7 @@ const SearchScreen = () => {
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchResults, setSearchResults] = useState([]);
   const [error, setError] = useState(null);
+  const { isPlayerReady } = useContext(AudioContext);
 
   const [paginationState, setPaginationState] = useState({
     hasMore: true,
