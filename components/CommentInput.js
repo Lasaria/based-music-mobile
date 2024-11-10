@@ -19,6 +19,7 @@ const API_URL = SERVER_URL;
 export const CommentInput = ({ postId, onCommentAdded }) => {
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
 
   const handleSubmit = async () => {
     if (!comment.trim()) return;
@@ -26,6 +27,7 @@ export const CommentInput = ({ postId, onCommentAdded }) => {
     setIsSubmitting(true);
     try {
       const token = await tokenManager.getAccessToken();
+      const currentUserId = await tokenManager.getUserId();
       const response = await fetch(`${API_URL}/posts/${postId}/comments`, {
         method: 'POST',
         headers: {
@@ -42,9 +44,39 @@ export const CommentInput = ({ postId, onCommentAdded }) => {
       }
 
       const data = await response.json();
+
+      const userResponse = await fetch(`${API_URL}/users/${currentUserId}`, {
+        method: 'GET'
+      });
+
+      if (!userResponse.ok) {
+        throw new Error('Failed to add comment');
+      }
+
+      const userData = await userResponse.json();
+      console.log(userData);
+
+
       setComment('');
+      // Create a complete comment object to pass back
+      
+      const newComment = {
+        post_id: postId,
+        comment_id: data.comment_id,
+        content: comment.trim(),
+        author_id: currentUserId,
+        username: userData.username,  // Add these as props to CommentInput
+        profile_image_url: userData.profile_image_url,  // Add these as props to CommentInput
+        created_at: new Date().toISOString(),
+        like_count: 0,
+        reply_count: 0,
+        likes: [],
+        replies: [],
+        liked_by_user: false
+      };
+  
       if (onCommentAdded) {
-        onCommentAdded(data);
+        onCommentAdded(newComment);
       }
     } catch (error) {
       console.error('Error adding comment:', error);

@@ -18,34 +18,24 @@ import { SERVER_URL, AUTHSERVER_URL } from '@env';
 import { confirmDelete } from '../components/DeleteConfirmDialog';
 import { deleteReply } from '../components/DeleteActions';
 import { formatDate } from '../utils/functions';
+import { LikesModal } from './LikesModal';
 
 const API_URL = SERVER_URL;
 
 // ReplyCard.js - Component for individual replies
-export const ReplyCard = ({ reply, postId, commentId, currentUserId }) => {
+export const ReplyCard = ({ onReplyDeleted, reply, comment, comments, setComments, postId, commentId, currentUserId }) => {
     const [isLiked, setIsLiked] = useState(false);
-    const [likeCount, setLikeCount] = useState(0);
+    const [likeCount, setLikeCount] = useState(reply.like_count);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [likesModalVisible, setLikesModalVisible] = useState(false);
+    const [selectedLikes, setSelectedLikes] = useState([]);
   
     useEffect(() => {
       checkLikeStatus();
-      getLikeCount();
+      //getLikeCount();
     }, [isLiked]);
 
-    const handleDeleteReply = async () => {
-        if (isDeleting) return;
     
-        confirmDelete('reply', async () => {
-          setIsDeleting(true);
-          try {
-            await deleteReply(postId, commentId, reply.reply_id);
-            onReplyDeleted(reply.reply_id);
-          } catch (error) {
-          } finally {
-            setIsDeleting(false);
-          }
-        });
-      };
     
       const isAuthor = currentUserId === reply.author_id;
   
@@ -78,7 +68,7 @@ export const ReplyCard = ({ reply, postId, commentId, currentUserId }) => {
             }
           );
           const data = await response.json();
-          console.log(data.reply.like_count);
+          console.log(data);
           setLikeCount(data.reply.like_count);
         } catch (error) {
           console.error('Error checking like status:', error);
@@ -101,11 +91,34 @@ export const ReplyCard = ({ reply, postId, commentId, currentUserId }) => {
         );
         
         setIsLiked(!isLiked);
-        reply.like_count = isLiked ? reply.like_count - 1 : reply.like_count + 1;
+        const newLikeCount = isLiked ? likeCount - 1 : likeCount + 1;
+        setLikeCount(newLikeCount);
       } catch (error) {
         console.error('Error toggling reply like:', error);
       }
     };
+
+    const handlePressLikes = async () => {
+        try {
+          const response = await fetch(
+            `${API_URL}/posts/${postId}/comments/${commentId}/replies/${reply.reply_id}/likes`,
+            {
+              headers: {
+                'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
+              }
+            }
+          );
+          
+          if (!response.ok) throw new Error('Failed to fetch likes');
+          
+          const data = await response.json();
+          setSelectedLikes(data.likes);
+          setLikesModalVisible(true);
+        } catch (error) {
+          console.error('Error fetching likes:', error);
+          Alert.alert('Error', 'Failed to load likes');
+        }
+      };
   
     return (
       <View style={styles.replyCard}>
@@ -121,7 +134,7 @@ export const ReplyCard = ({ reply, postId, commentId, currentUserId }) => {
 
         {isAuthor && (
           <TouchableOpacity 
-            onPress={handleDeleteReply}
+            onPress={() => onReplyDeleted(reply)}
             disabled={isDeleting}
             style={styles.deleteButton}
           >
@@ -144,7 +157,17 @@ export const ReplyCard = ({ reply, postId, commentId, currentUserId }) => {
               color={isLiked ? "red" : "black"}
             />
           </TouchableOpacity>
-          <Text style={styles.likeCount}>{likeCount} likes</Text>
+          {/* <Text style={styles.likeCount}>{likeCount}</Text> */}
+          <TouchableOpacity onPress={handlePressLikes}>
+            <Text style={styles.likeCount}>{likeCount}</Text>
+            </TouchableOpacity>
+
+            {/* Add LikesModal */}
+            <LikesModal
+            visible={likesModalVisible}
+            onClose={() => setLikesModalVisible(false)}
+            likes={selectedLikes}
+            />
         </View>
       </View>
     );

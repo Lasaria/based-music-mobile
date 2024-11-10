@@ -25,20 +25,31 @@ export const LikesModal = ({ visible, onClose, likes }) => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Liked by</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Liked by</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
             <FlatList
               data={likes}
-              keyExtractor={(item, index) => index.toString()}
+              keyExtractor={(item) => item.author_id}
               renderItem={({ item }) => (
                 <View style={styles.likeItem}>
-                  <Text style={styles.likeAuthor}>{item.userId}</Text>
-                  <Text style={styles.likeDate}>{item.timestamp}</Text>
+                  <View style={styles.likeUserInfo}>
+                    <Image 
+                      source={{ uri: item.profile_image_url }}
+                      style={styles.likeUserImage}
+                    />
+                    <View style={styles.likeUserText}>
+                      <Text style={styles.likeUsername}>{item.username}</Text>
+                    </View>
+                  </View>
                 </View>
               )}
+              contentContainerStyle={styles.likesList}
             />
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -48,7 +59,7 @@ export const LikesModal = ({ visible, onClose, likes }) => {
 
   const { width } = Dimensions.get('window');
 
-const styles = StyleSheet.create({
+const existingStyles = StyleSheet.create({
   // PostCard Styles
   postCard: {
     backgroundColor: '#fff',
@@ -427,3 +438,53 @@ const styles = StyleSheet.create({
     color: '#666',
   },
 });
+
+// Add these new styles
+const additionalStyles = {
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingBottom: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: '#e0e0e0',
+    },
+    likesList: {
+      paddingHorizontal: 16,
+    },
+    likeItem: {
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: '#f0f0f0',
+    },
+    likeUserInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    likeUserImage: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      marginRight: 12,
+    },
+    likeUserText: {
+      flex: 1,
+    },
+    likeUsername: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: '#1a1a1a',
+    },
+    likeTimestamp: {
+      fontSize: 12,
+      color: '#666',
+      marginTop: 2,
+    },
+  };
+  
+  // Merge the new styles with your existing styles
+  const styles = StyleSheet.create({
+    ...existingStyles,
+    ...additionalStyles,
+  });

@@ -16,7 +16,7 @@ import { tokenManager } from "../utils/tokenManager";
 
 const API_URL = SERVER_URL;
 // ReplyInput.js
-export const ReplyInput = ({ postId, commentId, onReplyAdded, onCancel }) => {
+export const ReplyInput = ({ postId, currentUserId, commentId, onReplyAdded, onCancel }) => {
     const [reply, setReply] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -45,9 +45,36 @@ export const ReplyInput = ({ postId, commentId, onReplyAdded, onCancel }) => {
         }
   
         const data = await response.json();
+        console.log("REPLY ADdED DATA: ", data)
+
+        const userResponse = await fetch(`${API_URL}/users/${currentUserId}`, {
+            method: 'GET'
+          });
+    
+          if (!userResponse.ok) {
+            throw new Error('Failed to add comment');
+          }
+    
+          const userData = await userResponse.json();
+          console.log(userData);
+
         setReply('');
+        const newReply = {
+            post_id: postId,
+            reply_id: data.reply_id,
+            content: reply.trim(),
+            author_id: currentUserId,
+            username: userData.username,  // Add these as props to CommentInput
+            profile_image_url: userData.profile_image_url,  // Add these as props to CommentInput
+            created_at: new Date().toISOString(),
+            like_count: 0,
+            likes: [],
+            liked_by_user: false
+          };
+      
+
         if (onReplyAdded) {
-          onReplyAdded(data);
+          onReplyAdded(newReply);
         }
         if (onCancel) {
           onCancel();

@@ -23,28 +23,28 @@ import { SERVER_URL, AUTHSERVER_URL } from '@env';
 const API_URL = SERVER_URL;
 
 // CommentsSection.js - Component for comments
-export const CommentsSection = ({ postId, currentUserId }) => {
-    const [comments, setComments] = useState([]);
-    const [loading, setLoading] = useState(true);
+export const CommentsSection = ({ onCommentDeleted, isDeleting, isLoadingComments, postId, comments, setComments, currentUserId, commentCount, setCommentCount }) => {
+    //const [comments, setComments] = useState([]);
+    // const [loading, setLoading] = useState(false);
   
     useEffect(() => {
-      fetchComments();
+      //fetchComments();
     }, [postId]);
   
-    const fetchComments = async () => {
-      try {
-        const response = await fetch(`${API_URL}/posts/${postId}/comments`);
-        const data = await response.json();
-        console.log(data.comments);
-        setComments(data.comments);
-      } catch (error) {
-        console.error('Error fetching comments:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    // const fetchComments = async () => {
+    //   try {
+    //     const response = await fetch(`${API_URL}/posts/${postId}/comments`);
+    //     const data = await response.json();
+    //     console.log("COMMENT FETCH: ", data.comments);
+    //     setComments(data.comments);
+    //   } catch (error) {
+    //     console.error('Error fetching comments:', error);
+    //   } finally {
+    //     setLoading(false);
+    //   }
+    // };
   
-    if (loading) {
+    if (isLoadingComments) {
       return <ActivityIndicator />;
     }
   
@@ -53,7 +53,13 @@ export const CommentsSection = ({ postId, currentUserId }) => {
         {comments.map(comment => (
           <CommentCard
             key={comment.comment_id}
+            onCommentDeleted={onCommentDeleted}
+            isDeleting={isDeleting}
             comment={comment}
+            comments={comments}
+            setComments={setComments}
+            commentCount={commentCount}
+            setCommentCount={setCommentCount}
             postId={postId}
             currentUserId={currentUserId}
           />

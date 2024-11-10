@@ -53,6 +53,7 @@ const FeedScreen = () => {
     fetchPosts(1);
     fetchCurrentUser();
   }, []);
+  
 
   const handlePostDeleted = (postId) => {
     // Remove the deleted post from state
@@ -117,8 +118,8 @@ const FeedScreen = () => {
       // Check like status for each post
       const postsWithLikeStatus = await Promise.all(
         data.map(async (post) => {
-          const likeStatus = await checkPostLikeStatus(post.post_id);
-          return { ...post, liked: likeStatus.liked };
+          //const likeStatus = await checkPostLikeStatus(post.post_id);
+          return { ...post };
         })
       );
       
@@ -145,93 +146,7 @@ const FeedScreen = () => {
     }
   };
 
-  const checkPostLikeStatus = async (postId) => {
-    try {
-      const token = await getAuthToken();
-      const response = await fetch(
-        `${API_URL}/posts/${postId}/like-status`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-      if (!response.ok) throw new Error('Failed to check like status');
-      return await response.json();
-    } catch (error) {
-      console.error('Error checking post like status:', error);
-      return { liked: false };
-    }
-  };
-
-  const handleLike = async (postId) => {
-    try {
-      const token = await getAuthToken();
-      const response = await fetch(`${API_URL}/posts/${postId}/like`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) throw new Error('Failed to like post');
-      
-      setPosts(posts.map(post => 
-        post.post_id === postId
-          ? { ...post, liked: true, like_count: post.like_count + 1 }
-          : post
-      ));
-    } catch (error) {
-      console.error('Error liking post:', error);
-      setError('Failed to like post');
-    }
-  };
-
-  const handleUnlike = async (postId) => {
-    try {
-      const token = await getAuthToken();
-      const response = await fetch(`${API_URL}/posts/${postId}/unlike`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) throw new Error('Failed to unlike post');
-      
-      setPosts(posts.map(post => 
-        post.post_id === postId
-          ? { ...post, liked: false, like_count: Math.max(0, post.like_count - 1) }
-          : post
-      ));
-    } catch (error) {
-      console.error('Error unliking post:', error);
-      setError('Failed to unlike post');
-    }
-  };
-
-  const handlePressLikes = async (postId) => {
-    try {
-      const token = await getAuthToken();
-      const response = await fetch(
-        `${API_URL}/posts/${postId}/likes`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-      
-      if (!response.ok) throw new Error('Failed to fetch likes');
-      
-      const data = await response.json();
-      setSelectedPostLikes(data.likes);
-      setLikesModalVisible(true);
-    } catch (error) {
-      console.error('Error fetching likes:', error);
-      setError('Failed to load likes');
-    }
-  };
+  
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -284,9 +199,6 @@ const FeedScreen = () => {
         renderItem={({ item }) => (
           <PostCard
             post={item}
-            onLike={handleLike}
-            onUnlike={handleUnlike}
-            onPressLikes={handlePressLikes}
             currentUserId={currentUserId}
             onPostDeleted={handlePostDeleted}
             onEditPost={handleEditPost}

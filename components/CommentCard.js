@@ -15,9 +15,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { ReplyCard } from './ReplyCard';
 import { ReplyInput } from './ReplyInput';
-import { confirmDelete } from '../components/DeleteConfirmDialog';
-import { deleteComment } from '../components/DeleteActions';
+import { confirmDelete } from './DeleteConfirmDialog';
+import { deleteComment, deleteReply } from './DeleteActions';
 import { formatDate } from '../utils/functions';
+import { LikesModal } from './LikesModal';
 
 import { tokenManager } from "../utils/tokenManager"; 
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
@@ -25,42 +26,56 @@ import { SERVER_URL, AUTHSERVER_URL } from '@env';
 const API_URL = SERVER_URL;
 
 // CommentCard.js - Component for individual comments
-export const CommentCard = ({ comment, postId, currentUserId }) => {
+export const CommentCard = ({ onCommentDeleted, isDeleting, comment, comments, postId, currentUserId, setComments, commentCount, setCommentCount }) => {
     const [showReplies, setShowReplies] = useState(false);
     const [showReplyInput, setShowReplyInput] = useState(false);
     const [replies, setReplies] = useState([]);
     const [isLiked, setIsLiked] = useState(false);
-    const [likeCount, setLikeCount] = useState(0);
-    const [isDeleting, setIsDeleting] = useState(false);
-
-    const handleDeleteComment = async () => {
-        if (isDeleting) return;
+    const [likeCount, setLikeCount] = useState(comment.like_count || 0);
+    const [replyCount, setReplyCount] = useState(comment.reply_count || 0);
+    const [isReplyDeleting, setIsReplyDeleting] = useState(false);
+    const [likesModalVisible, setLikesModalVisible] = useState(false);
+    const [selectedLikes, setSelectedLikes] = useState([]);
     
-        confirmDelete('comment', async () => {
-          setIsDeleting(true);
-          try {
-            await deleteComment(postId, comment.comment_id);
-            onCommentDeleted(comment.comment_id);
-          } catch (error) {
-            onError('Failed to delete comment');
-          } finally {
-            setIsDeleting(false);
-          }
-        });
-      };
+
+    // const handleDeleteComment = async () => {
+    //     if (isDeleting) return;
+    //     console.log("COMMENT IN COMMENT CARD: ", comment)
+    
+    //     confirmDelete('comment', async () => {
+    //       setIsDeleting(true);
+    //       try {
+    //         await deleteComment(postId, comment.comment_id);
+    //         setCommentCount(commentCount - 1);
+    //         setComments(prevComments => prevComments.filter(c => c.comment_id !== comment.comment_id));
+    //       } catch (error) {
+    //         onError('Failed to delete comment');
+    //       } finally {
+    //         setIsDeleting(false);
+    //       }
+    //     });
+    //   };
 
     // Add this handler
     const handleReplyAdded = (newReply) => {
         setReplies([newReply, ...replies]);
         // Update reply count in comment
-        comment.reply_count += 1;
+        setReplyCount(replyCount+ 1);
         // Hide reply input after successful submission
         setShowReplyInput(false);
+        if (!showReplies) {
+            setShowReplies(true);
+          }
     };
+
+    useEffect(() => {
+        fetchReplies()
+    }, []);
   
     useEffect(() => {
       checkLikeStatus();
-      getLikeCount();
+      // getLikeCount();
+      // getReplyCount();
     }, [isLiked]);
   
     const checkLikeStatus = async () => {
@@ -92,7 +107,26 @@ export const CommentCard = ({ comment, postId, currentUserId }) => {
           );
           const data = await response.json();
           console.log(data);
-          setLikeCount(data.comment.total_likes);
+          setLikeCount(data.like_count);
+        } catch (error) {
+          console.error('Error checking like status:', error);
+        }
+      };
+
+      const getReplyCount = async () => {
+        try {
+          const response = await fetch(
+            `${API_URL}/posts/${postId}/comments/${comment.comment_id}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
+              }
+            }
+          );
+          const data = await response.json();
+          console.log(data);
+          console.log(data.reply_count);
+          setReplyCount(data.reply_count);
         } catch (error) {
           console.error('Error checking like status:', error);
         }
@@ -115,7 +149,8 @@ export const CommentCard = ({ comment, postId, currentUserId }) => {
         
         setIsLiked(!isLiked);
         // Update like count in UI
-        comment.like_count = isLiked ? comment.like_count - 1 : comment.like_count + 1;
+        const newLikeCount = isLiked ? likeCount - 1 : likeCount + 1;
+        setLikeCount(newLikeCount);
       } catch (error) {
         console.error('Error toggling like:', error);
       }
@@ -141,6 +176,49 @@ export const CommentCard = ({ comment, postId, currentUserId }) => {
       setShowReplies(!showReplies);
     };
 
+    const handleDeleteReply = async (reply) => {
+        if (isReplyDeleting) return;
+        console.log("REPLY IN REPLY CARD: ", reply);
+    
+        confirmDelete('reply', async () => {
+          setIsReplyDeleting(true);
+          try {
+            console.log(postId, comment.comment_id, reply.reply_id)
+            await deleteReply(postId, comment.comment_id, reply.reply_id);
+            //onReplyDeleted(reply.reply_id);
+            setReplyCount(replyCount - 1);
+            setReplies(prevReplies => prevReplies.filter(r => r.reply_id !== reply.reply_id));
+          } catch (error) {
+          } finally {
+            setIsReplyDeleting(false);
+          }
+        });
+      };
+
+      const handlePressLikes = async () => {
+        try {
+          const response = await fetch(
+            `${API_URL}/posts/${postId}/comments/${comment.comment_id}/likes`,
+            {
+              headers: {
+                'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
+              }
+            }
+          );
+          
+          if (!response.ok) throw new Error('Failed to fetch likes');
+          
+          const data = await response.json();
+          console.log(data);
+          setSelectedLikes(data.likes);
+          setLikesModalVisible(true);
+        } catch (error) {
+          console.error('Error fetching likes:', error);
+          Alert.alert('Error', 'Failed to load likes');
+        }
+      };
+
+
     const isAuthor = currentUserId === comment.author_id;
   
     return (
@@ -157,7 +235,7 @@ export const CommentCard = ({ comment, postId, currentUserId }) => {
 
         {isAuthor && (
           <TouchableOpacity 
-            onPress={handleDeleteComment}
+            onPress={() => onCommentDeleted(comment)}
             disabled={isDeleting}
             style={styles.deleteButton}
           >
@@ -180,13 +258,25 @@ export const CommentCard = ({ comment, postId, currentUserId }) => {
               color={isLiked ? "red" : "black"}
             />
           </TouchableOpacity>
-          <Text style={styles.likeCount}>{likeCount} likes</Text>
+          {/* <Text style={styles.likeCount}>{likeCount}</Text> */}
+          <TouchableOpacity onPress={handlePressLikes}>
+            <Text style={styles.likeCount}>{likeCount}</Text>
+            </TouchableOpacity>
+
+            {/* Add LikesModal */}
+            <LikesModal
+            visible={likesModalVisible}
+            onClose={() => setLikesModalVisible(false)}
+            likes={selectedLikes}
+            />
           
-          <TouchableOpacity onPress={handleShowReplies}>
-            <Text style={styles.replyButton}>
-              {showReplies ? 'Hide Replies' : 'Show Replies'} ({comment.reply_count})
-            </Text>
-          </TouchableOpacity>
+          {replyCount > 0 && (
+            <TouchableOpacity onPress={handleShowReplies}>
+                <Text style={styles.replyButton}>
+                {showReplies ? 'Hide' : 'Show'} {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
+                </Text>
+            </TouchableOpacity>
+            )}
           <TouchableOpacity 
           onPress={() => setShowReplyInput(true)}
           style={styles.replyAction}
@@ -196,27 +286,32 @@ export const CommentCard = ({ comment, postId, currentUserId }) => {
         </TouchableOpacity>
         </View>
 
-        {showReplyInput && (
-            <ReplyInput
-            postId={postId}
-            commentId={comment.comment_id}
-            onReplyAdded={handleReplyAdded}
-            onCancel={() => setShowReplyInput(false)}
-            />
-        )}
   
   {showReplies && replies.length > 0 && (
         <View style={styles.repliesContainer}>
           {replies.map(reply => (
             <ReplyCard
               key={reply.reply_id}
+              onReplyDeleted={handleDeleteReply}
               reply={reply}
+              comment={comment}
+              comments={comments}
+              setComments={setComments}
               postId={postId}
               commentId={comment.comment_id}
               currentUserId={currentUserId}
             />
           ))}
           </View>
+        )}
+        {showReplyInput && (
+            <ReplyInput
+            postId={postId}
+            currentUserId={currentUserId}
+            commentId={comment.comment_id}
+            onReplyAdded={handleReplyAdded}
+            onCancel={() => setShowReplyInput(false)}
+            />
         )}
       </View>
     );
