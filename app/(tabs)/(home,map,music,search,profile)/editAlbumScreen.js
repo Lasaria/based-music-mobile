@@ -19,7 +19,7 @@ import { SERVER_URL, AUTHSERVER_URL } from '@env';
 
 const editAlbumScreen = () => {
   const router = useRouter();
-  const { title, isrc, genre, tracks, artwork, lyrics, lyricsMapping, nameMapping } =
+  const { title, isrc, genre, tags, tracks, artwork, lyrics, lyricsMapping, nameMapping } =
     useLocalSearchParams();
 
   // Parse and ensure tracks have unique IDs
@@ -84,6 +84,7 @@ const editAlbumScreen = () => {
     formData.append("artistId", artistId);
     formData.append("title", title);
     formData.append("isrc", isrc);
+    formData.append("tags", tags);
     formData.append("releaseDate", new Date().toISOString());
     formData.append("genre", genre);
     formData.append("nameMapping", JSON.stringify(nameMapping));

@@ -34,6 +34,8 @@ const uploadTrackScreen = () => {
   const [newArtworkName, setNewArtworkName] = useState("");
   const [nameMapping, setNameMapping] = useState({});
   const [lyricsMapping, setLyricsMapping] = useState({});
+  const [currentTag, setCurrentTag] = useState("");
+  const [tags, setTags] = useState([]);
 
 
   const artistId = tokenManager.getIdToken();
@@ -370,6 +372,25 @@ const deleteArtwork = () => {
   
 }
 
+const addTag = () => {
+  if (currentTag.trim()) {
+    if (tags.length >= 5) {
+      Alert.alert("Maximum Tags", "You can only add up to 5 tags.");
+      return;
+    }
+    if (!tags.includes(currentTag.trim())) {
+      setTags([...tags, currentTag.trim()]);
+      setCurrentTag("");
+    } else {
+      Alert.alert("Duplicate Tag", "This tag already exists.");
+    }
+  }
+};
+
+const removeTag = (indexToRemove) => {
+  setTags(tags.filter((_, index) => index !== indexToRemove));
+};
+
 const nextScreen = () => {
 
    router.push({
@@ -378,6 +399,7 @@ const nextScreen = () => {
       title,
       isrc,
       genre,
+      tags: JSON.stringify(tags),
       tracks:JSON.stringify(tracks),
       lyrics: JSON.stringify(lyrics),
       artwork:JSON.stringify(artwork),
@@ -440,6 +462,48 @@ const nextScreen = () => {
             placeholderTextColor="white"
           />
         </View>
+
+        <View style={styles.intputContainer}>
+            <View style={styles.labelContainer}>
+              <Text style={styles.labelText}>Tags</Text>
+            </View>
+            <View style={styles.tagInputContainer}>
+              <TextInput
+                style={styles.tagInput}
+                value={currentTag}
+                onChangeText={setCurrentTag}
+                placeholder="Add tags"
+                placeholderTextColor="white"
+                onKeyPress={({ nativeEvent }) => {
+                  if (nativeEvent.key === ' ') {
+                    addTag();
+                  }
+                }}
+              />
+              <TouchableOpacity 
+                style={styles.addTagButton}
+                onPress={addTag}
+              >
+                <Text style={styles.addTagButtonText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.tagsContainer}>
+              {tags.map((tag, index) => (
+                <View key={index} style={styles.tagChip}>
+                  <Text style={styles.tagText}>{tag}</Text>
+                  <TouchableOpacity
+                    onPress={() => removeTag(index)}
+                    style={styles.removeTagButton}
+                  >
+                    <Text style={styles.removeTagText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.tagLimit}>
+              {tags.length}/5 tags added
+            </Text>
+          </View>
        
        {/** section to upload the albums */}
         <View style={{ alignItems: "center" }}>
@@ -954,6 +1018,64 @@ const styles = StyleSheet.create({
     color: "red",
     fontSize: 16,
     marginTop: 5,
+  },
+  tagInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 5,
+  },
+  tagInput: {
+    flex: 1,
+    color: 'white',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  addTagButton: {
+    backgroundColor: '#6F2CFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  addTagButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 10,
+    gap: 8,
+  },
+  tagChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6F2CFF',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    marginBottom: 4,
+  },
+  tagText: {
+    color: 'white',
+    fontSize: 12,
+    marginRight: 4,
+  },
+  removeTagButton: {
+    marginLeft: 4,
+  },
+  removeTagText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  tagLimit: {
+    color: 'grey',
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: 'right',
   },
 });
 
