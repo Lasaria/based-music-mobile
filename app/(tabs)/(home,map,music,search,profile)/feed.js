@@ -102,6 +102,9 @@ const FeedScreen = () => {
   };
 
   const fetchPosts = async (pageNum = 1) => {
+    // Prevent fetching if already loading or refreshing
+    if (loading || refreshing) return;
+
     if (!hasMore && pageNum > 1) return;
   
     try {
@@ -137,9 +140,10 @@ const FeedScreen = () => {
       });
       
       setPage(pageNum);
+      setError(null);
     } catch (error) {
       console.error('Error fetching posts:', error);
-      setError('Failed to load posts');
+      setError(error.message || 'Failed to load posts');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -149,6 +153,7 @@ const FeedScreen = () => {
   
 
   const handleRefresh = () => {
+    if (refreshing) return;
     setRefreshing(true);
     setPage(1);
     setHasMore(true);
@@ -158,7 +163,7 @@ const FeedScreen = () => {
   };
 
   const handleLoadMore = () => {
-    if (!loading && hasMore && !refreshing) {
+    if (!loading && hasMore && !refreshing && !error) {
       const nextPage = page + 1;
       setLoading(true);
       fetchPosts(nextPage);

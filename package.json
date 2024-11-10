@@ -48,6 +48,7 @@
     "react-dom": "18.2.0",
     "react-native": "0.74.5",
     "react-native-blob-util": "^0.19.11",
+    "react-native-deck-swiper": "^2.0.17",
     "react-native-dotenv": "^3.4.11",
     "react-native-draggable-flatlist": "^4.0.1",
     "react-native-elements": "^3.4.3",
