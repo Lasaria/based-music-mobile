@@ -155,7 +155,7 @@ const Music = ({ name }) => {
                             <Text style={styles.musicArtist}>{item.artist}</Text>
                         </View>
                         <Text style={styles.musicDuration}>{item.duration}</Text>
-                        <Image source={require('../../assets/images/ArtistProfile/play.png')} style={styles.play} />
+                        <Image source={require('../../assets/images/UserProfile/play.png')} style={styles.play} />
                     </View>
                 ))}
             </View>
@@ -189,7 +189,7 @@ const Music = ({ name }) => {
                                 {/* ATTENDEES COUNT */}
                                 <View style={styles.attendeeCountContainer}>
                                     <Image
-                                        source={require('../../assets/images/ArtistProfile/user.png')}
+                                        source={require('../../assets/images/UserProfile/user.png')}
                                         style={styles.userIcon}
                                     />
                                     <Text style={styles.attendeeCount}>{item.attendees}</Text>

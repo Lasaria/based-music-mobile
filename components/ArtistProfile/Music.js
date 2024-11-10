@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Colors } from '../../constants/Color';
 import { Feather, FontAwesome6 } from '@expo/vector-icons';
 import { tokenManager } from '../../utils/tokenManager';
-import { ArtistService } from '../../services/artistService';
+import { UserService } from '../../services/UserService';
 
 
 const tracksData = [
@@ -329,7 +329,7 @@ const Music = ({ name, isSelfProfile }) => {
             const artistId = await tokenManager.getUserId();
 
             // Fetch albums
-            const albumsResponse = await ArtistService.fetchAlbums(artistId, lastAlbumKeyRef.current);
+            const albumsResponse = await UserService.fetchAlbums(artistId, lastAlbumKeyRef.current);
             if (albumsResponse.albums && Array.isArray(albumsResponse.albums)) {
                 albumsRef.current = isInitialFetch
                     ? albumsResponse.albums
@@ -339,7 +339,7 @@ const Music = ({ name, isSelfProfile }) => {
             }
 
             // Fetch tracks
-            const tracksResponse = await ArtistService.fetchTracks(artistId, lastTrackKeyRef.current);
+            const tracksResponse = await UserService.fetchTracks(artistId, lastTrackKeyRef.current);
             if (tracksResponse.tracks && Array.isArray(tracksResponse.tracks)) {
                 tracksRef.current = isInitialFetch
                     ? tracksResponse.tracks
@@ -443,10 +443,10 @@ const Music = ({ name, isSelfProfile }) => {
             if (selectedItems.length === 1) {
                 const itemId = selectedItems[0][`${itemType.slice(0, -1)}_id`];
                 if (itemType === 'albums') {
-                    await ArtistService.deleteAlbum(itemId); // Call deleteAlbum for albums
+                    await UserService.deleteAlbum(itemId); // Call deleteAlbum for albums
                     setAlbums((prev) => prev.filter((item) => item.album_id !== itemId));
                 } else {
-                    await ArtistService.deleteTrack(itemId); // Call deleteTrack for tracks
+                    await UserService.deleteTrack(itemId); // Call deleteTrack for tracks
                     setTracks((prev) => prev.filter((item) => item.track_id !== itemId));
                 }
                 setIsSelecting((prev) => ({ ...prev, [itemType]: false }));
@@ -485,7 +485,7 @@ const Music = ({ name, isSelfProfile }) => {
         >
             <View style={styles.modalContainer}>
                 <View style={styles.modalContent}>
-                    <Image source={require('../../assets/images/ArtistProfile/delete.png')} style={styles.deleteImage} />
+                    <Image source={require('../../assets/images/UserProfile/delete.png')} style={styles.deleteImage} />
                     <Text style={styles.modalText}>{modalContent.text || 'Delete this selection?'}</Text>
                     <Text style={styles.modalTextDesc}>{modalContent.description || 'Do you really want to delete this selection? This can’t be undone.'}</Text>
                     <View style={styles.modalActions}>
@@ -614,7 +614,7 @@ const Music = ({ name, isSelfProfile }) => {
                             {displayedData.map((item, index) => (
                                 <View key={item.id || index} style={styles.squareItem}>
                                     <Image
-                                        source={item.cover_image_url ? { uri: item.cover_image_url } : require('../../assets/images/ArtistProfile/defaultArtCover.png')}
+                                        source={item.cover_image_url ? { uri: item.cover_image_url } : require('../../assets/images/UserProfile/defaultArtCover.png')}
                                         style={styles.squareImage}
                                     />
                                     <Text style={styles.title} numberOfLines={2}>{item.title || 'Untitled'}</Text>
@@ -639,7 +639,7 @@ const Music = ({ name, isSelfProfile }) => {
                             {displayedData.map((album, index) => (
                                 <View key={album.id || index} style={styles.albumItem}>
                                     <Image
-                                        source={album.cover_image_url ? { uri: album.cover_image_url } : require('../../assets/images/ArtistProfile/defaultArtCover.png')}
+                                        source={album.cover_image_url ? { uri: album.cover_image_url } : require('../../assets/images/UserProfile/defaultArtCover.png')}
                                         style={styles.albumImage}
                                     />
                                     <Text style={styles.albumTitle} numberOfLines={2}>{album.title || 'Untitled Album'}</Text>
@@ -677,7 +677,7 @@ const Music = ({ name, isSelfProfile }) => {
                     source={
                         item.cover_image_url
                             ? { uri: item.cover_image_url }
-                            : require('../../assets/images/ArtistProfile/defaultArtCover.png')
+                            : require('../../assets/images/UserProfile/defaultArtCover.png')
                     }
                     style={styles.trackImage}
                 />
@@ -687,7 +687,7 @@ const Music = ({ name, isSelfProfile }) => {
                 <Text style={styles.artist}>{handleFormatText(item.artist || name, 26)}</Text>
             </View>
             <Text style={styles.trackDuration}>{item.duration || '3:24'}</Text>
-            <Image source={item.cover_image_url && require('../../assets/images/ArtistProfile/play.png')} style={styles.play} />
+            <Image source={item.cover_image_url && require('../../assets/images/UserProfile/play.png')} style={styles.play} />
         </TouchableOpacity>
     );
 
@@ -705,7 +705,7 @@ const Music = ({ name, isSelfProfile }) => {
             )}
             <View style={styles.albumCoverContainer}>
                 <Image
-                    source={album.cover_image_url ? { uri: album.cover_image_url } : require('../../assets/images/ArtistProfile/defaultArtCover.png')}
+                    source={album.cover_image_url ? { uri: album.cover_image_url } : require('../../assets/images/UserProfile/defaultArtCover.png')}
                     style={styles.albumImage}
                 />
             </View>
@@ -728,7 +728,7 @@ const Music = ({ name, isSelfProfile }) => {
             )}
             <View style={styles.squareCoverContainer}>
                 <Image
-                    source={beat.cover_image_url ? { uri: beat.cover_image_url } : require('../../assets/images/ArtistProfile/defaultArtCover.png')}
+                    source={beat.cover_image_url ? { uri: beat.cover_image_url } : require('../../assets/images/UserProfile/defaultArtCover.png')}
                     style={styles.dataImage}
                 />
             </View>
@@ -751,7 +751,7 @@ const Music = ({ name, isSelfProfile }) => {
             )}
             <View style={styles.squareCoverContainer}>
                 <Image
-                    source={sound.cover_image_url ? { uri: sound.cover_image_url } : require('../../assets/images/ArtistProfile/defaultArtCover.png')}
+                    source={sound.cover_image_url ? { uri: sound.cover_image_url } : require('../../assets/images/UserProfile/defaultArtCover.png')}
                     style={styles.dataImage}
                 />
             </View>
@@ -774,7 +774,7 @@ const Music = ({ name, isSelfProfile }) => {
             )}
             <View style={styles.squareCoverContainer}>
                 <Image
-                    source={preset.cover_image_url ? { uri: preset.cover_image_url } : require('../../assets/images/ArtistProfile/defaultArtCover.png')}
+                    source={preset.cover_image_url ? { uri: preset.cover_image_url } : require('../../assets/images/UserProfile/defaultArtCover.png')}
                     style={styles.dataImage}
                 />
             </View>

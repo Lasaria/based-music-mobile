@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions, Animated, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, Image } from 'react-native';
 import { AntDesign, Entypo } from '@expo/vector-icons';
 import { Colors } from '../../constants/Color';
 
@@ -108,7 +108,7 @@ const Dashboard = () => {
                         <Text style={styles.cardTitle}>{item.title}</Text>
                         <Text style={styles.cardValue}>{item.value}</Text>
                         <View style={styles.cardChangeContainer}>
-                            <Image source={item.positive ? require('../../assets/images/ArtistProfile/rankingUpArrow.png') : require('../../assets/images/ArtistProfile/rankingDownArrow.png')} />
+                            <Image source={item.positive ? require('../../assets/images/UserProfile/rankingUpArrow.png') : require('../../assets/images/UserProfile/rankingDownArrow.png')} />
                             <Text style={[styles.cardChange, { color: item.positive ? '#5ce65c' : '#FF034F' }]}>{item.change}</Text>
                         </View>
                     </TouchableOpacity>
@@ -132,7 +132,7 @@ const Dashboard = () => {
                         <Text style={styles.cardTitle}>{item.title}</Text>
                         <Text style={styles.cardValue}>{item.location}</Text>
                         <View style={styles.cardChangeContainer}>
-                            <Image source={item.positive ? require('../../assets/images/ArtistProfile/rankingUpArrow.png') : require('../../assets/images/ArtistProfile/rankingDownArrow.png')} />
+                            <Image source={item.positive ? require('../../assets/images/UserProfile/rankingUpArrow.png') : require('../../assets/images/UserProfile/rankingDownArrow.png')} />
                             <Text style={[styles.cardChange, { color: item.positive ? '#5ce65c' : '#FF034F' }]}>{item.change}</Text>
                         </View>
                     </TouchableOpacity>

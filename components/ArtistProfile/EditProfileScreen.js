@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Image 
 import { Ionicons } from 'react-native-vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { tokenManager } from '../../utils/tokenManager';
-import { ArtistService } from '../../services/artistService';
+import { UserService } from '../../services/UserService';
 import { Colors } from '../../constants/Color';
 
 const EditProfileScreen = ({ name, setName, coverImageUri, setCoverImageUri, avatarUri, onCancel, currentUsername, lastUpdatedUsername, defaultCover, defaultProfile, openEditProfilePhotosScreen }) => {
@@ -85,7 +85,7 @@ const EditProfileScreen = ({ name, setName, coverImageUri, setCoverImageUri, ava
             // Only check availability if username is changed to a different one than the current username
             if (username !== currentUsername) {
                 console.log("Checking availability for new username:", username);
-                const isAvailable = await ArtistService.checkUsernameAvailability(username);
+                const isAvailable = await UserService.checkUsernameAvailability(username);
                 console.log("Username availability for", username, ":", isAvailable);
 
                 if (!isAvailable) {
@@ -108,7 +108,7 @@ const EditProfileScreen = ({ name, setName, coverImageUri, setCoverImageUri, ava
 
             console.log('Data to be updated:', profileData);
 
-            const response = await ArtistService.updateUserProfile({
+            const response = await UserService.updateUserProfile({
                 userId: userId,
                 ...profileData,
                 token: token
@@ -198,7 +198,7 @@ const EditProfileScreen = ({ name, setName, coverImageUri, setCoverImageUri, ava
                         justifyContent: 'center'
                     }]} onPress={handleOpenCoverImagePicker}>
                         <Image
-                            source={require('../../assets/images/ArtistProfile/edit.png')}
+                            source={require('../../assets/images/UserProfile/edit.png')}
                             style={styles.editIcon}
                         />
                     </TouchableOpacity>
@@ -213,7 +213,7 @@ const EditProfileScreen = ({ name, setName, coverImageUri, setCoverImageUri, ava
                             onCancel();
                         }}>
                             <Image
-                                source={require('../../assets/images/ArtistProfile/edit.png')}
+                                source={require('../../assets/images/UserProfile/edit.png')}
                                 style={styles.editIcon}
                             />
                         </TouchableOpacity>

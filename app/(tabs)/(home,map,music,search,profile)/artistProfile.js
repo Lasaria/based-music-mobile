@@ -11,7 +11,7 @@ import Music from '../../../components/ArtistProfile/Music';
 import Events from '../../../components/ArtistProfile/Events';
 import Posts from '../../../components/ArtistProfile/Posts';
 import Dashboard from '../../../components/ArtistProfile/Dashboard';
-import { ArtistService } from '../../../services/artistService';
+import { UserService } from '../../../services/UserService';
 import { tokenManager } from '../../../utils/tokenManager';
 import * as ImagePicker from 'expo-image-picker';
 import MusicPlayer from '../../../components/MusicPlayer';
@@ -81,7 +81,7 @@ const ArtistProfileScreen = () => {
   const fetchUserProfile = async () => {
     try {
       const userId = await tokenManager.getUserId();
-      const response = await ArtistService.getUserProfile(userId); // Update function to fetch user profile
+      const response = await UserService.getUserProfile(userId); // Update function to fetch user profile
       setUserId(userId);
 
       if (response) {
@@ -90,7 +90,7 @@ const ArtistProfileScreen = () => {
         // Determine if the logged-in user is viewing their own profile
         const isUserSelfProfile = response.id === userId;
         setIsSelfProfile(isUserSelfProfile);
-        console.log("Is user viewing their own profile?", isUserSelfProfile); 
+        console.log("Is user viewing their own profile?", isUserSelfProfile);
 
         const profileImageUrl = response.profile_image_url;
 
@@ -102,7 +102,7 @@ const ArtistProfileScreen = () => {
           ? response.cover_image_url
           : DEFAULT_COVER_IMAGE;
 
-        setAvatarUri(validProfileImageUrl); 
+        setAvatarUri(validProfileImageUrl);
         setCoverImageUri(coverImageUrl);
 
         // Set other fields using new schema
@@ -221,7 +221,7 @@ const ArtistProfileScreen = () => {
 
       console.log('About to send the following data for update:', profileData);
 
-      const response = await ArtistService.updateUserProfile({
+      const response = await UserService.updateUserProfile({
         userId: userId,
         ...profileData,
       });
@@ -352,15 +352,15 @@ const ArtistProfileScreen = () => {
             {isSelfProfile ? (
               <View style={styles.headerButtons}>
                 <TouchableOpacity style={styles.roundButton}>
-                  <Image source={require('../../../assets/images/ArtistProfile/bell.png')} />
-                  <Image source={require('../../../assets/images/ArtistProfile/ellipse.png')} style={styles.badge} />
+                  <Image source={require('../../../assets/images/UserProfile/bell.png')} />
+                  <Image source={require('../../../assets/images/UserProfile/ellipse.png')} style={styles.badge} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.roundButton} onPress={() => router.push("/artistInboxScreen")}>
-                  <Image source={require('../../../assets/images/ArtistProfile/message.png')} />
-                  <Image source={require('../../../assets/images/ArtistProfile/ellipse.png')} style={styles.badge} />
+                  <Image source={require('../../../assets/images/UserProfile/message.png')} />
+                  <Image source={require('../../../assets/images/UserProfile/ellipse.png')} style={styles.badge} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.roundButton} onPress={() => router.push("/settings")}>
-                  <Image source={require('../../../assets/images/ArtistProfile/settings.png')} />
+                  <Image source={require('../../../assets/images/UserProfile/settings.png')} />
                 </TouchableOpacity>
               </View>
 
@@ -368,7 +368,7 @@ const ArtistProfileScreen = () => {
               // Render the three dots icon when viewing someone else's profile
               <View style={styles.headerButtons}>
                 <TouchableOpacity style={styles.roundButton} onPress={openOptionsModal}>
-                  <Image source={require('../../../assets/images/ArtistProfile/morehorizontal.png')} />
+                  <Image source={require('../../../assets/images/UserProfile/morehorizontal.png')} />
                 </TouchableOpacity>
               </View>
             )}
@@ -390,7 +390,7 @@ const ArtistProfileScreen = () => {
     const fetchProfileImages = async () => {
       if (!userId) return; // Exit if userId is not available
       try {
-        const fetchedPhotos = await ArtistService.getProfileImages(userId);
+        const fetchedPhotos = await UserService.getProfileImages(userId);
 
         // Check if fetchedPhotos is valid, and set photos state accordingly
         if (Array.isArray(fetchedPhotos) && fetchedPhotos.length > 0) {
@@ -476,7 +476,7 @@ const ArtistProfileScreen = () => {
                 closeOptionsModal();
               }}>
                 <View style={styles.actionModalIconContainer}>
-                  <Image source={require('../../../assets/images/ArtistProfile/ic_twotone-block.png')} />
+                  <Image source={require('../../../assets/images/UserProfile/ic_twotone-block.png')} />
                   <Text style={styles.optionText}>Block account</Text>
                 </View>
               </TouchableOpacity>
@@ -486,7 +486,7 @@ const ArtistProfileScreen = () => {
                 closeOptionsModal();
               }}>
                 <View style={styles.actionModalIconContainer}>
-                  <Image source={require('../../../assets/images/ArtistProfile/alert-circle.png')} />
+                  <Image source={require('../../../assets/images/UserProfile/alert-circle.png')} />
                   <Text style={styles.optionText}>Report</Text>
                 </View>
               </TouchableOpacity>
@@ -561,13 +561,13 @@ const ArtistProfileScreen = () => {
                         {/* ARITST SOCIAL HANDLES */}
                         <View style={styles.socialIconsContainer}>
                           <TouchableOpacity>
-                            <Image source={require('../../../assets/images/ArtistProfile/entypo-social_instagram.png')} style={styles.icon} />
+                            <Image source={require('../../../assets/images/UserProfile/entypo-social_instagram.png')} style={styles.icon} />
                           </TouchableOpacity>
                           <TouchableOpacity>
-                            <Image source={require('../../../assets/images/ArtistProfile/lineicons_tiktok.png')} style={styles.icon} />
+                            <Image source={require('../../../assets/images/UserProfile/lineicons_tiktok.png')} style={styles.icon} />
                           </TouchableOpacity>
                           <TouchableOpacity>
-                            <Image source={require('../../../assets/images/ArtistProfile/uil_snapchat-square.png')} style={styles.icon} />
+                            <Image source={require('../../../assets/images/UserProfile/uil_snapchat-square.png')} style={styles.icon} />
                           </TouchableOpacity>
                         </View>
 
@@ -627,13 +627,13 @@ const ArtistProfileScreen = () => {
                       {/* ARITST SOCIAL HANDLES */}
                       <View style={styles.socialIconsContainer}>
                         <TouchableOpacity>
-                          <Image source={require('../../../assets/images/ArtistProfile/entypo-social_instagram.png')} style={styles.icon} />
+                          <Image source={require('../../../assets/images/UserProfile/entypo-social_instagram.png')} style={styles.icon} />
                         </TouchableOpacity>
                         <TouchableOpacity>
-                          <Image source={require('../../../assets/images/ArtistProfile/lineicons_tiktok.png')} style={styles.icon} />
+                          <Image source={require('../../../assets/images/UserProfile/lineicons_tiktok.png')} style={styles.icon} />
                         </TouchableOpacity>
                         <TouchableOpacity>
-                          <Image source={require('../../../assets/images/ArtistProfile/uil_snapchat-square.png')} style={styles.icon} />
+                          <Image source={require('../../../assets/images/UserProfile/uil_snapchat-square.png')} style={styles.icon} />
                         </TouchableOpacity>
                       </View>
 

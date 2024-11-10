@@ -121,7 +121,7 @@ const EventCard = ({ event }) => {
                         ))}
                     </View>
                     <View style={styles.attendeeCountContainer}>
-                        <Image source={require('../../assets/images/ArtistProfile/user.png')} style={styles.userIcon} />
+                        <Image source={require('../../assets/images/UserProfile/user.png')} style={styles.userIcon} />
                         <Text style={styles.attendeeCount}>{event.attendees}</Text>
                     </View>
                 </View>

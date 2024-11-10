@@ -71,7 +71,7 @@ const NewPostModal = ({ visible, onClose, onAddPost, avatarUri, username }) => {
                             <Image source={{ uri: selectedImage }} style={styles.selectedImage} />
                         ) : (
                             <>
-                                <Image source={require('../../assets/images/ArtistProfile/upload.png')} style={styles.uploadIcon} />
+                                <Image source={require('../../assets/images/UserProfile/upload.png')} style={styles.uploadIcon} />
                                 <Text style={styles.uploadText}>Tap to upload from camera roll or files</Text>
                                 <Text style={[styles.uploadText, { opacity: 0.8 }]}>Max file size 4MB</Text>
                             </>

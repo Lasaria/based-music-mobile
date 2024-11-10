@@ -116,7 +116,7 @@ const Posts = ({ avatarUri, name, isSelfProfile }) => {
                 </View>
                 {isSelfProfile && (
                     <TouchableOpacity onPress={() => showOptions(item.id)}>
-                        <Image source={require('../../assets/images/ArtistProfile/morehorizontal.png')} />
+                        <Image source={require('../../assets/images/UserProfile/morehorizontal.png')} />
                     </TouchableOpacity>
                 )}
             </View>
@@ -171,11 +171,11 @@ const Posts = ({ avatarUri, name, isSelfProfile }) => {
                     <Text style={styles.actionText}>Like</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionButton}>
-                    <Image source={require('../../assets/images/ArtistProfile/chat.png')} />
+                    <Image source={require('../../assets/images/UserProfile/chat.png')} />
                     <Text style={styles.actionText}>Comment</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionButton}>
-                    <Image source={require('../../assets/images/ArtistProfile/send.png')} />
+                    <Image source={require('../../assets/images/UserProfile/send.png')} />
                     <Text style={styles.actionText}>Share</Text>
                 </TouchableOpacity>
             </View>

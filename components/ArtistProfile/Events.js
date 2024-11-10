@@ -92,7 +92,7 @@ const EventCard = ({ event }) => (
                 {/* ATTENDEES COUNT */}
                 <View style={styles.attendeeCountContainer}>
                     <Image
-                        source={require('../../assets/images/ArtistProfile/user.png')}
+                        source={require('../../assets/images/UserProfile/user.png')}
                         style={styles.userIcon}
                     />
                     <Text style={styles.attendeeCount}>{event.attendees}</Text>

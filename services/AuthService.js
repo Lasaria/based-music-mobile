@@ -2,9 +2,7 @@
 import { axiosPost } from '../utils/axiosCalls';
 import { tokenManager } from '../utils/tokenManager';
 
-// const serverURL = 'http://localhost:3001'
-const serverURL = `http://${process.env.EXPO_PUBLIC_IP_ADDRESS}:3001`;
-
+const serverURL = 'http://localhost:3001'
 
 export const AuthService = {
 
