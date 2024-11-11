@@ -2,10 +2,9 @@ import * as SecureStore from "expo-secure-store";
 import { router } from "expo-router";
 import { axiosPost } from "../utils/axiosCalls";
 import { tokenManager } from "../utils/tokenManager";
-import { SERVER_URL, AUTHSERVER_URL } from '@env';
+import { SERVER_URL, AUTHSERVER_URL } from "@env";
 
 const serverURL = AUTHSERVER_URL;
-
 
 export const AuthService = {
   // Sign Up Function
@@ -189,7 +188,7 @@ export const AuthService = {
         body: { refreshToken },
         isAuthenticated: false,
       });
-      console.log("Tokens refreshed successfully:", response);
+      console.log("Tokens refreshed successfully");
       await tokenManager.saveTokens(response.result.AuthenticationResult);
     } catch (error) {
       console.error("Error:", err.message);
@@ -206,7 +205,7 @@ export const AuthService = {
         isAuthenticated: false,
       });
 
-      console.log("User signed in successfully using Google:", response);
+      console.log("User signed in successfully using Google:");
       await tokenManager.saveTokens(response.result.AuthenticationResult);
 
       return response;

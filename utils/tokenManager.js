@@ -24,9 +24,9 @@ export const tokenManager = {
       const idToken = await SecureStore.getItemAsync(ID_TOKEN_KEY);
       const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
 
-      console.log("accessToken: " + accessToken);
-      console.log("idToken: " + idToken);
-      console.log("refreshToken: " + refreshToken);
+      // console.log("accessToken: " + accessToken);
+      // console.log("idToken: " + idToken);
+      // console.log("refreshToken: " + refreshToken);
     } catch (error) {
       console.error("Error saving tokens:", error);
     }

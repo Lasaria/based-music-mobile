@@ -252,6 +252,30 @@ export const AudioProvider = ({ children }) => {
     }
   };
 
+  //validate and set duration
+  const validateAndSetDuration = (status) => {
+    if (!status || !status.isLoaded) return;
+
+    // Check both durationMillis and playableDurationMillis
+    const durationMillis =
+      status.durationMillis || status.playableDurationMillis;
+
+    if (!durationMillis || isNaN(durationMillis)) {
+      debug("Invalid duration values:", {
+        durationMillis: status.durationMillis,
+        playableDurationMillis: status.playableDurationMillis,
+      });
+      return;
+    }
+
+    const durationSeconds = durationMillis / 1000;
+    if (durationSeconds > 0) {
+      batchStateUpdate({ duration: durationSeconds });
+      debug("Duration set to:", durationSeconds);
+    } else {
+      debug("Invalid duration value (zero or negative):", durationSeconds);
+    }
+  };
   // Function: Fetch Track Info from Server
   const fetchTrackInfo = async (trackId) => {
     debug("Fetching track info", trackId);
@@ -403,7 +427,12 @@ export const AudioProvider = ({ children }) => {
               });
             }
           }
-
+          if (status.durationMillis) {
+            debug("Initial duration received:", status.durationMillis);
+            validateAndSetDuration(status.durationMillis);
+          } else {
+            debug("No duration in initial status:", status);
+          }
           // Log status update
           debug("[loadAudio()] Status update received:", {
             isLoaded: status.isLoaded,
@@ -555,7 +584,7 @@ export const AudioProvider = ({ children }) => {
       isLoaded: status.isLoaded,
       error: status.error,
       position: status.positionMillis,
-      duration: status.durationMillis,
+      duration: status.durationMillis || status.playableDurationMillis,
       isPlaying: status.isPlaying,
       isBuffering: status.isBuffering,
       playableDuration: status.playableDurationMillis,
@@ -572,17 +601,37 @@ export const AudioProvider = ({ children }) => {
         updates.isPlayerReady = true;
         updates.isBuffering = status.isBuffering || false;
 
-        if (status.durationMillis) {
-          updates.duration = status.durationMillis / 1000;
+        // Handle duration from either durationMillis or playableDurationMillis
+        const durationMillis =
+          status.durationMillis || status.playableDurationMillis;
+        if (durationMillis) {
+          const newDuration = durationMillis / 1000;
+          if (newDuration !== duration) {
+            debug("[onPlayBackStatusUpdate()] Duration update:", {
+              previous: duration,
+              new: newDuration,
+              rawMillis: durationMillis,
+              source: status.durationMillis
+                ? "durationMillis"
+                : "playableDurationMillis",
+            });
+            updates.duration = newDuration;
+          }
         }
 
+        // Update current playback position if available
         if (status.positionMillis !== undefined) {
           updates.currentTime = status.positionMillis / 1000;
         }
 
+        // Update playing state
         updates.isPlaying = status.isPlaying || false;
 
+        // Handle track completion
         if (status.didJustFinish) {
+          debug(
+            "[onPlayBackStatusUpdate()] Track finished, resetting position"
+          );
           updates.isPlaying = false;
           if (soundRef.current) {
             soundRef.current.setPositionAsync(0).catch((err) => {
@@ -594,8 +643,10 @@ export const AudioProvider = ({ children }) => {
           }
         }
       } else {
+        // Handle unloaded state
         updates.isPlayerReady = false;
         if (status.error) {
+          debug("[onPlayBackStatusUpdate()] Playback error:", status.error);
           updates.error = {
             message: "Playback error",
             details: status.error,
@@ -603,9 +654,10 @@ export const AudioProvider = ({ children }) => {
         }
       }
 
+      // Batch update all state changes
       batchStateUpdate(updates);
 
-      // Update tracking state
+      // Update tracking state for throttling
       StateTracker.lastUpdateTime = now;
       StateTracker.lastPosition = status.positionMillis || 0;
       StateTracker.lastPlayingState = status.isPlaying || false;
@@ -619,6 +671,7 @@ export const AudioProvider = ({ children }) => {
       });
     }
 
+    // Performance monitoring
     const endTime = performance.now();
     if (endTime - startTime > 16.67) {
       // Longer than one frame
@@ -632,7 +685,6 @@ export const AudioProvider = ({ children }) => {
       });
     }
   };
-
   // Function: Update Current Track
   const updateCurrentTrack = async (trackId) => {
     const startTime = performance.now();
@@ -827,7 +879,7 @@ export const AudioProvider = ({ children }) => {
     }
     return Math.max(0, Math.floor(seconds * 1000)); // Ensure positive and convert to ms
   };
-  
+
   // Function: Seek to Position
   const seekTo = async (seconds) => {
     debug("[seekTo] Starting seek operation with seconds:", seconds);
@@ -973,6 +1025,14 @@ export const AudioProvider = ({ children }) => {
       }
 
       const status = await soundRef.current.getStatusAsync();
+
+      if (status.isLoaded && status.durationMillis) {
+        validateAndSetDuration(status.durationMillis);
+      }
+      debug(
+        "[checkSoundStatus()] Sound duration status:",
+        status.durationMillis
+      );
       return {
         isLoaded: status.isLoaded,
         isReady: isPlayerReady,
