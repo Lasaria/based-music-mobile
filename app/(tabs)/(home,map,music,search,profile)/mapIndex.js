@@ -22,7 +22,6 @@ import { color } from "react-native-elements/dist/helpers";
 import { Dimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-
 MapboxGL.setAccessToken(
     "pk.eyJ1IjoibGFzYXJpYSIsImEiOiJjbTJheXV0cjcwNG9zMmxwdnlxZWdoMjc5In0.NoBtaBj9cNvdemNp52pxGQ"
 );
@@ -36,6 +35,8 @@ const MapScreen = () => {
   const [mapData, setMapData] = useState(null);
   const [selectedLayer, setSelectedLayer] = useState(null); // For tracking the selected polygon
   const [venuesInPolygon, setVenuesInPolygon] = useState([]); // For tracking the venues inside the polygon
+  const [isCostModalVisible, setIsCostModalVisible] = useState(false); // For controlling cost modal visibility
+  const [activeButton, setActiveButton] = useState({}); // For tracking active buttons
   const modalizeRef = useRef(null); // Ref for controlling the modal
   const animatedHeight = useRef(new Animated.Value(300)).current; // Initial height for scrollable list
 
@@ -295,6 +296,17 @@ const MapScreen = () => {
     modalizeRef.current?.open();
   };
 
+  const toggleCostModal = () => {
+    setIsCostModalVisible((prev) => !prev);
+  };
+
+  const toggleButtonColor = (buttonName) => {
+    setActiveButton((prev) => ({
+      ...prev,
+      [buttonName]: !prev[buttonName]
+    }));
+  };
+
   const renderMapLayers = () => {
     if (!mapData || !mapData.data) return null;
 
@@ -368,24 +380,42 @@ const MapScreen = () => {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ alignItems: "flex-start" }} // 将 alignItems 放在这里
           >
-            <TouchableOpacity style={styles.buttonStyle}>
+            <TouchableOpacity style={[styles.buttonStyle, activeButton['Genre'] && styles.activeButton]} onPress={() => toggleButtonColor('Genre')}>
               <Text style={styles.buttonText}>Genre</Text>
-              <Ionicons name="chevron-down" size={15} color="white" />
+              <Ionicons name="chevron-down" size={22} color="white" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.buttonStyle}>
+            <TouchableOpacity style={[styles.buttonStyle, activeButton['Cost'] && styles.activeButton]} onPress={() => { toggleButtonColor('Cost'); toggleCostModal(); }}>
               <Text style={styles.buttonText}>Cost</Text>
-              <Ionicons name="chevron-down" size={15} color="white" />
+              <Ionicons name="chevron-down" size={22} color="white" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.buttonStyle}>
+            <TouchableOpacity style={[styles.buttonStyle, activeButton['Distance'] && styles.activeButton]} onPress={() => toggleButtonColor('Distance')}>
               <Text style={styles.buttonText}>Distance</Text>
-              <Ionicons name="chevron-down" size={15} color="white" />
+              <Ionicons name="chevron-down" size={22} color="white" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.buttonStyle}>
+            <TouchableOpacity style={[styles.buttonStyle, activeButton['Access'] && styles.activeButton]} onPress={() => toggleButtonColor('Access')}>
               <Text style={styles.buttonText}>Access</Text>
-              <Ionicons name="chevron-down" size={15} color="white" />
+              <Ionicons name="chevron-down" size={22} color="white" />
             </TouchableOpacity>
           </ScrollView>
         </View>
+        {/* Cost Modal */}
+        {isCostModalVisible && (
+            <View style={styles.costModal}>
+              <View style={styles.dragHandle} />
+              <Text style={styles.modalTitle}>Cost</Text>
+              <View style={styles.modalContent}>
+                <TouchableOpacity style={styles.modalButton}><Text style={styles.modalButtonText}>Free</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.modalButton}><Text style={styles.modalButtonText}>$</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.modalButton}><Text style={styles.modalButtonText}>$$</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.modalButton}><Text style={styles.modalButtonText}>$$$</Text></TouchableOpacity>
+                <View style={styles.modalRangeInputContainer}>
+                  <View style={styles.modalRangeInput}><Text style={styles.modalRangeText}>Min</Text></View>
+                  <Text style={styles.connect}>-</Text>
+                  <View style={styles.modalRangeInput}><Text style={styles.modalRangeText}>Max</Text></View>
+                </View>
+              </View>
+            </View>
+        )}
         {/* Map */}
         <MapboxGL.MapView
             style={styles.map}
@@ -549,15 +579,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 0,
     paddingLeft: "5%",
-
     // Position and size styling
     width: "100%",
-    height: 55,
+    height: 63,
     backgroundColor: "#000000",
     borderRadius: 15,
     borderWidth: 1.4,
     borderColor: "#FFFFFF", // Add white border
     paddingHorizontal: 10,
+
   },
   buttonStyle: {
     boxSizing: "border-box",
@@ -568,8 +598,8 @@ const styles = StyleSheet.create({
     alignContent: "flex-start",
     padding: 5,
     gap: 4,
-    width: 100,
-    height: 28,
+    width: 110,
+    height: 32,
     backgroundColor: "#000000",
     borderWidth: 1.4,
     borderColor: "#FFFFFF",
@@ -577,6 +607,9 @@ const styles = StyleSheet.create({
     flexGrow: 0,
     marginRight: 6,
     justifyContent: "space-between",
+  },
+  activeButton: {
+    backgroundColor: "#6A0DAD",
   },
   buttonText: {
     color: "#FFFFFF",
@@ -598,7 +631,7 @@ const styles = StyleSheet.create({
 
   },
   dragHandle: {
-    width: "30%",
+    width: "40%",
     height: 5,
     borderRadius: 5,
     backgroundColor: "#444",
@@ -740,6 +773,76 @@ const styles = StyleSheet.create({
   iconImage: {
     width: 70,
     height: 70,
+  },
+  costModal: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+    padding: 20,
+    zIndex: 10,
+    height: '44%',
+  },
+  modalTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginTop: 27,
+    marginBottom: 20,
+    marginLeft: 10,
+    fontFamily: "Inter"
+  },
+  modalContent: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginLeft: 10,
+  },
+  modalButton: {
+    backgroundColor: "#000",
+    paddingVertical: 9,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  modalButtonSelected: {
+    backgroundColor: "#6A0DAD",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  modalButtonText: {
+    color: "#fff",
+    fontSize: 16,
+  },
+  modalRangeInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 40,
+    marginLeft: -10,
+  },
+  connect: {
+    fontSize: 30,
+    fontWeight: "bold",
+    fontFamily: "Inter"
+  },
+  modalRangeInput: {
+    width: 110,
+    height: 60,
+    backgroundColor: "#ddd",
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
+    marginHorizontal: 10,
+  },
+
+  modalRangeText: {
+    color: "#000",
+    fontSize: 16,
   },
 });
 
