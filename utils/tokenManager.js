@@ -35,7 +35,7 @@ export const tokenManager = {
   getAccessToken: async () => {
     try {
       const accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
-      console.log(" [tokenManager.js] accessToken: " + accessToken);
+      // console.log(" [tokenManager.js] accessToken: " + accessToken);
 
       return await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
     } catch (error) {
@@ -126,13 +126,12 @@ export const tokenManager = {
 
   getUserId: async () => {
     const token = await tokenManager.getAccessToken(); // Retrieve access token
-    console.log("TOKEN: ", token);
+    // console.log("TOKEN: ", token);
     if (token) {
       const decodedToken = jwtDecode(token); // Decode the JWT token
-      console.log("[tokenManager.js] AuthDECODED TOKEN: ", decodedToken.sub);
+      // console.log("[tokenManager.js] AuthDECODED TOKEN: ", decodedToken.sub);
       return decodedToken.sub || decodedToken.userId; // Assuming 'sub' or 'userId' contains the user ID
     }
     throw new Error("[tokenManager.js] User not authenticated");
-  }
-
+  },
 };

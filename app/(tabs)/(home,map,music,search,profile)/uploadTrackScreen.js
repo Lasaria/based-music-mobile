@@ -38,6 +38,8 @@ const uploadTrackScreen = () => {
   const [lyricsUploadStatus, setLyricsUploadStatus] = useState("idle");
   const [lyricsUploadProgress, setLyricsUploadProgress] = useState();
   const [lyricsSize, setLyricsSize] = useState();
+  const [tags, setTags] = useState([]);
+  const [currentTag, setCurrentTag] = useState("");
   const [cover, setCover] = useState();
   const [coverName, setCoverName] = useState();
   const [coverError, setCoverError] = useState();
@@ -185,6 +187,30 @@ const uploadTrackScreen = () => {
     }
   };
 
+  const addTag = () => {
+    trimmedTag = currentTag.trim();
+    if (trimmedTag) {
+      if (trimmedTag.length > 20) {
+        Alert.alert("Too Long", "Tags must be 20 characters or less");
+        return;
+      }
+      if (tags.length >= 5) {
+        Alert.alert("Maximum Tags", "You can only add up to 5 tags.");
+        return;
+      }
+      if (!tags.includes(currentTag.trim())) {
+        setTags([...tags, currentTag.trim()]);
+        setCurrentTag("");
+      } else {
+        Alert.alert("Duplicate Tag", "This tag already exists.");
+      }
+    }
+  };
+
+  const removeTag = (indexToRemove) => {
+    setTags(tags.filter((_, index) => index !== indexToRemove));
+  };
+
   const startUpload = (track) => {
     console.log(track);
 
@@ -302,6 +328,7 @@ const uploadTrackScreen = () => {
     formData.append("isrc", isrc);
     formData.append("releaseDate", new Date().toISOString());
     formData.append("genre", genre);
+    formData.append("tags", JSON.stringify(tags)); // Add tags to form data
 
     // Append the files (track, cover, lyrics)
     formData.append("track", {
@@ -437,6 +464,47 @@ const uploadTrackScreen = () => {
               placeholder="Enter your track's ISRC Code"
               placeholderTextColor="white"
             />
+          </View>
+          <View style={styles.intputContainer}>
+            <View style={styles.labelContainer}>
+              <Text style={styles.labelText}>Tags</Text>
+            </View>
+            <View style={styles.tagInputContainer}>
+              <TextInput
+                style={styles.tagInput}
+                value={currentTag}
+                onChangeText={setCurrentTag}
+                placeholder="Add tags"
+                placeholderTextColor="white"
+                onKeyPress={({ nativeEvent }) => {
+                  if (nativeEvent.key === ' ') {
+                    addTag();
+                  }
+                }}
+              />
+              <TouchableOpacity 
+                style={styles.addTagButton}
+                onPress={addTag}
+              >
+                <Text style={styles.addTagButtonText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.tagsContainer}>
+              {tags.map((tag, index) => (
+                <View key={index} style={styles.tagChip}>
+                  <Text style={styles.tagText}>{tag}</Text>
+                  <TouchableOpacity
+                    onPress={() => removeTag(index)}
+                    style={styles.removeTagButton}
+                  >
+                    <Text style={styles.removeTagText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.tagLimit}>
+              {tags.length}/5 tags added
+            </Text>
           </View>
           <View style={{ alignItems: "center" }}>
             <Text style={styles.uploadText}>Upload song</Text>
@@ -941,6 +1009,64 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
+  },
+  tagInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 5,
+  },
+  tagInput: {
+    flex: 1,
+    color: 'white',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  addTagButton: {
+    backgroundColor: '#6F2CFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  addTagButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 10,
+    gap: 8,
+  },
+  tagChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6F2CFF',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    marginBottom: 4,
+  },
+  tagText: {
+    color: 'white',
+    fontSize: 12,
+    marginRight: 4,
+  },
+  removeTagButton: {
+    marginLeft: 4,
+  },
+  removeTagText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  tagLimit: {
+    color: 'grey',
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: 'right',
   },
 });
 

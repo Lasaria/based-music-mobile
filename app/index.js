@@ -12,7 +12,7 @@ export default function Index() {
         const tokens = await tokenManager.getAccessToken();
 
         if (tokens) {
-          console.log("Access token found:", tokens);
+          console.log("Access token found");
           setRedirectPath("/homeIndex");
         } else {
           console.log("No access token found, redirecting to welcome page.");
@@ -28,6 +28,20 @@ export default function Index() {
   }, []);
 
   if (redirectPath) {
+    console.log(
+      "\n" +
+        "\n" +
+        "\n" +
+        "\n" +
+        "\n" +
+        "--------------------------!! LOG START POINT AFTER SESSION REFRESH !!-------------------------------" +
+        "\n" +
+        "Redirecting to: " +
+        redirectPath +
+        "\n" +
+        "---------------------------------------------------------------------------------------------------" +
+        "\n"
+    );
     console.log("Redirecting to:", redirectPath);
     return <Redirect href={redirectPath} />;
   }
