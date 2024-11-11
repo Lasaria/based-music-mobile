@@ -73,6 +73,7 @@ const HomeScreen = ({}) => {
       <Button title="upload" onPress={() => router.push("/uploadScreen")}/>
       <Button title="Create a Post" onPress={() => router.push("/createPost")}/>
       <Button title="View Feed" onPress={() => router.push("/feed")}/>
+      <Button title="Swipe" onPress={() => router.push("/swipe")}/>
     </View>
   );
 };

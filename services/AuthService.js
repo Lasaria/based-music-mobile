@@ -10,6 +10,7 @@ const serverURL = AUTHSERVER_URL;
 export const AuthService = {
   // Sign Up Function
   signUp: async (fullName, email, password) => {
+    console.log("authService Hitting");
     try {
       const response = await axiosPost({
         url: `${serverURL}/signup`,
