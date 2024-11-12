@@ -19,9 +19,10 @@ import MusicPlayer from '../../../components/MusicPlayer';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import EditProfilePhotosScreen from '../../../components/ArtistProfile/EditProfilePhotosScreen';
 import EditProfileScreen from '../../../components/ArtistProfile/EditProfileScreen';
+import { SERVER_URL, AUTHSERVER_URL } from "@env";
 
 // SERVER URL
-const serverURL = 'http://localhost:3000';
+const serverURL = SERVER_URL;
 
 // DEVICE ACTUAL WIDTH
 const { width } = Dimensions.get('window');
@@ -422,6 +423,8 @@ const ListenerProfileScreen = () => {
                     username={username}
                     setUsername={setUsername}
                     coverImageUri={coverImageUri}
+                    description={description}
+                    setDescription={setDescription}
                     setCoverImageUri={setCoverImageUri}
                     defaultCover={DEFAULT_COVER_IMAGE}
                     avatarUri={avatarUri}
@@ -534,7 +537,7 @@ const ListenerProfileScreen = () => {
                                                         {/* Listener Name and Handle */}
                                                         <Text style={styles.artistName}>{name}</Text>
                                                         <View style={styles.artistHandleContainer}>
-                                                            <Text style={styles.artistHandle}>@{name}</Text>
+                                                            <Text style={styles.artistHandle}>@{username}</Text>
                                                         </View>
                                                     </View>
 
@@ -585,7 +588,7 @@ const ListenerProfileScreen = () => {
                                                     {/* Listener Name and Handle */}
                                                     <Text style={styles.artistName}>{name}</Text>
                                                     <View style={styles.artistHandleContainer}>
-                                                        <Text style={styles.artistHandle}>@{name}</Text>
+                                                        <Text style={styles.artistHandle}>@{username}</Text>
                                                     </View>
                                                 </View>
 
