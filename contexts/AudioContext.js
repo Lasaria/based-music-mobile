@@ -1,8 +1,15 @@
 // contexts/AudioContext.js
-import React, { createContext, useState, useEffect, useRef } from "react";
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useRef,
+  useContext,
+} from "react";
 import { Audio } from "expo-av";
 import { tokenManager } from "../utils/tokenManager";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { QueueContext } from "./QueueContext";
 
 export const AudioContext = createContext();
 
@@ -145,7 +152,7 @@ export const AudioProvider = ({ children }) => {
   const [isInitializing, setIsInitializing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
-
+  const { queue, removeFromQueue } = useContext(QueueContext);
   // Refs
   const soundRef = useRef(null);
   const loadingPromise = useRef(null);
@@ -268,14 +275,34 @@ export const AudioProvider = ({ children }) => {
       return;
     }
 
-    const durationSeconds = durationMillis / 1000;
-    if (durationSeconds > 0) {
-      batchStateUpdate({ duration: durationSeconds });
-      debug("Duration set to:", durationSeconds);
-    } else {
-      debug("Invalid duration value (zero or negative):", durationSeconds);
+    // Only update duration if it's significantly different (more than 100ms)
+    // or if it's the first time we're setting it
+    const newDuration = durationMillis / 1000;
+    const currentDuration = duration;
+
+    if (
+      Math.abs(newDuration - currentDuration) > 0.1 ||
+      currentDuration === 0
+    ) {
+      debug("[validateAndSetDuration] Duration update:", {
+        previous: currentDuration,
+        new: newDuration,
+        rawMillis: durationMillis,
+        source: status.durationMillis
+          ? "durationMillis"
+          : "playableDurationMillis",
+      });
+
+      // Store the maximum duration we've seen
+      if (newDuration > currentDuration || currentDuration === 0) {
+        batchStateUpdate({ duration: newDuration });
+        debug("Duration set to:", newDuration);
+      } else {
+        debug("Ignoring shorter duration:", newDuration);
+      }
     }
   };
+
   // Function: Fetch Track Info from Server
   const fetchTrackInfo = async (trackId) => {
     debug("Fetching track info", trackId);
@@ -392,19 +419,18 @@ export const AudioProvider = ({ children }) => {
             trackId: track.track_id,
             currentAudioStateTrackId: currentAudioState.current.trackId,
           });
-          const soundEndTime = performance.now();
-          measurePerformance(
-            "Sound Object Creation",
-            PERFORMANCE_TARGETS.loadAudio.soundObjectCreation,
-            soundEndTime - soundStartTime
-          );
+
           if (status.isLoaded) {
             debug("[loadAudio()] Setting player ready state");
             if (track.track_id === currentAudioState.current.trackId) {
               setIsPlayerReady(true);
               isPlayerReadyRef.current = true;
+
+              // Wait for final duration to be available
               if (status.durationMillis) {
-                setDuration(status.durationMillis / 1000);
+                validateAndSetDuration(status);
+              } else {
+                debug("Waiting for final duration...");
               }
             } else {
               debug(
@@ -427,18 +453,13 @@ export const AudioProvider = ({ children }) => {
               });
             }
           }
-          if (status.durationMillis) {
-            debug("Initial duration received:", status.durationMillis);
-            validateAndSetDuration(status.durationMillis);
-          } else {
-            debug("No duration in initial status:", status);
-          }
+
           // Log status update
           debug("[loadAudio()] Status update received:", {
             isLoaded: status.isLoaded,
             error: status.error,
             position: status.positionMillis,
-            duration: status.durationMillis,
+            duration: status.durationMillis || status.playableDurationMillis,
             isPlaying: status.isPlaying,
             isBuffering: status.isBuffering,
           });
@@ -557,11 +578,16 @@ export const AudioProvider = ({ children }) => {
   };
 
   // Callback: Playback Status Update
+  /**
+   * Handles playback status updates from the Audio API
+   * Manages state updates, duration validation, and performance monitoring
+   * @param {Object} status - The status object from Audio API
+   */
   const onPlaybackStatusUpdate = (status) => {
     const startTime = performance.now();
     const now = Date.now();
 
-    // Skip updates that are too frequent
+    // Performance optimization: Skip rapid updates
     if (
       now - StateTracker.lastUpdateTime <
       StateTracker.minimumUpdateInterval
@@ -569,7 +595,7 @@ export const AudioProvider = ({ children }) => {
       return;
     }
 
-    // Skip if position change is insignificant
+    // Skip minor position changes unless playback state changed
     const positionChange = Math.abs(
       (status.positionMillis || 0) - StateTracker.lastPosition
     );
@@ -580,6 +606,7 @@ export const AudioProvider = ({ children }) => {
       return;
     }
 
+    // Log detailed status for debugging
     debug("[onPlayBackStatusUpdate()] Status update received:", {
       isLoaded: status.isLoaded,
       error: status.error,
@@ -591,22 +618,29 @@ export const AudioProvider = ({ children }) => {
     });
 
     try {
+      // Basic validation
       if (!status || !currentAudioState.current.isLoaded) {
+        debug(
+          "[onPlayBackStatusUpdate()] Skipping update - invalid status or audio not loaded"
+        );
         return;
       }
 
+      // Prepare batch updates object
       const updates = {};
 
       if (status.isLoaded) {
+        // Update basic playback states
         updates.isPlayerReady = true;
         updates.isBuffering = status.isBuffering || false;
 
-        // Handle duration from either durationMillis or playableDurationMillis
+        // Handle duration updates with improved validation
         const durationMillis =
           status.durationMillis || status.playableDurationMillis;
-        if (durationMillis) {
+        if (durationMillis && durationMillis > 0) {
           const newDuration = durationMillis / 1000;
-          if (newDuration !== duration) {
+          if (Math.abs(newDuration - duration) > 0.1 || duration === 0) {
+            // Only update if significantly different or initial setting
             debug("[onPlayBackStatusUpdate()] Duration update:", {
               previous: duration,
               new: newDuration,
@@ -615,24 +649,31 @@ export const AudioProvider = ({ children }) => {
                 ? "durationMillis"
                 : "playableDurationMillis",
             });
-            updates.duration = newDuration;
+            // Keep the larger duration to avoid incorrect shorter values
+            if (newDuration > duration || duration === 0) {
+              updates.duration = newDuration;
+            }
           }
         }
 
-        // Update current playback position if available
-        if (status.positionMillis !== undefined) {
-          updates.currentTime = status.positionMillis / 1000;
+        // Update playback position if available
+        if (typeof status.positionMillis === "number") {
+          const newPosition = status.positionMillis / 1000;
+          // Validate position against duration
+          if (newPosition <= (updates.duration || duration)) {
+            updates.currentTime = newPosition;
+          }
         }
 
         // Update playing state
-        updates.isPlaying = status.isPlaying || false;
+        updates.isPlaying = Boolean(status.isPlaying);
 
         // Handle track completion
         if (status.didJustFinish) {
-          debug(
-            "[onPlayBackStatusUpdate()] Track finished, resetting position"
-          );
+          debug("[onPlayBackStatusUpdate()] Track finished");
           updates.isPlaying = false;
+
+          // Reset position to start
           if (soundRef.current) {
             soundRef.current.setPositionAsync(0).catch((err) => {
               debug(
@@ -641,10 +682,16 @@ export const AudioProvider = ({ children }) => {
               );
             });
           }
+
+          // Optional: Trigger next track in queue
+          if (typeof onTrackFinished === "function") {
+            onTrackFinished();
+          }
         }
       } else {
         // Handle unloaded state
         updates.isPlayerReady = false;
+
         if (status.error) {
           debug("[onPlayBackStatusUpdate()] Playback error:", status.error);
           updates.error = {
@@ -654,14 +701,15 @@ export const AudioProvider = ({ children }) => {
         }
       }
 
-      // Batch update all state changes
+      // Apply all state updates in a single batch
       batchStateUpdate(updates);
 
-      // Update tracking state for throttling
+      // Update state tracking for future update throttling
       StateTracker.lastUpdateTime = now;
       StateTracker.lastPosition = status.positionMillis || 0;
-      StateTracker.lastPlayingState = status.isPlaying || false;
+      StateTracker.lastPlayingState = Boolean(status.isPlaying);
     } catch (err) {
+      // Handle any errors during status processing
       debug("[onPlayBackStatusUpdate()] Error processing status update:", err);
       batchStateUpdate({
         error: {
@@ -669,20 +717,22 @@ export const AudioProvider = ({ children }) => {
           details: err.message,
         },
       });
-    }
+    } finally {
+      // Performance monitoring
+      const endTime = performance.now();
+      const updateDuration = endTime - startTime;
 
-    // Performance monitoring
-    const endTime = performance.now();
-    if (endTime - startTime > 16.67) {
-      // Longer than one frame
-      debug("[onPlayBackStatusUpdate()] Status update took too long:", {
-        duration: `${(endTime - startTime).toFixed(2)}ms`,
-        status: {
-          buffering: status.isBuffering,
-          isPlaying: status.isPlaying,
-          position: status.positionMillis,
-        },
-      });
+      // Log slow updates (taking longer than one frame at 60fps)
+      if (updateDuration > 16.67) {
+        debug("[onPlayBackStatusUpdate()] Status update took too long:", {
+          duration: `${updateDuration.toFixed(2)}ms`,
+          status: {
+            buffering: status.isBuffering,
+            isPlaying: status.isPlaying,
+            position: status.positionMillis,
+          },
+        });
+      }
     }
   };
   // Function: Update Current Track
@@ -968,37 +1018,119 @@ export const AudioProvider = ({ children }) => {
     }
   };
 
-  // Function: Skip Forward
-  const skipForward = async () => {
-    try {
-      if (!soundRef.current || !isPlayerReady) return;
+  // Function: Find current track index in queue
+  const findCurrentTrackIndex = () => {
+    return queue.findIndex((track) => track.track_id === currentTrackId);
+  };
 
-      const newPosition = Math.min(currentTime + 10, duration);
-      debug("Skipping forward to", newPosition);
-      await soundRef.current.setPositionAsync(newPosition * 1000);
-      setCurrentTime(newPosition);
+  // Function: Skip Forward (Next Track)
+  const skipForward = async () => {
+    debug("\n=== SKIP FORWARD START ===");
+    try {
+      const currentIndex = findCurrentTrackIndex();
+
+      // If current track isn't in queue, start from beginning of queue
+      if (currentIndex === -1) {
+        if (queue.length > 0) {
+          debug(
+            "[skipForward] Current track not in queue, playing first queue item"
+          );
+          await updateCurrentTrack(queue[0].track_id);
+          if (soundRef.current) {
+            await soundRef.current.playAsync();
+            setIsPlaying(true);
+          }
+        }
+        return;
+      }
+
+      // Check if there's a next track
+      if (currentIndex < queue.length - 1) {
+        const nextTrack = queue[currentIndex + 1];
+        debug("[skipForward] Playing next track:", nextTrack.track_id);
+
+        await updateCurrentTrack(nextTrack.track_id);
+        if (soundRef.current) {
+          await soundRef.current.playAsync();
+          setIsPlaying(true);
+        }
+
+        // Remove the previous track from queue
+      } else if (queue.length > 0) {
+        // Loop back to first track
+        debug("[skipForward] Looping to first track");
+        await updateCurrentTrack(queue[0].track_id);
+        if (soundRef.current) {
+          await soundRef.current.playAsync();
+          setIsPlaying(true);
+        }
+
+      } else {
+        debug("[skipForward] No tracks in queue");
+      }
     } catch (err) {
-      debug("Error skipping forward", err);
+      debug("[skipForward] Error:", err);
       setError({
-        message: "Failed to skip forward",
+        message: "Failed to skip to next track",
         details: err.message,
       });
     }
   };
 
-  // Function: Skip Backward
+  // Function: Skip Backward (Previous Track)
   const skipBackward = async () => {
+    debug("\n=== SKIP BACKWARD START ===");
     try {
-      if (!soundRef.current || !isPlayerReady) return;
+      const currentIndex = findCurrentTrackIndex();
 
-      const newPosition = Math.max(currentTime - 10, 0);
-      debug("Skipping backward to", newPosition);
-      await soundRef.current.setPositionAsync(newPosition * 1000);
-      setCurrentTime(newPosition);
+      // If current track isn't in queue and queue isn't empty, start from last track
+      if (currentIndex === -1) {
+        if (queue.length > 0) {
+          debug(
+            "[skipBackward] Current track not in queue, playing last queue item"
+          );
+          await updateCurrentTrack(queue[queue.length - 1].track_id);
+          if (soundRef.current) {
+            await soundRef.current.playAsync();
+            setIsPlaying(true);
+          }
+        }
+        return;
+      }
+
+      // Check if there's a previous track
+      if (currentIndex > 0) {
+        const previousTrack = queue[currentIndex - 1];
+        debug("[skipBackward] Playing previous track:", previousTrack.track_id);
+
+        await updateCurrentTrack(previousTrack.track_id);
+        if (soundRef.current) {
+          await soundRef.current.playAsync();
+          setIsPlaying(true);
+        }
+
+        // Remove the current track from queue
+        removeFromQueue(queue[currentIndex].track_id);
+      } else if (queue.length > 0) {
+        // Loop to last track
+        debug("[skipBackward] Looping to last track");
+        await updateCurrentTrack(queue[queue.length - 1].track_id);
+        if (soundRef.current) {
+          await soundRef.current.playAsync();
+          setIsPlaying(true);
+        }
+
+        // Remove the first track if it was the current track
+        if (currentIndex === 0) {
+          removeFromQueue(queue[0].track_id);
+        }
+      } else {
+        debug("[skipBackward] No tracks in queue");
+      }
     } catch (err) {
-      debug("Error skipping backward", err);
+      debug("[skipBackward] Error:", err);
       setError({
-        message: "Failed to skip backward",
+        message: "Failed to skip to previous track",
         details: err.message,
       });
     }
