@@ -1,6 +1,6 @@
 
 // Updated GenreSelectionScreen
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import {
@@ -11,14 +11,36 @@ import {
   FlatList,
   SafeAreaView,
   Alert,
+  Image,
+  TextInput,
 } from 'react-native';
 import { tokenManager } from '../utils/tokenManager';
 import useProfileStore from '../zusStore/userFormStore';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../constants/Color';
+import ProgressBar from '../components/ProgressBar';
 
-const MAX_SELECTIONS = 3;
+const MIN_SELECTIONS = 3;
+
+const genres = [
+  { id: '1', genre: 'Country', image: require('../assets/images/ArtistSignUpFlow/country.png') },
+  { id: '2', genre: 'Hip-Hop', image: require('../assets/images/ArtistSignUpFlow/hip-pop.png') },
+  { id: '3', genre: 'Hard Rock', image: require('../assets/images/ArtistSignUpFlow/hard-rock.png') },
+  { id: '4', genre: 'Indie', image: require('../assets/images/ArtistSignUpFlow/indie.png') },
+  { id: '5', genre: 'Chill out', image: require('../assets/images/ArtistSignUpFlow/chill-out.png') },
+  { id: '6', genre: 'R&B', image: require('../assets/images/ArtistSignUpFlow/r-and-b.png') },
+  { id: '7', genre: 'Pop', image: require('../assets/images/ArtistSignUpFlow/pop.png') },
+  { id: '8', genre: 'Metallic', image: require('../assets/images/ArtistSignUpFlow/metallic.png') },
+  { id: '9', genre: 'Rock', image: require('../assets/images/ArtistSignUpFlow/rock.png') },
+];
 
 const GenreSelectionScreen = () => {
   const { selectedGenres, updateField } = useProfileStore();
+  const [searchText, setSearchText] = useState("");
+
+  const filteredGenres = genres.filter(genre =>
+    genre.genre.toLowerCase().split(' ').some(word => word.startsWith(searchText.toLowerCase()))
+  );
 
   // Initialize access token
   useEffect(() => {
@@ -29,27 +51,15 @@ const GenreSelectionScreen = () => {
     initializeToken();
   }, []);
 
-  const genres = [
-    { id: '1', name: 'Pop' },
-    { id: '2', name: 'Rock' },
-    // ... rest of the genres array
-  ];
-
   const handleGenreSelect = (genre) => {
     const isSelected = selectedGenres.some(g => g.id === genre.id);
-    
+
     if (isSelected) {
       const updatedGenres = selectedGenres.filter(g => g.id !== genre.id);
       updateField('selectedGenres', updatedGenres);
     } else {
-      if (selectedGenres.length >= MAX_SELECTIONS) {
-        Alert.alert(
-          "Selection Limit Reached",
-          `You can only select up to ${MAX_SELECTIONS} genres. Please remove a genre before adding another.`
-        );
-        return;
-      }
-      updateField('selectedGenres', [...selectedGenres, genre]);
+      const newSelection = [...selectedGenres, genre];
+      updateField('selectedGenres', newSelection);
     }
   };
 
@@ -61,197 +71,223 @@ const GenreSelectionScreen = () => {
       );
       return;
     }
-    
+    // Navigate to the next screen
     router.push('userBasicInfoForm');
   };
 
   const renderGenreItem = ({ item }) => {
     const isSelected = selectedGenres.some(g => g.id === item.id);
-    const selectionNumber = isSelected ? 
-      selectedGenres.findIndex(g => g.id === item.id) + 1 : null;
-
     return (
       <TouchableOpacity
-        style={[
-          styles.genreItem,
-          isSelected && styles.selectedGenre,
-        ]}
+        style={styles.genreItem}
         onPress={() => handleGenreSelect(item)}
       >
+        <Image source={item.image} style={styles.genreImage} />
         <Text style={[
           styles.genreText,
           isSelected && styles.selectedGenreText
         ]}>
-          {item.name}
+          {item.genre}
         </Text>
         {isSelected && (
           <View style={styles.selectionBadge}>
-            <Text style={styles.selectionBadgeText}>{selectionNumber}</Text>
+            <Ionicons name="checkmark-sharp" size={16} color={Colors.black} />
           </View>
         )}
       </TouchableOpacity>
     );
   };
 
+
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>Select Music Genres</Text>
+      {/* Progress Bar */}
+      <ProgressBar currentStep={0} totalSteps={4} />
+
+      {/* Header and Search */}
+      <Text style={styles.header}>Select music genre</Text>
       <Text style={styles.subHeader}>
-        Choose up to {MAX_SELECTIONS} genres
-        {selectedGenres.length > 0 && ` (${selectedGenres.length}/${MAX_SELECTIONS} selected)`}
+        Choose {MIN_SELECTIONS} or more genres you like.
       </Text>
-      <FlatList
-        data={genres}
-        renderItem={renderGenreItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-        numColumns={2}
-      />
-      {selectedGenres.length > 0 && (
-        <View style={styles.selectionContainer}>
-          <Text style={styles.selectionTitle}>Selected Genres:</Text>
-          {selectedGenres.map((genre, index) => (
-            <Text key={genre.id} style={styles.selectionText}>
-              {index + 1}. {genre.name}
-            </Text>
-          ))}
+
+      {/* Search Bar with Clear Button */}
+      <View style={styles.searchContainer}>
+        <Image
+          source={require('../assets/images/ArtistSignUpFlow/search.png')}
+          style={[styles.searchIcon, { tintColor: 'black' }]}
+        />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search your favorite genre"
+          placeholderTextColor={Colors.black}
+          value={searchText}
+          onChangeText={setSearchText}
+        />
+        {searchText.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchText("")}>
+            <Ionicons name="close" size={22} color={Colors.black} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Genre List */}
+      {filteredGenres.length > 0 ? (
+        <>
+          <FlatList
+            data={filteredGenres}
+            renderItem={renderGenreItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContainer}
+            numColumns={3}
+          />
+          {/* Next Button */}
+          <TouchableOpacity
+            style={[
+              styles.nextButton,
+              selectedGenres.length < MIN_SELECTIONS && styles.nextButtonDisabled
+            ]}
+            onPress={handleNext}
+            disabled={selectedGenres.length < MIN_SELECTIONS}
+          >
+            <Text style={styles.nextButtonText}>Next</Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <View style={styles.noResultsContainer}>
+          <Text style={styles.noResultsText}>No genre found</Text>
+          <Image source={require('../assets/images/ArtistSignUpFlow/crying-emoji-9.gif')} style={styles.noResultsGif} />
         </View>
       )}
-      <View style={styles.bottomContainer}>
-        <TouchableOpacity
-          style={[
-            styles.nextButton,
-            selectedGenres.length === 0 && styles.nextButtonDisabled
-          ]}
-          onPress={handleNext}
-        >
-          <Text style={styles.nextButtonText}>Next</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 };
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-    paddingHorizontal: 12,
+    backgroundColor: Colors.background,
+    paddingHorizontal: 16,
+  },
+  progressBarContainer: {
+    height: 4,
+    backgroundColor: '#333',
+    marginVertical: 10,
+    borderRadius: 2,
+  },
+  progressBar: {
+    width: '20%',
+    height: '100%',
+    backgroundColor: '#A020F0',
+    borderRadius: 2,
   },
   header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 20,
-    marginBottom: 8,
+    color: Colors.white,
     textAlign: 'center',
-    color: '#1a1a1a',
+    fontSize: 28,
+    fontWeight: '800',
+    lineHeight: 34,
+    marginTop: 8,
   },
   subHeader: {
-    fontSize: 16,
-    color: '#666',
+    color: Colors.white,
     textAlign: 'center',
-    marginBottom: 20,
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
+    opacity: 0.7,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginVertical: 20,
+    marginHorizontal: 26,
+  },
+  searchIcon: {
+    width: 24,
+    height: 24,
+    tintColor: Colors.black,
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#000',
+    fontSize: 16,
+    paddingVertical: 8,
   },
   listContainer: {
-    paddingBottom: 20,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 40,
+    height: '100%',
   },
   genreItem: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    padding: 16,
-    margin: 4,
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 3.84,
-    minHeight: 60,
-    justifyContent: 'center',
-    position: 'relative',
+    alignItems: 'center',
+    margin: 20,
+    width: 80,
+    height: 80,
   },
-  selectedGenre: {
-    backgroundColor: '#1DB954',
+  genreImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   genreText: {
     fontSize: 14,
-    color: '#333333',
-    textAlign: 'center',
     fontWeight: '500',
+    color: Colors.white,
+    textAlign: 'center',
+    marginTop: 10,
   },
   selectedGenreText: {
-    color: '#ffffff',
+    color: Colors.primary,
+    fontWeight: '800',
   },
   selectionBadge: {
     position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: '#1a1a1a',
+    top: 0,
+    right: 0,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
     width: 24,
     height: 24,
-    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#ffffff',
   },
-  selectionBadgeText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: 'bold',
+  noResultsContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '56%',
   },
-  selectionContainer: {
-    padding: 16,
-    backgroundColor: '#E8E8E8',
-    borderRadius: 12,
-    marginBottom: 20,
-    marginHorizontal: 4,
+  noResultsText: {
+    fontSize: 18,
+    color: Colors.white,
+    marginBottom: 10,
+    fontWeight: '900',
   },
-  selectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 8,
-  },
-  selectionText: {
-    fontSize: 16,
-    color: '#333333',
-    marginVertical: 2,
-  },
-  bottomContainer: {
-    padding: 16,
-    backgroundColor: 'transparent',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingBottom: 34, // Add extra padding for iPhone X and newer
+  noResultsGif: {
+    width: 150,
+    height: 150,
   },
   nextButton: {
-    backgroundColor: '#1DB954',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    marginHorizontal: 16,
+    marginVertical: 20,
   },
   nextButtonDisabled: {
-    backgroundColor: '#cccccc',
+    backgroundColor: '#333',
   },
   nextButtonText: {
-    color: '#ffffff',
+    color: Colors.white,
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
 });
 
