@@ -526,7 +526,7 @@ const ArtistProfileScreen = () => {
               ) : (
                 <>
                   <Animated.Image
-                    source={coverImageUri ? { uri: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQUSaECYZOmdLp2vJTDIRojmVAY0xsTTZU56Q&s' } : DEFAULT_COVER_IMAGE}
+                    source={coverImageUri ? { uri: coverImageUri } : DEFAULT_COVER_IMAGE}
                     style={[styles.image, imageAnimatedStyle]}
                     resizeMode="cover"
                   />
@@ -1060,7 +1060,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     borderRadius: 24,
     backgroundColor: '#3C3C3C',
-    
+
   },
   followButton: {
     display: 'flex',
