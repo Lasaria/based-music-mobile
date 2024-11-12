@@ -6,9 +6,10 @@ import { Colors } from '../../constants/Color';
 import { tokenManager } from '../../utils/tokenManager';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SERVER_URL, AUTHSERVER_URL } from "@env";
 
 // SERVER URL
-const serverURL = 'http://localhost:3000';
+const serverURL = SERVER_URL;
 
 // DEFAULT PHOTO
 const DEFAULT_PHOTO_URI = 'https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg';
