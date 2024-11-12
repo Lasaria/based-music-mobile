@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { router } from 'expo-router';
 import {
   StyleSheet,
@@ -9,25 +9,30 @@ import {
   SafeAreaView,
   Alert,
   Platform,
+  ActivityIndicator,
   ScrollView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { MaterialIcons } from '@expo/vector-icons';
+import { AntDesign, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Colors } from '../constants/Color';
+import ProgressBar from '../components/ProgressBar';
 import useProfileStore from '../zusStore/userFormStore';
 
 const MAX_PHOTOS = 6;
 
 const AdditionalPhotosScreen = () => {
-  const { 
+  const {
     additionalPhotos,
     profileImage,
     updateField
   } = useProfileStore();
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
+
       if (status !== 'granted') {
         Alert.alert(
           'Permissions Required',
@@ -40,6 +45,7 @@ const AdditionalPhotosScreen = () => {
     }
     return true;
   };
+
 
   const pickImage = async () => {
     const hasPermissions = await requestPermissions();
@@ -58,7 +64,6 @@ const AdditionalPhotosScreen = () => {
           Alert.alert('Maximum Photos', `You can only add up to ${MAX_PHOTOS} photos`);
           return;
         }
-        
         const newPhotoUri = result.assets[0].uri;
         updateField('additionalPhotos', [...additionalPhotos, newPhotoUri]);
       }
@@ -69,11 +74,9 @@ const AdditionalPhotosScreen = () => {
 
   const removePhoto = (indexToRemove) => {
     const newPhotos = additionalPhotos.filter((_, index) => index !== indexToRemove);
-    
     if (additionalPhotos[indexToRemove] === profileImage) {
       updateField('profileImage', null);
     }
-    
     updateField('additionalPhotos', newPhotos);
   };
 
@@ -107,58 +110,56 @@ const AdditionalPhotosScreen = () => {
               style={styles.removeButton}
               onPress={() => removePhoto(index)}
             >
-              <MaterialIcons name="close" size={20} color="white" />
+              <AntDesign name="minuscircleo" size={16} color={Colors.white} style={styles.removeIcon} />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.starButton, isProfilePhoto && styles.starButtonActive]}
               onPress={() => toggleProfileImage(photo)}
             >
-              <MaterialIcons 
-                name={isProfilePhoto ? "star" : "star-border"} 
-                size={24} 
-                color={isProfilePhoto ? "#FFD700" : "white"} 
+              <MaterialIcons
+                name={isProfilePhoto ? "star" : "star-border"}
+                size={24}
+                color={isProfilePhoto ? "#FFD700" : "white"}
               />
             </TouchableOpacity>
           </View>
         </View>
       );
     }
-    return null;
+
+    return (
+      <TouchableOpacity
+        style={styles.photoPlaceholder}
+        onPress={pickImage}
+      >
+        <Ionicons name="add-circle-outline" size={24} color={Colors.white} />
+      </TouchableOpacity>
+    );
   };
 
   return (
     <SafeAreaView style={styles.container}>
+      <ProgressBar currentStep={2} totalSteps={4} />
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.header}>Add Photos</Text>
         <Text style={styles.subHeader}>
-          Add up to {MAX_PHOTOS} photos and star one as your profile photo
+          Add photos from your camera roll or files to add to your profile.
         </Text>
 
         <View style={styles.photoGrid}>
-          {additionalPhotos.map((photo, index) => (
+          {Array.from({ length: MAX_PHOTOS }).map((_, index) => (
             <View key={index} style={styles.photoSlot}>
-              {renderPhotoSlot(photo, index)}
+              {renderPhotoSlot(additionalPhotos[index], index)}
             </View>
           ))}
-          
-          {additionalPhotos.length < MAX_PHOTOS && (
-            <View style={styles.photoSlot}>
-              <View style={styles.photoPlaceholder}>
-                <TouchableOpacity
-                  style={styles.addPhotoButton}
-                  onPress={pickImage}
-                >
-                  <MaterialIcons name="photo-library" size={32} color="#666" />
-                  <Text style={styles.addPhotoText}>Add Photo</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
         </View>
 
-        <Text style={styles.tip}>
-          Tip: Star your favorite photo to set it as your profile picture
-        </Text>
+        <View style={styles.tipContainer}>
+          <Text style={styles.tip}>
+            Tip: Star your favorite photo to set it as your profile picture
+          </Text>
+        </View>
       </ScrollView>
 
       <View style={styles.bottomContainer}>
@@ -170,7 +171,14 @@ const AdditionalPhotosScreen = () => {
           onPress={handleNext}
           disabled={additionalPhotos.length === 0 || !profileImage}
         >
-          <Text style={styles.nextButtonText}>Next</Text>
+          {isSubmitting ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.nextButtonText}>Next</Text>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleNext}>
+          <Text style={styles.skipButtonText}>Skip</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -180,42 +188,45 @@ const AdditionalPhotosScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#000',
   },
   scrollContent: {
     padding: 16,
     paddingBottom: 100,
   },
   header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#1a1a1a',
+    color: Colors.white,
     textAlign: 'center',
+    fontSize: 28,
+    fontWeight: '800',
+    lineHeight: 34,
+    marginTop: 8,
   },
   subHeader: {
-    fontSize: 16,
-    color: '#666',
+    color: Colors.white,
     textAlign: 'center',
-    marginBottom: 24,
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
+    opacity: 0.7,
   },
   photoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
     gap: 12,
-    marginBottom: 24,
   },
   photoSlot: {
-    width: '48%',
-    aspectRatio: 4/5,
-    marginBottom: 12,
+    width: '30%',
+    aspectRatio: 1,
   },
   photoContainer: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#e1e1e1',
+    position: 'relative',
   },
   photo: {
     width: '100%',
@@ -223,87 +234,76 @@ const styles = StyleSheet.create({
   },
   photoPlaceholder: {
     flex: 1,
-    borderRadius: 12,
-    backgroundColor: '#e1e1e1',
-    borderWidth: 2,
-    borderColor: '#ccc',
-    borderStyle: 'dashed',
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  addPhotoButton: {
-    alignItems: 'center',
-  },
-  addPhotoText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#666',
+    borderWidth: 1,
+    width: 107,
+    height: 103,
+    borderColor: Colors.white,
   },
   photoOverlay: {
     position: 'absolute',
     top: 8,
     right: 8,
-    flexDirection: 'column',
-    alignItems: 'flex-end',
+    flexDirection: 'row',
     gap: 8,
   },
   removeButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: 'absolute',
+    top: 58,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 18,
+  },
+  removeIcon: {
+    margin: 8,
   },
   starButton: {
-    width: 36,
-    height: 36,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 4,
   },
   starButtonActive: {
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  tipContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    marginTop: 24,
   },
   tip: {
     fontSize: 14,
-    color: '#666',
+    color: 'gold',
     textAlign: 'center',
     fontStyle: 'italic',
   },
   bottomContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#f5f5f5',
-    padding: 16,
-    paddingBottom: 34,
-    borderTopWidth: 1,
-    borderTopColor: '#e1e1e1',
+    paddingHorizontal: 16,
+    paddingBottom: 24,
   },
-  submitButton: {
-    backgroundColor: '#1DB954',
+  nextButton: {
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    marginHorizontal: 16,
+    marginVertical: 20,
   },
-  submitButtonDisabled: {
-    backgroundColor: '#cccccc',
+  nextButtonDisabled: {
+    backgroundColor: '#333',
   },
-  submitButtonText: {
-    color: '#ffffff',
+  nextButtonText: {
+    color: Colors.white,
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
+  },
+  skipButtonText: {
+    color: '#828796',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 12,
   },
 });
 

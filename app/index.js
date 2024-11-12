@@ -30,17 +30,17 @@ export default function Index() {
   if (redirectPath) {
     console.log(
       "\n" +
-        "\n" +
-        "\n" +
-        "\n" +
-        "\n" +
-        "--------------------------!! LOG START POINT AFTER SESSION REFRESH !!-------------------------------" +
-        "\n" +
-        "Redirecting to: " +
-        redirectPath +
-        "\n" +
-        "---------------------------------------------------------------------------------------------------" +
-        "\n"
+      "\n" +
+      "\n" +
+      "\n" +
+      "\n" +
+      "--------------------------!! LOG START POINT AFTER SESSION REFRESH !!-------------------------------" +
+      "\n" +
+      "Redirecting to: " +
+      redirectPath +
+      "\n" +
+      "---------------------------------------------------------------------------------------------------" +
+      "\n"
     );
     console.log("Redirecting to:", redirectPath);
     return <Redirect href={redirectPath} />;

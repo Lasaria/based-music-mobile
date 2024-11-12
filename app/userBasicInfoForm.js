@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import {
   StyleSheet,
@@ -11,15 +11,23 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  FlatList
+  FlatList,
+  Animated,
+  Image,
+  Dimensions,
 } from 'react-native';
 import useProfileStore from '../zusStore/userFormStore';
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
+import ProgressBar from '../components/ProgressBar';
+import InputComponent from '../components/InputComponent';
+import { Colors } from '../constants/Color';
+import { Ionicons } from '@expo/vector-icons';
 
 const geocodingClient = mbxGeocoding({ accessToken: 'pk.eyJ1IjoibGFzYXJpYSIsImEiOiJjbTJheXV0cjcwNG9zMmxwdnlxZWdoMjc5In0.NoBtaBj9cNvdemNp52pxGQ' });
 
+const { width } = Dimensions.get("window");
 const ProfileSetupScreen = () => {
-  const { 
+  const {
     username,
     displayname,
     description,
@@ -27,10 +35,12 @@ const ProfileSetupScreen = () => {
     selectedGenres,
     updateField
   } = useProfileStore();
-  
-  // Keep errors in local state as they're UI-specific
+
   const [errors, setErrors] = useState({});
+  const [isFormValid, setIsFormValid] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
+  const [locationSelected, setLocationSelected] = useState(false);
+  const [descriptionFocused, setDescriptionFocused] = useState(false);
 
   const handleLocationChange = async (text) => {
     updateField('location', text);
@@ -54,7 +64,9 @@ const ProfileSetupScreen = () => {
   const handleLocationSelect = (selectedLocation) => {
     updateField('location', selectedLocation);
     setSuggestions([]);
+    setLocationSelected(true); // Ensuring locationSelected is set to true upon selection
   };
+
 
   const validateForm = () => {
     let newErrors = {};
@@ -76,8 +88,8 @@ const ProfileSetupScreen = () => {
     }
 
     // Description validation (optional but with max length)
-    if (description.length > 150) {
-      newErrors.description = 'Description must be less than 150 characters';
+    if (description.length >= 120) {
+      newErrors.description = 'Description must be less than 120 characters';
     }
 
     setErrors(newErrors);
@@ -95,25 +107,40 @@ const ProfileSetupScreen = () => {
     }
   };
 
+
+  useEffect(() => {
+    // Only valid if there are no errors and all fields are non-empty with location selected
+    const isValid =
+      Object.values(errors).every((err) => !err) &&
+      username &&
+      displayname &&
+      description &&
+      location &&
+      locationSelected; // Ensure location is selected
+    setIsFormValid(isValid);
+  }, [errors, username, displayname, description, location, locationSelected]); // Added `location` to dependency
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoid}
       >
-        {/* <ScrollView 
-          contentContainerStyle={styles.scrollContainer}
+        <ScrollView
           keyboardShouldPersistTaps="handled"
-        > */}
-          <View style={styles.scrollContainer}>
-          <Text style={styles.header}>Create Your Profile</Text>
+        >
+          <ProgressBar currentStep={1} totalSteps={4} />
+          <Text style={styles.header}>Set Up Profile</Text>
 
-          {/* Username Input */}
+          <View style={styles.iconContainer}>
+            <Image source={require('../assets/images/ArtistSignUpFlow/Glow.png')} style={styles.glowImage} />
+            <Image source={require('../assets/images/ArtistSignUpFlow/user.png')} style={styles.userImage} />
+          </View>
+
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Username*</Text>
-            <TextInput
-              style={[styles.input, errors.username && styles.inputError]}
-              placeholder="Enter username"
+            <InputComponent
+              placeholder="Username"
+              placeholderTextColor={Colors.secondary}
               value={username}
               onChangeText={(text) => {
                 updateField('username', text);
@@ -122,24 +149,19 @@ const ProfileSetupScreen = () => {
                   setErrors({ ...errors, username: null });
                 }
               }}
+              keyboardType="default"
               autoCapitalize="none"
               autoCorrect={false}
               maxLength={30}
+              style={styles.input}
             />
-            {errors.username && (
-              <Text style={styles.errorText}>{errors.username}</Text>
-            )}
-            <Text style={styles.helperText}>
-              This will be your unique identifier
-            </Text>
+            {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
           </View>
 
-          {/* Display Name Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Display Name*</Text>
-            <TextInput
-              style={[styles.input, errors.displayname && styles.inputError]}
-              placeholder="Enter display name"
+            <InputComponent
+              placeholder="Display Name"
+              placeholderTextColor={Colors.secondary}
               value={displayname}
               onChangeText={(text) => {
                 updateField('displayname', text);
@@ -147,85 +169,106 @@ const ProfileSetupScreen = () => {
                   setErrors({ ...errors, displayname: null });
                 }
               }}
+              keyboardType="default"
+              autoCapitalize="none"
               maxLength={50}
-            />
-            {errors.displayname && (
-              <Text style={styles.errorText}>{errors.displayname}</Text>
-            )}
-            <Text style={styles.helperText}>
-              This is how others will see you
-            </Text>
-          </View>
-
-          {/* Description Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Description</Text>
-            <TextInput
-              style={[
-                styles.input, 
-                styles.textArea,
-                errors.description && styles.inputError
-              ]}
-              placeholder="Tell us about yourself"
-              value={description}
-              onChangeText={(text) => {
-                updateField('description', text);
-                if (errors.description) {
-                  setErrors({ ...errors, description: null });
-                }
-              }}
-              multiline
-              numberOfLines={4}
-              maxLength={150}
-              textAlignVertical="top"
-            />
-            {errors.description && (
-              <Text style={styles.errorText}>{errors.description}</Text>
-            )}
-            <Text style={styles.helperText}>
-              {description.length}/150 characters
-            </Text>
-          </View>
-
-          {/* Location Input */}
-          {/* Location Input with Autocomplete */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Location</Text>
-            <TextInput
               style={styles.input}
-              placeholder="Enter your location"
+            />
+            {errors.displayname && <Text style={styles.errorText}>{errors.displayname}</Text>}
+          </View>
+
+          <View style={styles.inputContainer}>
+            <View style={styles.textAreaContainer}>
+              <TextInput
+                placeholder="Tell us more about you..."
+                placeholderTextColor={Colors.secondary}
+                style={[
+                  styles.textArea,
+                  descriptionFocused && styles.textAreaFocused,
+                ]}
+                value={description}
+                onChangeText={(text) => {
+                  updateField('description', text);
+                  if (errors.description) {
+                    setErrors({ ...errors, description: null });
+                  }
+                }}
+                maxLength={120}
+                multiline
+                numberOfLines={4}
+                onFocus={() => setDescriptionFocused(true)}
+                onBlur={() => setDescriptionFocused(false)}
+              />
+              <Text style={styles.characterCount}>{description.length} / 120</Text>
+            </View>
+            <View style={styles.descriptionInfo}>
+              {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
+            </View>
+          </View>
+
+
+          <View style={styles.inputContainer}>
+            <InputComponent
+              placeholder="Location"
+              placeholderTextColor={Colors.secondary}
               value={location}
               onChangeText={handleLocationChange}
+              keyboardType="default"
+              autoCapitalize="none"
               maxLength={100}
+              style={styles.input}
             />
+            {errors.location && <Text style={styles.errorText}>{errors.location}</Text>}
             {suggestions.length > 0 && (
               <FlatList
                 data={suggestions}
                 keyExtractor={(item, index) => index.toString()}
-                renderItem={({ item }) => (
-                  <TouchableOpacity onPress={() => handleLocationSelect(item)}>
-                    <Text style={styles.suggestionItem}>{item}</Text>
-                  </TouchableOpacity>
-                )}
+                renderItem={({ item, index }) => {
+                  const searchText = location.toLowerCase();
+                  const itemText = item.toLowerCase();
+                  const startIdx = itemText.indexOf(searchText);
+
+                  const highlightedText = startIdx >= 0 ? (
+                    <Text style={styles.suggestionText}>
+                      <Text>{item.slice(0, startIdx)}</Text>
+                      <Text style={styles.highlightedText}>{item.slice(startIdx, startIdx + searchText.length)}</Text>
+                      <Text>{item.slice(startIdx + searchText.length)}</Text>
+                    </Text>
+                  ) : (
+                    <Text style={styles.suggestionText}>{item}</Text>
+                  );
+
+                  return (
+                    <View>
+                      <TouchableOpacity onPress={() => handleLocationSelect(item)} style={styles.suggestionItem}>
+                        <Ionicons name="location-sharp" size={24} color={Colors.secondary} style={styles.suggestionIcon} />
+                        {highlightedText}
+                      </TouchableOpacity>
+                      {index < suggestions.length - 1 && (
+                        <View style={styles.divider} />
+                      )}
+                    </View>
+                  );
+                }}
+                scrollEnabled={false}
                 style={styles.suggestionsContainer}
               />
             )}
-            <Text style={styles.helperText}>
-              Optional: City, Country
-            </Text>
           </View>
-        {/* </ScrollView> */}
-        </View>
 
-        {/* Next Button */}
-        <View style={styles.bottomContainer}>
-          <TouchableOpacity
-            style={styles.nextButton}
-            onPress={handleNext}
-          >
-            <Text style={styles.nextButtonText}>Next</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.bottomContainer}>
+            <TouchableOpacity
+              style={[
+                styles.nextButton,
+                !isFormValid && styles.nextButtonDisabled
+              ]}
+              onPress={handleNext}
+              disabled={!isFormValid}
+            >
+              <Text style={styles.nextButtonText}>Next</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -234,87 +277,131 @@ const ProfileSetupScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: Colors.background,
   },
   keyboardAvoid: {
     flex: 1,
   },
-  scrollContainer: {
-    padding: 16,
-    paddingBottom: 100, // Space for the bottom button
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 52,
+  },
+  glowImage: {
+    width: 100,
+    height: 100,
+  },
+  userImage: {
+    position: 'absolute',
+    width: 45,
+    height: 45,
   },
   header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    color: '#1a1a1a',
+    color: Colors.white,
     textAlign: 'center',
+    fontSize: 28,
+    fontWeight: '800',
+    lineHeight: 34,
+    marginTop: 8,
   },
   inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    marginBottom: 16,
+    marginHorizontal: 'auto'
   },
   input: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    padding: 12,
     fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e1e1e1',
-    color: '#333',
-  },
-  inputError: {
-    borderColor: '#ff3b30',
-  },
-  textArea: {
-    minHeight: 100,
-    paddingTop: 16,
+    color: Colors.white,
   },
   errorText: {
     color: '#ff3b30',
     fontSize: 14,
     marginTop: 4,
+    marginHorizontal: 4,
   },
-  helperText: {
-    color: '#666',
-    fontSize: 14,
+  textArea: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    padding: 12,
+    paddingRight: 50,
+    fontSize: 16,
+    color: Colors.white,
+    width: 343,
+    height: 88,
+    textAlignVertical: 'top',
+    borderWidth: 1,
+    borderColor: Colors.secondary,
+  },
+  textAreaFocused: {
+    borderColor: Colors.white,
+    borderWidth: 2,
+  },
+  characterCount: {
+    position: 'absolute',
+    right: 10,
+    bottom: 8,
+    color: Colors.secondary,
+    fontSize: 12,
+  },
+
+  descriptionInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  placeholderText: {
+    position: 'absolute',
+    left: 12,
+    color: Colors.secondary,
+  },
+  suggestionsContainer: {
+    backgroundColor: '#2a2a2a',
+    width: 343,
+    borderRadius: 8,
     marginTop: 4,
   },
-  bottomContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#f5f5f5',
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingBottom: 34, // Extra padding for notched devices
-    borderTopWidth: 1,
-    borderTopColor: '#e1e1e1',
+    backgroundColor: '#2a2a2a',
+    marginVertical: 10,
+  },
+  suggestionIcon: {
+    marginLeft: 10,
+  },
+  suggestionText: {
+    color: Colors.white,
+    marginLeft: 18,
+  },
+  highlightedText: {
+    color: 'gold',
+    fontWeight: 'bold',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#444',
+    marginHorizontal: 16,
+  },
+  bottomContainer: {
+    padding: 10,
   },
   nextButton: {
-    backgroundColor: '#1DB954',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    marginHorizontal: 16,
+  },
+  nextButtonDisabled: {
+    backgroundColor: '#333',
   },
   nextButtonText: {
-    color: '#ffffff',
+    color: Colors.white,
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
 });
 

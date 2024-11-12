@@ -4,7 +4,7 @@ import { AuthService } from "../services/AuthService";
 import { router } from "expo-router";
 
 class ApiError extends Error {
-  constructor(message, status, data) {
+  constructor (message, status, data) {
     super(message);
     this.name = "ApiError";
     this.status = status;
@@ -117,6 +117,10 @@ export const axiosGet = (config) => {
     params,
   });
 };
+
+export const axiosPatch = (config) =>
+  createAxiosRequest({ ...config, method: 'PATCH' });
+
 
 export const axiosDelete = (config) =>
   createAxiosRequest({ ...config, method: "DELETE" });
