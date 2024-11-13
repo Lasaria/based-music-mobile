@@ -7,6 +7,7 @@ import { StatusBar } from "expo-status-bar";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { useRouter } from "expo-router";
 import { tokenManager } from "../../../utils/tokenManager";
+import {SERVER_URL, AUTHSERVER_URL} from "@env"
 
 const MAIN_SERVER_URL = "http://localhost:3000";
 
@@ -106,25 +107,14 @@ const createPlaylist = () => {
     
     
     try {
-      const response = await fetch(`${MAIN_SERVER_URL}/tracks`, {
+      const response = await fetch(`${SERVER_URL}/playlists`, {
         method: "POST",
-        data: formData,
+        body: formData,
         headers: {
           Accept: "application/json",
           Authorization: `Bearer ${token}`, 
         },
       });
-
-      
-      // await axiosPost({
-      //   url: `${MAIN_SERVER_URL}/playlists`,
-      //   data: {
-      //     userId: userId,
-      //     title: playlistName,
-      //     description: playlistDescription,
-      //     songs: JSON.stringify(songIds),
-      //   },
-      // });
 
       if (!response.ok) {
         // Try to parse error message from response
