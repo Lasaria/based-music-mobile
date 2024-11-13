@@ -7,6 +7,7 @@ import {
   Image,
   StyleSheet,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -16,8 +17,8 @@ import { tokenManager } from "../../../utils/tokenManager";
 import { AudioContext } from "../../../contexts/AudioContext";
 import Toast from "react-native-toast-message";
 import SongList from "../../../components/SongComponent";
-
-const MAIN_SERVER_URL = "http://localhost:3000";
+import PopularRecommendations from "../../../components/PopularRecommendations";
+import { SERVER_URL } from "@env";
 
 function MusicScreen() {
   const router = useRouter();
@@ -84,7 +85,7 @@ function MusicScreen() {
       }
 
       const response = await axiosGet({
-        url: `${MAIN_SERVER_URL}/library/${userId}?${queryParams.toString()}`,
+        url: `${SERVER_URL}/library/${userId}?${queryParams.toString()}`,
         isAuthenticated: true,
       });
       console.log("Library response:", JSON.stringify(response.items, null, 2));
@@ -230,6 +231,19 @@ function MusicScreen() {
     setLastEvaluatedKey(null);
     setHasMore(true);
   };
+
+  const renderForYou = () => (
+    <ScrollView style={styles.forYouContainer}>
+      <PopularRecommendations 
+        onTrackPress={(track) => {
+          // Handle track selection - we can add more functionality here (e.g. play track)
+          updateCurrentTrack(track);
+        }} 
+      />
+      {/* we can add more recommendation sections here in the future */}
+    </ScrollView>
+  );
+
   const renderMyLibrary = () => (
     <View style={styles.libraryContainer}>
       <View style={styles.libraryHeader}>
@@ -398,15 +412,7 @@ function MusicScreen() {
         </View>
       </View>
 
-      {selectedTab === "My Library" ? (
-        renderMyLibrary()
-      ) : (
-        <View style={styles.forYouContainer}>
-          <Text style={styles.comingSoonText}>
-            For You content coming soon...
-          </Text>
-        </View>
-      )}
+      {selectedTab === "My Library" ? renderMyLibrary() : renderForYou()}
     </View>
   );
 }
@@ -538,12 +544,7 @@ const styles = StyleSheet.create({
   },
   forYouContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  comingSoonText: {
-    color: "white",
-    fontSize: 18,
+    backgroundColor: '#000',
   },
 });
 
