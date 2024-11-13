@@ -330,18 +330,22 @@ const SearchScreen = () => {
           param: "songId",
         },
         playlist: {
-          path: "/playlistDetail",
-          param: "playlistId",
+          path: "/playlistScreen",
+          param: "playlist_id",
         },
       };
 
       const route = routes[item.type];
+      console.log("item id:", item.id);
+      
       if (route) {
         router.push({
           pathname: route.path,
           params: { [route.param]: item.id },
         });
       }
+      console.log("hitting: ", route.path);
+      
     },
     [router]
   );
