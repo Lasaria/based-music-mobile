@@ -129,7 +129,7 @@ function MusicScreen() {
     const showPlayingState = isCurrentTrack && isPlaying;
     const getSubtitle = () => {
       switch (item.content_type) {
-        case "playlist":
+        case "playlists":
           return `${item.track_count} songs • ${formatDuration(
             item.total_duration
           )}`;
@@ -163,7 +163,7 @@ function MusicScreen() {
         />
         <View style={styles.itemInfo}>
           <Text style={styles.itemTitle} numberOfLines={1}>
-            {item.title || item.artist_name || "Untitled"}
+            {item.title || item.artist_name || "Untitld"}
           </Text>
           <Text style={styles.itemSubtitle} numberOfLines={1}>
             {getSubtitle()}
