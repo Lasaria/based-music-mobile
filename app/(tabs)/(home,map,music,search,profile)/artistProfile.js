@@ -1,6 +1,6 @@
 import { ActivityIndicator, Image, Modal, StyleSheet, Text, TouchableOpacity, Vibration, View } from 'react-native';
 import React, { useEffect, useLayoutEffect, useState } from 'react';
-import { router, useNavigation } from 'expo-router';
+import { router, useNavigation, useLocalSearchParams } from 'expo-router';
 import { Colors } from '../../../constants/Color';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import Animated, {
@@ -18,6 +18,8 @@ import MusicPlayer from '../../../components/MusicPlayer';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import EditProfilePhotosScreen from '../../../components/ArtistProfile/EditProfilePhotosScreen';
 import EditProfileScreen from '../../../components/ArtistProfile/EditProfileScreen';
+import { formatCount } from '../../../utils/functions';
+import { FollowersModal } from '../../../components/FollowersModal';
 
 // SERVER URL
 const serverURL = 'http://localhost:3000';
@@ -34,26 +36,63 @@ const DEFAULT_PROFILE_IMAGE = 'https://i.sstatic.net/dr5qp.jpg';
 const DEFAULT_COVER_IMAGE = 'https://plus.unsplash.com/premium_photo-1700604012249-e2f3c5645695?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OXx8bWF0dGUlMjBibGFja3xlbnwwfHwwfHx8MA%3D%3D';
 
 
-const ArtistProfileScreen = () => {
+export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl }) => {
   // ARTIST PROFILE STATES
-  const [userData, setUserData] = useState(null);
-  const [avatarUri, setAvatarUri] = useState('');
-  const [coverImageUri, setCoverImageUri] = useState();
-  const [name, setName] = useState('');
-  const [genre, setGenre] = useState('');
-  const [location, setLocation] = useState('');
-  const [username, setUsername] = useState('');
-  const [description, setDescription] = useState('');
+  const params = useLocalSearchParams();
+  //const [userData, setUserData] = useState(null);
+  const {
+    id: userId,
+    profile_image_url: initialAvatarUri,
+    cover_image_url: initialCoverUri,
+    display_name: initialName,
+    username: initialUsername,
+    description: initialDescription,
+    selected_genres: initialGenre,
+    user_location: initialLocation,
+    isSelfProfile,
+    followers_count: initialFollowersCount
+  } = userData;
+  // const [avatarUri, setAvatarUri] = useState('');
+  // const [coverImageUri, setCoverImageUri] = useState();
+  // const [name, setName] = useState('');
+  // const [genre, setGenre] = useState('');
+  // const [location, setLocation] = useState('');
+  // const [username, setUsername] = useState('');
+  // const [description, setDescription] = useState('');
+  // const [lastUpdatedUsername, setLastUpdatedUsername] = useState('');
+  // const [loading, setLoading] = useState(true);
+  // const [selectedTab, setSelectedTab] = useState('music');
+  // const [isEditing, setIsEditing] = useState(false);
+  // const [showEditPhotosScreen, setShowEditPhotosScreen] = useState(false);
+  // const [photos, setPhotos] = useState([]);
+  // const [userId, setUserId] = useState(null); // State to store the userId
+  //const [isSelfProfile, setIsSelfProfile] = useState(false);
+  // const [userType, setUserType] = useState(null);
+
+  // const [isOptionsModalVisible, setOptionsModalVisible] = useState(false);
+  // State for editable fields
+  const [avatarUri, setAvatarUri] = useState(initialAvatarUri);
+  const [coverImageUri, setCoverImageUri] = useState(initialCoverUri);
+  const [name, setName] = useState(initialName);
+  const [genre, setGenre] = useState(initialGenre);
+  const [location, setLocation] = useState(initialLocation);
+  const [description, setDescription] = useState(initialDescription);
+  const [username, setUsername] = useState(initialUsername);
+  //const [followersCount, setFollowersCount] = useState(initialFollowersCount);
+
+  // Other state variables
   const [lastUpdatedUsername, setLastUpdatedUsername] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selectedTab, setSelectedTab] = useState('music');
   const [isEditing, setIsEditing] = useState(false);
   const [showEditPhotosScreen, setShowEditPhotosScreen] = useState(false);
   const [photos, setPhotos] = useState([]);
-  const [userId, setUserId] = useState(null); // State to store the userId
-  const [isSelfProfile, setIsSelfProfile] = useState(false);
-
+  const [followersModalVisible, setFollowersModalVisible] = useState(false);
+  //const [userId, setUserId] = useState(userData.id);
   const [isOptionsModalVisible, setOptionsModalVisible] = useState(false);
+  
+  // Dynamic State variables for user interaction
+  const [isFollowing, setIsFollowing] = useState(null)
 
   // Function to open modal
   const openOptionsModal = () => setOptionsModalVisible(true);
@@ -80,47 +119,26 @@ const ArtistProfileScreen = () => {
 
   // FETCH ARTIST PROFILE FROM THE SERVER
   const fetchUserProfile = async () => {
-    try {
-      const userId = await tokenManager.getUserId();
-      const response = await UserService.getUserProfile(userId); // Update function to fetch user profile
-      setUserId(userId);
-
-      if (response) {
-        setUserData(response);
-
-        // Determine if the logged-in user is viewing their own profile
-        const isUserSelfProfile = response.id === userId;
-        setIsSelfProfile(isUserSelfProfile);
-        console.log("Is user viewing their own profile?", isUserSelfProfile);
-
-        const profileImageUrl = response.profile_image_url;
-
-        const validProfileImageUrl = (profileImageUrl && profileImageUrl !== 'Unknown')
-          ? profileImageUrl
-          : DEFAULT_PROFILE_IMAGE;
-
-        const coverImageUrl = response.cover_image_url && response.cover_image_url !== 'Unknown'
-          ? response.cover_image_url
-          : DEFAULT_COVER_IMAGE;
-
-        setAvatarUri(validProfileImageUrl);
-        setCoverImageUri(coverImageUrl);
-        // Set other fields using new schema
-        setName(response.display_name);
-        setUsername(response.username);
-        setLastUpdatedUsername(response.last_updated_username)
-        setDescription(response.description)
-        setGenre(response.selected_genres);
-        setLocation(response.user_location);
-      } else {
-        console.error('No user data found');
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      setLoading(false);
-    }
+    //try {
+      // const userId = params.userId || await tokenManager.getUserId();
+      console.log("FOLLOWING USER ID: ", userId);
+      const following = await UserService.checkIsFollowing(userId); // Update function to fetch user profile
+      // /isFollowing/:followee_id
+      setIsFollowing(following);
   };
+
+  // Follow Actions for user
+  const follow = async (type) => {
+    if (type) {
+      const result = await UserService.follow(userId); // Update function to fetch user profile
+      // /isFollowing/:followee_id
+      setIsFollowing(result);
+    } else {
+      const result = await UserService.unfollow(userId); // Update function to fetch user profile
+      // /isFollowing/:followee_id
+      setIsFollowing(result);
+    }
+  }
 
   // ANIMATED STYLE FOR IMAGE FADE-OUT
   const imageAnimatedStyle = useAnimatedStyle(() => {
@@ -331,7 +349,7 @@ const ArtistProfileScreen = () => {
   useEffect(() => {
     fetchUserProfile();
     navigation.setOptions({ headerShown: !loading });
-  }, [avatarUri, loading]);
+  }, [avatarUri, loading, userId]);
 
   // TOP HEADER PART
   useLayoutEffect(() => {
@@ -377,7 +395,7 @@ const ArtistProfileScreen = () => {
         ),
         // BACK BUTTON ICON
         headerLeft: () => (
-          <TouchableOpacity style={styles.roundButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={styles.roundButton} onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={20} color={Colors.white} />
           </TouchableOpacity>
         ),
@@ -510,6 +528,7 @@ const ArtistProfileScreen = () => {
               onScroll={scrollHandler}
               scrollEventThrottle={16}
               showsVerticalScrollIndicator={false}
+              refreshControl={refreshControl}
             >
               {/* COVER IMAGE */}
               {isEditing ? (
@@ -558,7 +577,7 @@ const ArtistProfileScreen = () => {
                             {/* Artist Name and Handle */}
                             <Text style={styles.artistName}>{name}</Text>
                             <View style={styles.artistHandleContainer}>
-                              <Text style={styles.artistHandle}>@{name}</Text>
+                              <Text style={styles.artistHandle}>@{username}</Text>
                             </View>
                           </View>
                         </View>
@@ -597,7 +616,7 @@ const ArtistProfileScreen = () => {
                           {/* Artist Name and Handle */}
                           <Text style={styles.artistName}>{name}</Text>
                           <View style={styles.artistHandleContainer}>
-                            <Text style={styles.artistHandle}>@{name}</Text>
+                            <Text style={styles.artistHandle}>@{username}</Text>
                           </View>
                         </View>
 
@@ -622,7 +641,14 @@ const ArtistProfileScreen = () => {
                       <View style={styles.followerInfo}>
                         <View style={styles.followersContainer}>
                           <Feather name="users" size={16} color={Colors.white} />
-                          <Text style={styles.followers}>321k followers</Text>
+                          <TouchableOpacity onPress={() => setFollowersModalVisible(true)}>
+                            <Text style={styles.followers}>{formatCount(userData.followers_count)} followers</Text>
+                          </TouchableOpacity>
+                          <FollowersModal
+                            visible={followersModalVisible}
+                            onClose={() => setFollowersModalVisible(false)}
+                            userId={userId}
+                          />
                         </View>
                         <View style={styles.streamsContainer}>
                           <Ionicons name="play" size={16} color={Colors.white} />
@@ -673,8 +699,14 @@ const ArtistProfileScreen = () => {
                   ) : (
                     // FOLLOW AND MESSAGE BUTTONS FOR LISTENER VIEWING ARTIST PROFILE
                     <>
-                      <TouchableOpacity style={styles.followButton}>
-                        <Text style={styles.buttonText}>Follow</Text>
+                      <TouchableOpacity 
+                      style={styles.followButton}
+                      onPress={() => isFollowing ? follow(false) : follow(true)}
+                      >
+                        { isFollowing ? 
+                        (<Text style={styles.buttonText}>Unfollow</Text>) :
+                        (<Text style={styles.buttonText}>Follow</Text>)
+                        }
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.messageButton}>
                         <Text style={styles.buttonText}>Message</Text>
