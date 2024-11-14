@@ -1,9 +1,10 @@
 import * as FileSystem from 'expo-file-system';
 import { Platform } from 'react-native';
 import { tokenManager } from '../utils/tokenManager';
-import { SERVER_URL, AUTHSERVER_URL } from '@env';
+import { SERVER_URL, AUTHSERVER_URL, IP_ADDRESS_SERVER_URL } from '@env';
 
-const serverURL = SERVER_URL;
+// const serverURL = SERVER_URL;
+const serverURL = IP_ADDRESS_SERVER_URL;
 
 export const uploadImage = async (imageUri, endpoint, imageName, method = 'PATCH') => {
     if (!imageUri) return;

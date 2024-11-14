@@ -17,9 +17,9 @@ import { tokenManager } from '../../../utils/tokenManager';
 import * as ImagePicker from 'expo-image-picker';
 import MusicPlayer from '../../../components/MusicPlayer';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import EditProfilePhotosScreen from '../../../components/ArtistProfile/EditProfilePhotosScreen';
-import EditProfileScreen from '../../../components/ArtistProfile/EditProfileScreen';
-import { SERVER_URL, AUTHSERVER_URL } from "@env";
+import EditProfilePhotosScreen from '../../../components/EditProfile/EditProfilePhotosScreen';
+import EditProfileScreen from '../../../components/EditProfile/EditProfileScreen';
+import { SERVER_URL } from "@env";
 
 // SERVER URL
 const serverURL = SERVER_URL;

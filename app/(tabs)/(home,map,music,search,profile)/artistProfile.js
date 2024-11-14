@@ -1,5 +1,5 @@
 import { ActivityIndicator, Image, Modal, StyleSheet, Text, TouchableOpacity, Vibration, View } from 'react-native';
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { router, useNavigation } from 'expo-router';
 import { Colors } from '../../../constants/Color';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -16,9 +16,9 @@ import { tokenManager } from '../../../utils/tokenManager';
 import * as ImagePicker from 'expo-image-picker';
 import MusicPlayer from '../../../components/MusicPlayer';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import EditProfilePhotosScreen from '../../../components/ArtistProfile/EditProfilePhotosScreen';
-import EditProfileScreen from '../../../components/ArtistProfile/EditProfileScreen';
-import { SERVER_URL, AUTHSERVER_URL } from "@env";
+import EditProfilePhotosScreen from '../../../components/EditProfile/EditProfilePhotosScreen';
+import EditProfileScreen from '../../../components/EditProfile/EditProfileScreen';
+import { SERVER_URL } from "@env";
 
 // SERVER URL
 const serverURL = SERVER_URL;
@@ -313,19 +313,26 @@ const ArtistProfileScreen = () => {
     setShowEditPhotosScreen(true);
   };
 
-  // ADD PHOTO(S) TO OTHER IMAGES UPTO 6
+
+  // Handle adding a photo
   const handleAddPhoto = (newPhotoUri) => {
+    console.log("Adding new photo with URI:", newPhotoUri);
     setPhotos((prevPhotos) => {
       const updatedPhotos = [...prevPhotos, { uri: newPhotoUri }];
-      console.log('Updated photos array:', updatedPhotos); // Log the updated array
+      console.log("Updated photos after adding:", updatedPhotos);
       return updatedPhotos;
     });
+
   };
 
-  // REMOVE PHOTO(S)
+  // Handle removing a photo
   const handleRemovePhoto = (photo) => {
-    // Logic to remove a photo
-    setPhotos((prevPhotos) => prevPhotos.filter((p) => p.uri !== photo.uri));
+    console.log("Removing photo with URI:", photo.uri);
+    setPhotos((prevPhotos) => {
+      const updatedPhotos = prevPhotos.filter((p) => p.uri !== photo.uri);
+      console.log("Updated photos after removing:", updatedPhotos);
+      return updatedPhotos;
+    });
   };
 
   // FETCH THE ARTIST PROFILE WHEN COMPONENT IS MOUNTED OR REFRESHED
@@ -419,6 +426,7 @@ const ArtistProfileScreen = () => {
         <EditProfilePhotosScreen
           userId={userId}
           photos={photos}
+          setPhotos={setPhotos}
           onSave={() => {
             handleSaveChanges();
             fetchUserProfile();
@@ -658,7 +666,7 @@ const ArtistProfileScreen = () => {
                 <Animated.View style={[styles.buttonContainer, combinedAnimatedStyle]}>
                   {isSelfProfile ? (
                     <>
-                      <TouchableOpacity style={styles.uploadButton} onPress={() => router.push("/upload")}>
+                      <TouchableOpacity style={styles.uploadButton} onPress={() => router.push("/uploadScreen")}>
                         <Text style={styles.buttonText}>Upload</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
