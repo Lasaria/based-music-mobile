@@ -119,8 +119,8 @@ const Posts = ({ currentUserId, avatarUri, name, isSelfProfile }) => {
           console.error('Error fetching posts:', error);
           setError(error.message || 'Failed to load posts');
         } finally {
-          setLoading(false);
-          setRefreshing(false);
+          //setLoading(false);
+          //setRefreshing(false);
         }
       };
 
