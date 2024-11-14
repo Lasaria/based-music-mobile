@@ -157,7 +157,7 @@ const SearchResultItem = ({ item, onPress }) => {
 
   // Validate required item properties
   if (!item || (!item.title && !item.name)) {
-    console.error("[SearchResultItem] Invalid item data:", item);
+    console.warn("[SearchResultItem] Invalid item data:", item);
     return null;
   }
 

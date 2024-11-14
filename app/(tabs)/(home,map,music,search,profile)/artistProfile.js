@@ -20,9 +20,10 @@ import EditProfilePhotosScreen from '../../../components/ArtistProfile/EditProfi
 import EditProfileScreen from '../../../components/ArtistProfile/EditProfileScreen';
 import { formatCount } from '../../../utils/functions';
 import { FollowersModal } from '../../../components/FollowersModal';
+import { SERVER_URL, AUTHSERVER_URL } from "@env";
 
 // SERVER URL
-const serverURL = 'http://localhost:3000';
+const serverURL = SERVER_URL;
 
 // DEVICE ACTUAL WIDTH
 const { width } = Dimensions.get('window');

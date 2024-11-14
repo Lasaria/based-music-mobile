@@ -26,8 +26,8 @@ export default function RootLayout() {
   const shouldShowTabs = !routesWithoutTabs.includes(pathname);
 
   return (
-    <AudioProvider>
-      <QueueProvider>
+    <QueueProvider>
+      <AudioProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
           {shouldShowTabs ? (
             <Stack screenOptions={{ headerShown: false }}>
@@ -49,7 +49,7 @@ export default function RootLayout() {
           {/* Render AudioPlayer globally at the bottom */}
           <AudioPlayer />
         </GestureHandlerRootView>
-      </QueueProvider>
-    </AudioProvider>
+      </AudioProvider>
+    </QueueProvider>
   );
 }
