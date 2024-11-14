@@ -772,7 +772,7 @@ export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl,
                     {selectedTab === 'events' && <Events isSelfProfile={isSelfProfile} />}
                   </View>
                   <View>
-                    {selectedTab === 'posts' && <Posts avatarUri={avatarUri} name={name} isSelfProfile={isSelfProfile} />}
+                    {selectedTab === 'posts' && <Posts currentUserId={userId} avatarUri={avatarUri} name={name} isSelfProfile={isSelfProfile} />}
                   </View>
                   <View>
                     {selectedTab === 'dashboard' && <Dashboard />}

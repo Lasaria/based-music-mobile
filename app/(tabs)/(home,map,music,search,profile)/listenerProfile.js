@@ -742,7 +742,7 @@ export const ListenerProfileScreen = ({ userData, onUpdateProfile, refreshContro
                                 <View style={{ width: '100%', marginTop: -20 }}>
                                     {selectedTab === 'music' && !isSelfProfile && <Music name={name} />}
                                     {selectedTab === 'events' && <Events />}
-                                    {selectedTab === 'posts' && <Posts avatarUri={avatarUri} name={name} isSelfProfile={isSelfProfile} />}
+                                    {selectedTab === 'posts' && <Posts currentUserId={userId} avatarUri={avatarUri} name={name} isSelfProfile={isSelfProfile} />}
                                     {selectedTab === 'dashboard' && isSelfProfile && <Dashboard />}
                                     {selectedTab === 'about' && !isSelfProfile && <About />}
                                 </View>
