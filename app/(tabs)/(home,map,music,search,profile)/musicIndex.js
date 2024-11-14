@@ -16,8 +16,9 @@ import { tokenManager } from "../../../utils/tokenManager";
 import { AudioContext } from "../../../contexts/AudioContext";
 import Toast from "react-native-toast-message";
 import SongList from "../../../components/SongComponent";
+import LibraryItem from "../../../components/RenderLibraryItem";
+import {SERVER_URL, AUTHSERVER_URL} from "@env"
 
-const MAIN_SERVER_URL = "http://localhost:3000";
 
 function MusicScreen() {
   const router = useRouter();
@@ -84,7 +85,7 @@ function MusicScreen() {
       }
 
       const response = await axiosGet({
-        url: `${MAIN_SERVER_URL}/library/${userId}?${queryParams.toString()}`,
+        url: `${SERVER_URL}/library/${userId}?${queryParams.toString()}`,
         isAuthenticated: true,
       });
       console.log("Library response:", JSON.stringify(response.items, null, 2));
@@ -102,6 +103,38 @@ function MusicScreen() {
     }
   };
 
+  const handlePlay = async (item) => {
+    console.log("Playing item:", item);
+    // if (!isPlayerReady) {
+    //   Toast.show({
+    //     type: "error",
+    //     text1: "Player not ready",
+    //     text2: "Please wait a moment and try again",
+    //   });
+    //   return;
+    // }
+
+    if (item.content_type === "song") {
+      updateCurrentTrack(item);
+    } else if (item.content_type === "playlist") {
+      // route to playlist screen
+      console.log("route to playlist screen");
+      router.push({
+        pathname: '/playlistScreen',
+        params: {
+          playlist_id: item.content_id,
+        }
+       });
+
+    } else {
+      Toast.show({
+        type: "error",
+        text1: "Invalid item",
+        text2: "Please select a song or playlist to play",
+      });
+      return;
+    }
+  }
   // Initial fetch when userId is available
   useEffect(() => {
     if (userId) {
@@ -118,76 +151,15 @@ function MusicScreen() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  const renderLibraryItem = ({ item }) => {
-    const formatDuration = (duration) => {
-      if (!duration) return "0:00";
-      const minutes = Math.floor(duration / 60);
-      const seconds = Math.floor(duration % 60);
-      return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-    };
-    const isCurrentTrack = trackInfo?.track_id === item.track_id;
-    const showPlayingState = isCurrentTrack && isPlaying;
-    const getSubtitle = () => {
-      switch (item.content_type) {
-        case "playlists":
-          return `${item.track_count} songs • ${formatDuration(
-            item.total_duration
-          )}`;
-        case "song":
-          return `${item.artist_name} • ${formatDuration(item.duration)}`;
-        case "album":
-          return `${item.artist_name} • ${item.track_count || 0} tracks`;
-        case "artist":
-          return `${item.total_albums || 0} albums • ${
-            item.total_tracks || 0
-          } tracks`;
-        default:
-          return "";
-      }
-    };
-
-    return (
-      <View style={styles.libraryItem}>
-        <Image
-          source={{
-            uri:
-              item.cover_image_url ||
-              item.image_url ||
-              "https://via.placeholder.com/50",
-            headers: { "Cache-Control": "max-age=31536000" },
-          }}
-          style={[
-            styles.itemImage,
-            item.content_type === "artist" && styles.artistImage,
-          ]}
-        />
-        <View style={styles.itemInfo}>
-          <Text style={styles.itemTitle} numberOfLines={1}>
-            {item.title || item.artist_name || "Untitld"}
-          </Text>
-          <Text style={styles.itemSubtitle} numberOfLines={1}>
-            {getSubtitle()}
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => handlePlay(item)}
-          style={styles.playButton}
-        >
-          <Ionicons
-            name={
-              item.content_type === "artist"
-                ? "chevron-forward"
-                : showPlayingState
-                ? "pause"
-                : "play"
-            }
-            size={24}
-            color={isCurrentTrack ? "purple" : "white"}
-          />
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  const renderLibraryItem = ({ item }) => (
+    <LibraryItem
+      item={item}
+      isPlaying={isPlaying}
+      trackInfo={trackInfo}
+      onPlay={handlePlay}
+      SERVER_URL={SERVER_URL}
+    />
+  );
 
 
 

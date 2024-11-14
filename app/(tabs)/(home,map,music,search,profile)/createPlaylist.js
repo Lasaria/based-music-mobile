@@ -9,7 +9,6 @@ import { useRouter } from "expo-router";
 import { tokenManager } from "../../../utils/tokenManager";
 import {SERVER_URL, AUTHSERVER_URL} from "@env"
 
-const MAIN_SERVER_URL = "http://localhost:3000";
 
 const createPlaylist = () => {
   const router = useRouter();
@@ -51,7 +50,7 @@ const createPlaylist = () => {
         setLoading(true);
         try {
           const response = await axiosGet({
-            url: `${MAIN_SERVER_URL}/search`,
+            url: `${SERVER_URL}/search`,
             params: { query, type: "songs" },
           });
           setSearchResults(response.items || []);
@@ -87,7 +86,7 @@ const createPlaylist = () => {
   };
 
   const handleCreatePlaylist = async () => {
-    if (!playlistName.trim() || !playlistDescription.trim() || selectedSongs.length === 0) {
+    if (!playlistName.trim() || !playlistDescription.trim()) {
       Alert.alert("Error", "Please fill in all fields and select at least one song.");
       return;
     }

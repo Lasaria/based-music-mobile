@@ -109,6 +109,10 @@ const createAxiosRequest = async ({
 export const axiosPost = (config) =>
   createAxiosRequest({ ...config, method: "POST" });
 
+export const axiosPut = (config) =>
+  createAxiosRequest({ ...config, method: "PUT" });
+
+
 export const axiosGet = (config) => {
   const { params, ...rest } = config;
   return createAxiosRequest({

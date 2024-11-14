@@ -24,8 +24,8 @@ import SearchFilters from "../../../components/SearchFilters";
 import SearchResultItem from "../../../components/SearchResultItem";
 import SearchEmptyState from "../../../components/SearchEmptyState";
 import { AudioContext } from "../../../contexts/AudioContext";
+import {SERVER_URL, AUTHSERVER_URL} from "@env"
 
-const MAIN_SERVER_URL = "http://localhost:3000";
 
 const SearchScreen = () => {
   console.log("\n=== [START] SearchScreen Component ===");
@@ -117,7 +117,7 @@ const SearchScreen = () => {
           );
         }
 
-        const requestUrl = `${MAIN_SERVER_URL}/search?${queryParams.toString()}`;
+        const requestUrl = `${SERVER_URL}/search?${queryParams.toString()}`;
         console.log("[SearchScreen] Executing search:", {
           query: queryToSearch,
           filter: currentFilter,
