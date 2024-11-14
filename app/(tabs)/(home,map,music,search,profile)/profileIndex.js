@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, ActivityIndicator, StyleSheet, RefreshControl } from 'react-native';
-import { useNavigation, useLocalSearchParams } from 'expo-router';
+import { useNavigation, useLocalSearchParams, usePathname, useSegments } from 'expo-router';
 import { Colors } from '../../../constants/Color';
 import { UserService } from '../../../services/UserService';
 import { tokenManager } from '../../../utils/tokenManager';
@@ -30,6 +30,12 @@ const ProfileScreen = () => {
   });
   const params = useLocalSearchParams();
   const navigation = useNavigation();
+  const pathname = usePathname();
+  const segments = useSegments();
+
+  // Pass isRootProfile to child components
+  const isRootProfile = !params.userId;
+
 
   // Fetch user type when component mounts
     const fetchUserProfile = async (showLoadingSpinner = true) => {
@@ -146,9 +152,9 @@ const ProfileScreen = () => {
   };
 
   return profileData.user_type === 'artist' ? (
-    <ArtistProfileScreen {...commonProps} />
+    <ArtistProfileScreen {...commonProps} isRootProfile={isRootProfile}/>
   ) : (
-    <ListenerProfileScreen {...commonProps} />
+    <ListenerProfileScreen {...commonProps} isRootProfile={isRootProfile}/>
   );
 };
 

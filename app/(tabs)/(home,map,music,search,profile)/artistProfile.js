@@ -37,7 +37,7 @@ const DEFAULT_PROFILE_IMAGE = 'https://i.sstatic.net/dr5qp.jpg';
 const DEFAULT_COVER_IMAGE = 'https://plus.unsplash.com/premium_photo-1700604012249-e2f3c5645695?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OXx8bWF0dGUlMjBibGFja3xlbnwwfHwwfHx8MA%3D%3D';
 
 
-export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl }) => {
+export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl, isRootProfile }) => {
   // ARTIST PROFILE STATES
   const params = useLocalSearchParams();
   //const [userData, setUserData] = useState(null);
@@ -346,6 +346,17 @@ export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl 
     setPhotos((prevPhotos) => prevPhotos.filter((p) => p.uri !== photo.uri));
   };
 
+  const isProfileTab = (navigation) => {
+    // Get the current route
+    const currentRoute = navigation.getState().routes;
+    
+    // Check if we're in the profile tab and it's the root screen
+    return currentRoute.some(route => 
+      route.name === '(profile)' && 
+      (!route.params || !route.params.userId)
+    );
+  };
+
   // FETCH THE ARTIST PROFILE WHEN COMPONENT IS MOUNTED OR REFRESHED
   useEffect(() => {
     fetchUserProfile();
@@ -395,11 +406,21 @@ export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl 
           </Animated.View>
         ),
         // BACK BUTTON ICON
-        headerLeft: () => (
-          <TouchableOpacity style={styles.roundButton} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={20} color={Colors.white} />
-          </TouchableOpacity>
-        ),
+        headerLeft: () => {
+          // Only show back button if not on root profile
+          return !isRootProfile ? (
+            <TouchableOpacity 
+              style={styles.roundButton} 
+              onPress={() => router.back()}
+            >
+              <Ionicons 
+                name="chevron-back" 
+                size={20} 
+                color={Colors.white} 
+              />
+            </TouchableOpacity>
+          ) : null;
+        },
       });
     }
   }, [isEditing, name, genre, avatarUri, coverImageUri, isSelfProfile, loading]);

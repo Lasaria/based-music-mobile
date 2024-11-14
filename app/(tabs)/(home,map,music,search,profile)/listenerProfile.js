@@ -41,7 +41,7 @@ const DEFAULT_PROFILE_IMAGE = 'https://i.sstatic.net/dr5qp.jpg';
 const DEFAULT_COVER_IMAGE = 'https://flowbite.com/docs/images/examples/image-2@2x.jpg';
 
 
-export const ListenerProfileScreen = ({ userData, onUpdateProfile, refreshControl }) => {
+export const ListenerProfileScreen = ({ userData, onUpdateProfile, refreshControl, isRootProfile  }) => {
     const params = useLocalSearchParams();
     // LISTENER PROFILE STATES
     const {
@@ -371,11 +371,21 @@ export const ListenerProfileScreen = ({ userData, onUpdateProfile, refreshContro
                     </Animated.View>
                 ),
                 // BACK BUTTON ICON
-                headerLeft: () => (
-                    <TouchableOpacity style={styles.roundButton} onPress={() => router.back()}>
-                        <Ionicons name="chevron-back" size={20} color={Colors.white} />
-                    </TouchableOpacity>
-                ),
+                headerLeft: () => {
+                    // Only show back button if not on root profile
+                    return !isRootProfile ? (
+                      <TouchableOpacity 
+                        style={styles.roundButton} 
+                        onPress={() => router.back()}
+                      >
+                        <Ionicons 
+                          name="chevron-back" 
+                          size={20} 
+                          color={Colors.white} 
+                        />
+                      </TouchableOpacity>
+                    ) : null;
+                  },
             });
         }
     }, [isEditing, name, genre, avatarUri, coverImageUri, isSelfProfile, loading]);
