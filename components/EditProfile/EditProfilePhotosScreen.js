@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Image, FlatList, Modal, Alert, StyleSheet, ActivityIndicator } from 'react-native';
-import { Ionicons, FontAwesome, Entypo, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
+import { View, Text, TouchableOpacity, Image, FlatList, Modal, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import { Ionicons, FontAwesome, AntDesign, Entypo, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '../../constants/Color';
 import { tokenManager } from '../../utils/tokenManager';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SERVER_URL, AUTHSERVER_URL } from "@env";
+import { SERVER_URL } from "@env";
+import { UserService } from '../../services/UserService';
 
 // SERVER URL
 const serverURL = SERVER_URL;
@@ -14,56 +15,44 @@ const serverURL = SERVER_URL;
 // DEFAULT PHOTO
 const DEFAULT_PHOTO_URI = 'https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg';
 
-const EditProfilePhotosScreen = ({ userId, photos, onSave, onCancel }) => {
-    const [mainPhoto, setMainPhoto] = useState(null);
-    const [modalVisible, setModalVisible] = useState(false);
+const EditProfilePhotosScreen = ({ userId, photos, setPhotos, onSave, onCancel }) => {
+    const [mainPhoto, setMainPhoto] = useState(null); // Photo currently displayed in the main view
+    const [profilePhotoUri, setProfilePhotoUri] = useState(null); // Photo marked as profile photo with the gold star
     const [localPhotos, setLocalPhotos] = useState([]);
+    const [modalVisible, setModalVisible] = useState(false);
     const [newPhotos, setNewPhotos] = useState([]);
-    const [starredPhotoUri, setStarredPhotoUri] = useState(null);
-    const [imagePicked, setImagePicked] = useState(false);
-    const [saveClicked, setSaveClicked] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    // FETCH ALL PHOTOS FROM S3
+    // Initialize photos
     const initializePhotos = async () => {
-        setLoading(true); // Start loading
+        setLoading(true);
         try {
             const token = await tokenManager.getAccessToken();
             const response = await axios.get(`${serverURL}/users/${userId}/profile`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
-            const mainPhotoUri = response.data.profile_image_url;
-            setStarredPhotoUri(mainPhotoUri);
+            const profilePhotoUri = response.data.profile_image_url || DEFAULT_PHOTO_URI;
+            setProfilePhotoUri(profilePhotoUri); // Set the saved profile photo
+            setMainPhoto(profilePhotoUri); // Display the profile photo in the main view initially
 
-            console.log("Main photo URI from DynamoDB:", mainPhotoUri);
-
-            let uniquePhotos = deduplicatePhotos(photos?.map(photo => ({
+            let uniquePhotos = deduplicatePhotos(photos.map(photo => ({
                 ...photo,
                 id: photo.id || generateUniqueId(),
-            })) || []);
-
-            console.log("Fetched photo URIs:", uniquePhotos?.map(photo => photo.uri));
-
-            if (mainPhotoUri) {
-                setMainPhoto(mainPhotoUri);
-            } else if (uniquePhotos.length > 0) {
-                setMainPhoto(uniquePhotos[0].uri);
-            }
+            })));
 
             setLocalPhotos([...uniquePhotos, ...createEmptySlots(uniquePhotos)]);
         } catch (error) {
-            console.error("Failed to fetch main photo URI:", error);
-            Alert.alert("Error", "Could not fetch main profile photo.");
+            console.error("Failed to fetch profile photo URI:", error);
+            Alert.alert("Error", "Could not fetch profile photo.");
         } finally {
-            setLoading(false); // Loading is complete
+            setLoading(false);
         }
     };
 
-    // SET UNIQUE ID
+    // Helper functions
     const generateUniqueId = () => `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
-    // MAKE EMPTY SLOT FOR PHOTO WHEN PHOTO IS REMOVED
     const createEmptySlots = (existingPhotos) => {
         const emptySlots = [];
         const remainingSlots = 6 - existingPhotos.length;
@@ -73,7 +62,6 @@ const EditProfilePhotosScreen = ({ userId, photos, onSave, onCancel }) => {
         return emptySlots;
     };
 
-    // FUNCTIONS TO CHECK DUPLICATE PHOTOS
     const deduplicatePhotos = (photosArray) => {
         const seen = new Set();
         return photosArray.filter(photo => {
@@ -86,19 +74,54 @@ const EditProfilePhotosScreen = ({ userId, photos, onSave, onCancel }) => {
         });
     };
 
-    // SET MAIN PHOTO (PROFILE PHOTO)
-    const handleSetMainPhoto = async (photo) => {
+    // Update the displayed image in the main view when a photo is clicked
+    const handleDisplayPhoto = (photo) => {
         if (!photo || !photo.uri) return;
-        setMainPhoto(photo.uri);
-        setStarredPhotoUri(photo.uri); // Mark this as the starred photo
-        console.log('Starred photo set to:', photo.uri);
-        await AsyncStorage.setItem('mainPhotoUri', photo.uri);
+        setMainPhoto(photo.uri); // Show the selected photo in the main view
     };
 
-    // FUNCTION TO REMOVE PHOTO FROM BOTH UI AND S3
+
+    // Set the profile photo (starred photo)
+    const handleSetProfilePhoto = (photo) => {
+        if (!photo || !photo.uri) return;
+        setProfilePhotoUri(photo.uri); // Mark the selected photo as the profile photo
+        setMainPhoto(photo.uri); // Display it as the main view as well
+        AsyncStorage.setItem('mainPhotoUri', photo.uri);
+    };
+
+    // Function to fetch photos
+    const fetchProfileImages = async () => {
+        if (!userId) return;
+        console.log("Fetching profile images...");
+        try {
+            const fetchedPhotos = await UserService.getProfileImages(userId);
+            if (Array.isArray(fetchedPhotos) && fetchedPhotos.length > 0) {
+                setPhotos(fetchedPhotos);
+                console.log("Fetched photos from server:", fetchedPhotos);
+            } else {
+                setPhotos([]);
+                console.log("No photos found.");
+            }
+        } catch (error) {
+            console.error("Error fetching profile images:", error);
+            setPhotos([]);
+        }
+    };
+
+    useEffect(() => {
+        fetchProfileImages();
+    }, [userId])
+
+
+    // Remove Photo
     const handleRemovePhoto = async (photo) => {
         const updatedPhotos = localPhotos.filter(p => p.uri !== photo.uri && !p.isEmpty);
         setLocalPhotos([...updatedPhotos, ...createEmptySlots(updatedPhotos)]);
+
+        // Also remove the photo from newPhotos if it's present there
+        setNewPhotos((prevNewPhotos) =>
+            prevNewPhotos.filter((p) => p.uri !== photo.uri)
+        );
 
         if (photo.uri === mainPhoto) {
             const newMainPhoto = updatedPhotos.length > 0 ? updatedPhotos[0].uri : null;
@@ -125,17 +148,8 @@ const EditProfilePhotosScreen = ({ userId, photos, onSave, onCancel }) => {
         }
     };
 
-    // OPEN IMAGE PICKER TO SELECT PHOTO FROM GALLERY OR CAMERA
+    // Image Picker
     const openImagePicker = async (source) => {
-        // Request camera permissions if the source is the camera
-        if (source === 'camera') {
-            const { status } = await ImagePicker.requestCameraPermissionsAsync();
-            if (status !== 'granted') {
-                Alert.alert("Camera Permission", "Camera permission is required to use the camera.");
-                return; // Exit the function if permission is not granted
-            }
-        }
-
         let result;
         if (source === 'gallery') {
             result = await ImagePicker.launchImageLibraryAsync({
@@ -158,39 +172,28 @@ const EditProfilePhotosScreen = ({ userId, photos, onSave, onCancel }) => {
 
             if (!isDuplicate) {
                 const newPhoto = { id: generateUniqueId(), uri: selectedPhotoUri };
-
-                // Update newPhotos state
                 setNewPhotos(prevPhotos => [...prevPhotos, newPhoto]);
 
-                // Update localPhotos
                 const updatedPhotos = [...localPhotos.filter((photo) => !photo.isEmpty), newPhoto];
                 setLocalPhotos([...updatedPhotos, ...createEmptySlots(updatedPhotos)]);
-
-                // Set imagePicked flag
-                setImagePicked(true);
-                console.log('Image picked, setting imagePicked to true');
             }
         }
         setModalVisible(false);
     };
 
-    // SAVE PHOTO(S) AFTER CHANGES
+    // Save Photos
     const handleSavePhotos = async () => {
-        console.log('Save clicked - Current states:', {
-            imagePicked,
-            saveClicked: true,
-            newPhotosLength: newPhotos.length
-        });
+        try {
+            const token = await tokenManager.getAccessToken();
+            const dynamoDBData = { userId: userId, mainPhotoUri: profilePhotoUri };
 
-        setSaveClicked(true);
-        let s3UploadSuccess = false; // Track if S3 upload was successful
+            await axios.patch(
+                `${serverURL}/users/${userId}/profile`,
+                dynamoDBData,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
 
-        // Handle S3 upload for new photos
-        if (imagePicked && newPhotos.length > 0) {
-            try {
-                console.log('Attempting S3 upload...');
-                const token = await tokenManager.getAccessToken();
-
+            if (newPhotos.length > 0) {
                 const formData = new FormData();
                 newPhotos.forEach((photo) => {
                     formData.append("profileImages", {
@@ -200,8 +203,7 @@ const EditProfilePhotosScreen = ({ userId, photos, onSave, onCancel }) => {
                     });
                 });
 
-                console.log('Uploading to S3:', formData);
-                const s3Response = await axios.post(
+                await axios.post(
                     `${serverURL}/users/${userId}/profile-images`,
                     formData,
                     {
@@ -212,85 +214,27 @@ const EditProfilePhotosScreen = ({ userId, photos, onSave, onCancel }) => {
                     }
                 );
 
-                console.log('S3 upload successful:', s3Response.data);
-                s3UploadSuccess = true; // Mark S3 upload as successful
-                onSave(s3Response.data.images);
-
-                // Show alert for successful S3 upload
-                Alert.alert("Success", "Successfully added new photo!");
-
-            } catch (error) {
-                console.error('S3 upload failed:', error);
-                Alert.alert("Error", "Failed to save photos to S3.");
-                return;
-            }
-        }
-
-        // Handle DynamoDB update
-        try {
-            const token = await tokenManager.getAccessToken();
-            const dynamoDBData = {
-                userId: userId,
-                mainPhotoUri: mainPhoto,
-            };
-
-            console.log('Updating DynamoDB with:', dynamoDBData);
-            const dynamoDBResponse = await axios.patch(
-                `${serverURL}/users/${userId}/profile`,
-                dynamoDBData,
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                }
-            );
-
-            console.log('DynamoDB update successful:', dynamoDBResponse.data);
-
-            // Show alert for DynamoDB update only if no S3 upload was performed
-            if (!s3UploadSuccess) {
-                Alert.alert("Success", "Profile Photo set successfully!");
+                Alert.alert("Success", "Photos updated successfully!");
+                onSave();
             }
         } catch (error) {
-            console.error('DynamoDB update failed:', error);
-            Alert.alert("Error", "Failed to update main photo in DynamoDB.");
+            console.error('Error updating photos:', error);
+            Alert.alert("Error", "Failed to update photos.");
         }
-
-        // Reset states after all operations
         onCancel(); // Close the screen (same as Cancel behavior)
-        setImagePicked(false);
-        setSaveClicked(false);
-        setNewPhotos([]);
     };
 
-    // FUNCTION TO CANCEL AND RETURN TO ARTIST PROFILE SCREEN
+    // Cancel and Reset
     const handleCancel = () => {
-        setImagePicked(false); // Reset picked flag on cancel
-        setSaveClicked(false); // Reset save flag on cancel
-        onCancel(); // Cancel without uploading
+        onCancel();
     };
 
     useEffect(() => {
-        console.log('IMAGE PICKED ', imagePicked);
-        console.log('SAVE CLICKED ', saveClicked);
-
         initializePhotos();
     }, [photos]);
 
-    // LOADER
-    if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={Colors.white} />
-            </View>
-        );
-    }
-
-    // RENDER PHOTOS ON PHOTO EDIT SCREEN 
+    // Render Photos in Grid
     const renderPhotoItem = ({ item }) => {
-        if (!item) {
-            console.log("Item is undefined or null");
-            return null;
-        }
-
         if (item.isEmpty) {
             return (
                 <TouchableOpacity
@@ -306,21 +250,32 @@ const EditProfilePhotosScreen = ({ userId, photos, onSave, onCancel }) => {
         }
 
         return (
-            <View style={styles.photoContainer}>
+            <TouchableOpacity onPress={() => handleDisplayPhoto(item)} style={styles.photoContainer}>
                 <Image source={{ uri: item.uri || DEFAULT_PHOTO_URI }} style={styles.photo} />
                 <TouchableOpacity style={styles.removeIcon} onPress={() => handleRemovePhoto(item)}>
                     <AntDesign name="minuscircleo" size={20} color={Colors.white} />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.starIcon} onPress={() => handleSetMainPhoto(item)}>
-                    <FontAwesome name="star" size={20} color={starredPhotoUri === item.uri ? 'gold' : 'gray'} />
+                <TouchableOpacity style={styles.starIcon} onPress={() => handleSetProfilePhoto(item)}>
+                    <FontAwesome
+                        name="star"
+                        size={20}
+                        color={profilePhotoUri === item.uri ? 'gold' : 'gray'}
+                    />
                 </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
         );
     };
 
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={Colors.white} />
+            </View>
+        );
+    }
+
     return (
         <View style={styles.container}>
-            {/* HEADER */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.roundButton} onPress={() => onCancel()}>
                     <Ionicons name="chevron-back" size={20} color={Colors.white} />
@@ -329,13 +284,19 @@ const EditProfilePhotosScreen = ({ userId, photos, onSave, onCancel }) => {
                 <Ionicons name="eye" size={24} color={Colors.white} />
             </View>
 
-            {/* MAIN PHOTO */}
+            {/* Main Display Photo */}
             <View style={styles.mainPhotoContainer}>
                 <Image source={{ uri: mainPhoto || DEFAULT_PHOTO_URI }} style={styles.mainPhoto} />
-                <FontAwesome name="star" size={24} color="gold" style={styles.mainPhotoStar} />
+                <TouchableOpacity style={styles.starIcon} onPress={handleSetProfilePhoto}>
+                    <FontAwesome
+                        name="star"
+                        size={24}
+                        color={profilePhotoUri === mainPhoto ? 'gold' : 'gray'}
+                    />
+                </TouchableOpacity>
             </View>
 
-            {/* PHOTO GRID */}
+            {/* Photo Grid */}
             <FlatList
                 data={localPhotos}
                 renderItem={renderPhotoItem}
@@ -370,8 +331,7 @@ const EditProfilePhotosScreen = ({ userId, photos, onSave, onCancel }) => {
                     </View>
                 </View>
             </Modal>
-
-            {/* FOOTER */}
+            {/* Footer with Save and Cancel */}
             <View style={styles.footer}>
                 <TouchableOpacity style={styles.saveButton} onPress={handleSavePhotos}>
                     <Text style={styles.saveButtonText}>Save</Text>
@@ -383,6 +343,7 @@ const EditProfilePhotosScreen = ({ userId, photos, onSave, onCancel }) => {
         </View>
     );
 };
+
 
 const styles = StyleSheet.create({
     container: {
@@ -486,7 +447,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-start',
         gap: 10,
         marginLeft: 10,
-        marginBottom: 48,
+        marginBottom: 56,
     },
     mainPhotoIndicator: {
         color: Colors.white,

@@ -1,5 +1,5 @@
 import { ActivityIndicator, Image, Modal, StyleSheet, Text, TouchableOpacity, Vibration, View } from 'react-native';
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { router, useNavigation, useLocalSearchParams } from 'expo-router';
 import { Colors } from '../../../constants/Color';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -21,6 +21,7 @@ import EditProfileScreen from '../../../components/ArtistProfile/EditProfileScre
 import { formatCount } from '../../../utils/functions';
 import { FollowersModal } from '../../../components/FollowersModal';
 import { SERVER_URL, AUTHSERVER_URL } from "@env";
+
 
 // SERVER URL
 const serverURL = SERVER_URL;
@@ -331,19 +332,26 @@ export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl,
     setShowEditPhotosScreen(true);
   };
 
-  // ADD PHOTO(S) TO OTHER IMAGES UPTO 6
+
+  // Handle adding a photo
   const handleAddPhoto = (newPhotoUri) => {
+    console.log("Adding new photo with URI:", newPhotoUri);
     setPhotos((prevPhotos) => {
       const updatedPhotos = [...prevPhotos, { uri: newPhotoUri }];
-      console.log('Updated photos array:', updatedPhotos); // Log the updated array
+      console.log("Updated photos after adding:", updatedPhotos);
       return updatedPhotos;
     });
+
   };
 
-  // REMOVE PHOTO(S)
+  // Handle removing a photo
   const handleRemovePhoto = (photo) => {
-    // Logic to remove a photo
-    setPhotos((prevPhotos) => prevPhotos.filter((p) => p.uri !== photo.uri));
+    console.log("Removing photo with URI:", photo.uri);
+    setPhotos((prevPhotos) => {
+      const updatedPhotos = prevPhotos.filter((p) => p.uri !== photo.uri);
+      console.log("Updated photos after removing:", updatedPhotos);
+      return updatedPhotos;
+    });
   };
 
   const isProfileTab = (navigation) => {
@@ -458,6 +466,7 @@ export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl,
         <EditProfilePhotosScreen
           userId={userId}
           photos={photos}
+          setPhotos={setPhotos}
           onSave={() => {
             handleSaveChanges();
             fetchUserProfile();
@@ -705,7 +714,7 @@ export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl,
                 <Animated.View style={[styles.buttonContainer, combinedAnimatedStyle]}>
                   {isSelfProfile ? (
                     <>
-                      <TouchableOpacity style={styles.uploadButton} onPress={() => router.push("/upload")}>
+                      <TouchableOpacity style={styles.uploadButton} onPress={() => router.push("/uploadScreen")}>
                         <Text style={styles.buttonText}>Upload</Text>
                       </TouchableOpacity>
                       <TouchableOpacity

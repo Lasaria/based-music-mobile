@@ -11,7 +11,6 @@ import { SERVER_URL, AUTHSERVER_URL } from '@env';
 
 const serverURL = SERVER_URL;
 
-
 export const UserService = {
     setUserType: async (userType) => {
         try {
@@ -341,17 +340,45 @@ export const UserService = {
         }
     },
 
+    // * Update user cover image
+    updateUserCoverImage: async (userId, formData) => {
+        try {
+            const response = await axios.patch( // Change to patch
+                `${serverURL}/users/${userId}/cover-image`,
+                formData,
+                {
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                        Authorization: `Bearer ${await tokenManager.getAccessToken()}`,
+                    },
+                }
+            );
+            console.log("Cover image updated successfully:", response.data);
+            return response.data;
+        } catch (error) {
+            console.error("Failed to update cover image:", error.response ? error.response.data : error.message);
+            throw new Error(error.response ? error.response.data.message : error.message);
+        }
+    },
+
     // * Check if user is available or taken
-    checkUsernameAvailability: async (username) => {
+    checkUsernameAvailability: async (username, requiresAuth = false) => {
         try {
             console.log("Checking username availability in service for:", username);
-            const response = await axios.post(`${serverURL}/users/check-username`, { username }, {
-                headers: {
-                    Authorization: `Bearer ${await tokenManager.getAccessToken()}`,
-                },
-            });
+
+            // Prepare headers conditionally based on whether authentication is required
+            const headers = requiresAuth
+                ? { Authorization: `Bearer ${await tokenManager.getAccessToken()}` }
+                : {};
+
+            const response = await axios.post(
+                `${serverURL}/users/check-username`,
+                { username },
+                { headers }
+            );
+
             console.log("Received response from username check:", response.data);
-            return response.data.available; // This should be true or false based on server response
+            return response.data.available;
         } catch (err) {
             console.error('Error checking username availability:', err.message);
             return false; // Assume username is taken if an error occurs
@@ -401,7 +428,6 @@ export const UserService = {
             return true;
         }
     },
-
 };
 
 

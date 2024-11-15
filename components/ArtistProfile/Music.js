@@ -521,7 +521,7 @@ const Music = ({ name, isSelfProfile }) => {
     const renderItemsSection = (type, data, title) => {
         // Filter the data based on the search text for all types
         const filteredData = data.filter(item =>
-            item.title && item.title.toLowerCase().startsWith(searchText.toLowerCase())
+            item.title && item.title.toLowerCase().includes(searchText.toLowerCase())
         );
 
         // Determine how much data to display based on showAll flag
