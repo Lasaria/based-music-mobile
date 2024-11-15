@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   View,
   Text,
@@ -12,9 +12,10 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import DraggableFlatList from "react-native-draggable-flatlist";
-import { axiosGet, axiosPut } from "../../../utils/axiosCalls";
+import { axiosGet } from "../../../utils/axiosCalls";
 import { tokenManager } from "../../../utils/tokenManager";
 import { SERVER_URL } from "@env";
+import { AudioContext } from "../../../contexts/AudioContext";
 
 const PlaylistScreen = () => {
   const [tracks, setTracks] = useState([]);
@@ -25,13 +26,19 @@ const PlaylistScreen = () => {
   const router = useRouter();
   const { playlist_id } = useLocalSearchParams();
 
+  // Access audio context for play/pause functionality
+  const { trackInfo, isPlaying, togglePlayPause, isPlayerReady, updateCurrentTrack } = useContext(AudioContext);
+
   const updatePlaylist = async (updatedTracks) => {
     const token = await tokenManager.getAccessToken();
     console.log("Updating playlist with song IDs:", updatedTracks);
-    
+
     const formData = new FormData();
-    formData.append("songs", JSON.stringify(updatedTracks.map((track) => track.id)));
-    
+    formData.append(
+      "songs",
+      JSON.stringify(updatedTracks.map((track) => track.id))
+    );
+
     try {
       const response = await fetch(`${SERVER_URL}/playlists/${playlist_id}`, {
         method: "PUT",
@@ -55,7 +62,7 @@ const PlaylistScreen = () => {
           url: `${SERVER_URL}/playlists?playlist_id=${playlist_id}`,
         });
         setPlaylist(response.playlist);
-        setTitle(response.playlist.title);  // Set initial title
+        setTitle(response.playlist.title);
 
         const songIds = response.playlist.songs || [];
         const initialTracks = songIds.map((id) => ({
@@ -96,25 +103,21 @@ const PlaylistScreen = () => {
   }, [playlist_id]);
 
   const handleDeleteTrack = (trackId) => {
-    Alert.alert(
-      "Delete Track",
-      "Are you sure you want to delete this track?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
+    Alert.alert("Delete Track", "Are you sure you want to delete this track?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => {
+          const updatedTracks = tracks.filter((track) => track.id !== trackId);
+          setTracks(updatedTracks);
+          updatePlaylist(updatedTracks);
         },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            const updatedTracks = tracks.filter((track) => track.id !== trackId);
-            setTracks(updatedTracks);
-            updatePlaylist(updatedTracks);
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
 
   const saveTitle = async () => {
@@ -135,9 +138,24 @@ const PlaylistScreen = () => {
       } catch (error) {
         console.error("Error updating playlist:", error);
       }
-      setIsEditing(false);  // Exit edit mode after saving
+      setIsEditing(false); 
     } catch (error) {
       console.error("Error saving playlist title:", error);
+    }
+  };
+
+  // Handle play/pause when a track is pressed
+  const handlePlayPause = async (track) => {
+    const trackId = track.id;
+    if (trackInfo?.track_id === trackId && isPlayerReady) {
+      // Toggle play/pause if the track is already loaded
+      await togglePlayPause();
+    } else {
+      // Load and play new track
+      await updateCurrentTrack(trackId);
+      if (isPlayerReady) {
+        await togglePlayPause();
+      }
     }
   };
 
@@ -150,11 +168,11 @@ const PlaylistScreen = () => {
       );
     }
 
+    const isCurrentTrack = trackInfo?.track_id === item.id;
+    const showPlayingState = isCurrentTrack && isPlaying;
+
     return (
-      <TouchableOpacity
-        style={styles.trackItem}
-        onLongPress={drag}
-      >
+      <TouchableOpacity style={styles.trackItem} onLongPress={drag}>
         <Image
           source={{ uri: item.details.track.cover_image_url }}
           style={styles.trackCover}
@@ -162,7 +180,17 @@ const PlaylistScreen = () => {
         <View style={styles.trackInfo}>
           <Text style={styles.trackTitle}>{item.details.track.title}</Text>
         </View>
-        <TouchableOpacity style={styles.menuIcon} onPress={() => handleDeleteTrack(item.id)}>
+        <TouchableOpacity onPress={() => handlePlayPause(item)} style={styles.playButton}>
+          <Ionicons
+            name={showPlayingState ? "pause" : "play"}
+            size={24}
+            color={isCurrentTrack ? "purple" : "white"}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.menuIcon}
+          onPress={() => handleDeleteTrack(item.id)}
+        >
           <Ionicons name="ellipsis-vertical" size={20} color="white" />
         </TouchableOpacity>
       </TouchableOpacity>
@@ -175,7 +203,9 @@ const PlaylistScreen = () => {
   };
 
   const filteredTracks = tracks.filter((track) =>
-    track.details?.track.title?.toLowerCase().includes(searchQuery.toLowerCase())
+    track.details?.track.title
+      ?.toLowerCase()
+      .includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -189,14 +219,18 @@ const PlaylistScreen = () => {
 
       {playlist && (
         <View style={styles.playlistHeader}>
-          <Image source={{ uri: playlist.coverImage }} style={styles.playlistCover} />
+         {playlist.coverImage &&  <Image
+            source={{ uri: playlist.coverImage }}
+            style={styles.playlistCover}
+          />
+         }
           <View style={styles.titleContainer}>
-          {isEditing ? (
+            {isEditing ? (
               <TextInput
                 style={styles.editTitleInput}
                 value={title}
                 onChangeText={setTitle}
-                onSubmitEditing={saveTitle}  // Save when submitting the input
+                onSubmitEditing={saveTitle} // Save when submitting the input
                 autoFocus
               />
             ) : (
@@ -230,7 +264,9 @@ const PlaylistScreen = () => {
         renderItem={renderTrack}
         keyExtractor={(item) => item.id}
         onDragEnd={handleDragEnd}
-        ListEmptyComponent={<Text style={styles.noTracksText}>No tracks found</Text>}
+        ListEmptyComponent={
+          <Text style={styles.noTracksText}>No tracks found</Text>
+        }
       />
     </View>
   );
@@ -238,12 +274,17 @@ const PlaylistScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#1c1c1c" },
-  header: { flexDirection: "row", alignItems: "center", padding: 16 },
-  headerTitle: { color: "white", fontSize: 24, fontWeight: "bold", marginLeft: 16 },
+  header: { flexDirection: "row", alignItems: "center", paddingTop: "15%", paddingLeft:10 },
+  headerTitle: {
+    color: "white",
+    fontSize: 24,
+    fontWeight: "bold",
+    marginLeft: 16,
+  },
   playlistHeader: { alignItems: "center", marginVertical: 16 },
   playlistCover: { width: 150, height: 150, borderRadius: 8 },
   playlistTitle: { color: "white", fontSize: 22, fontWeight: "bold" },
-  titleContainer: { flexDirection: "row", alignItems: "center" },
+  titleContainer: { flexDirection: "row", alignItems: "center" , paddingTop:20},
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -273,6 +314,7 @@ const styles = StyleSheet.create({
   trackCover: { width: 50, height: 50, borderRadius: 4 },
   trackInfo: { flex: 1, marginLeft: 10 },
   trackTitle: { color: "white", fontSize: 16 },
+  playButton: { padding: 10 },
   menuIcon: { padding: 10 },
   noTracksText: { color: "grey", textAlign: "center", marginTop: 20 },
 });
