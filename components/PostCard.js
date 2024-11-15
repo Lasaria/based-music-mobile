@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { tokenManager } from "../utils/tokenManager";
+import { router } from 'expo-router';
 
 import PostOptionsMenu from './PostOptionsMenu';
 import { CommentsSection } from './CommentsSection';
@@ -51,6 +52,11 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
       fetchComments();
     }
   }, [showComments]);
+
+  const navigateToProfile = () => {
+    // Navigate to the user's profile using their ID
+    router.push({ pathname: 'profileIndex', params: { userId: post.author_id } });
+  };
 
     const fetchComments = async () => {
         setIsLoadingComments(true);
@@ -190,11 +196,16 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
       <View style={styles.postCard}>
         {/* Author Info */}
         <View style={styles.postHeader}>
-        <Image
+        <TouchableOpacity 
+          style={styles.authorContainer}
+          onPress={navigateToProfile}
+        >
+          <Image
             source={{ uri: post.profile_image_url }}
             style={styles.profileImage}
           />
           <Text style={styles.authorText}>{post.username}</Text>
+        </TouchableOpacity>
           <Text style={styles.dateText}>{formatDate(post.created_at)}</Text>
         </View>
 

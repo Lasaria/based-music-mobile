@@ -20,12 +20,37 @@ const ITEM_HEIGHT = 70;
 const QueueList = () => {
   console.log("[QueueList] Rendering QueueList component");
   const router = useRouter();
-  const { trackInfo } = useContext(AudioContext);
+  const { trackInfo, isPlaying, togglePlayPause, updateCurrentTrack } =
+    useContext(AudioContext);
   const { queue, removeFromQueue, clearQueue, message, reorderQueue } =
     useQueue();
 
+  // Handle playing a track
+  const handlePlay = async (item) => {
+    try {
+      console.log("[QueueList] Playing track:", item.track_id);
+
+      // If this is the currently playing track, just toggle play/pause
+      if (trackInfo?.track_id === item.track_id) {
+        console.log("[QueueList] Toggling current track");
+        await togglePlayPause();
+        return;
+      }
+
+      // Otherwise, start playing the new track
+      console.log("[QueueList] Starting new track");
+      await updateCurrentTrack(item.track_id);
+    } catch (err) {
+      console.error("[QueueList] Error playing track:", err);
+    }
+  };
+
   const renderItem = ({ item, drag, isActive, index }) => {
     console.log(`[TrackItem] Rendering item at index ${index}:`, item);
+
+    // Check if this is the currently playing track
+    const isCurrentTrack = trackInfo?.track_id === item.track_id;
+    const showPlayingState = isCurrentTrack && isPlaying;
 
     return (
       <View
@@ -52,17 +77,39 @@ const QueueList = () => {
           <Ionicons name="menu" size={24} color="#666" />
         </TouchableOpacity>
 
-        <Image
-          source={{
-            uri: item.cover_image_url || "https://via.placeholder.com/50",
-          }}
-          style={styles.trackImage}
-        />
+        <TouchableOpacity
+          style={styles.trackContent}
+          onPress={() => handlePlay(item)}
+        >
+          <Image
+            source={{
+              uri: item.cover_image_url || "https://via.placeholder.com/50",
+            }}
+            style={styles.trackImage}
+          />
 
-        <View style={styles.trackInfo}>
-          <Text style={styles.trackTitle}>{item.title}</Text>
-          <Text style={styles.artistName}>{item.artist_name}</Text>
-        </View>
+          <View style={styles.trackInfo}>
+            <Text
+              style={[
+                styles.trackTitle,
+                isCurrentTrack && styles.activeTrackTitle,
+              ]}
+            >
+              {item.title}
+            </Text>
+            <Text style={styles.artistName}>{item.artist_name}</Text>
+          </View>
+
+          <View style={styles.playStateContainer}>
+            {isCurrentTrack && (
+              <Ionicons
+                name={showPlayingState ? "pause-circle" : "play-circle"}
+                size={24}
+                color="purple"
+              />
+            )}
+          </View>
+        </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => {
@@ -104,7 +151,10 @@ const QueueList = () => {
       {trackInfo && (
         <View style={styles.nowPlaying}>
           <Text style={styles.sectionTitle}>Now Playing</Text>
-          <View style={styles.trackItem}>
+          <TouchableOpacity
+            style={styles.trackItem}
+            onPress={() => handlePlay(trackInfo)}
+          >
             <Image
               source={{
                 uri:
@@ -113,10 +163,19 @@ const QueueList = () => {
               style={styles.trackImage}
             />
             <View style={styles.trackInfo}>
-              <Text style={styles.trackTitle}>{trackInfo.title}</Text>
+              <Text style={[styles.trackTitle, styles.activeTrackTitle]}>
+                {trackInfo.title}
+              </Text>
               <Text style={styles.artistName}>{trackInfo.artist_name}</Text>
             </View>
-          </View>
+            <View style={styles.playStateContainer}>
+              <Ionicons
+                name={isPlaying ? "pause-circle" : "play-circle"}
+                size={24}
+                color="purple"
+              />
+            </View>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -218,6 +277,19 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     fontWeight: "500",
+  },
+  trackContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  playStateContainer: {
+    paddingHorizontal: 10,
+    justifyContent: "center",
+  },
+  activeTrackTitle: {
+    color: "purple",
+    fontWeight: "bold",
   },
   messageContainer: {
     position: "absolute",

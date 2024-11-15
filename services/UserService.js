@@ -1,6 +1,6 @@
 
 import axios from 'axios';
-import { axiosGet, axiosPost, axiosPatch } from '../utils/axiosCalls';
+import { axiosGet, axiosPost, axiosPatch, axiosDelete } from '../utils/axiosCalls';
 import * as FileSystem from 'expo-file-system';
 import { Platform } from 'react-native';
 import { tokenManager } from '../utils/tokenManager';
@@ -383,7 +383,51 @@ export const UserService = {
             console.error('Error checking username availability:', err.message);
             return false; // Assume username is taken if an error occurs
         }
-    }
+    },
+
+    // Check if a user is following a another user
+    checkIsFollowing: async (followee_id) => {
+        try {
+            const response = await axiosGet({
+                url: `${serverURL}/follow/isFollowing/${followee_id}`
+            })
+            console.log("Check if following: ", response);
+            return response.isFollowing;
+        } catch (err) {
+            console.error(`Error checking if user is following user ${followee_id}:`, err.message);
+            return false;
+        }
+    },
+
+    // Follow another user
+    follow: async (followee_id) => {
+        try {
+            const response = await axiosPost({
+                url: `${serverURL}/follow`,
+                body: {followee_id: followee_id}
+            })
+            console.log(`Followed user:  ${followee_id}`, response);
+            return true;
+        } catch (err) {
+            console.error(`Error following user ${followee_id}:`, err.message);
+            return false;
+        }
+    },
+
+    // Unfollow another user
+    unfollow: async (followee_id) => {
+        try {
+            const response = await axiosDelete({
+                url: `${serverURL}/follow`,
+                body: {followee_id: followee_id}
+            })
+            console.log(`Unfollowed user:  ${followee_id}`, response);
+            return false;
+        } catch (err) {
+            console.error(`Error unfollowing user ${followee_id}:`, err.message);
+            return true;
+        }
+    },
 };
 
 
