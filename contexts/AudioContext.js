@@ -1064,7 +1064,6 @@ export const AudioProvider = ({ children }) => {
           await soundRef.current.playAsync();
           setIsPlaying(true);
         }
-
       } else {
         debug("[skipForward] No tracks in queue");
       }
