@@ -39,6 +39,7 @@ const MapScreen = () => {
   const [activeButton, setActiveButton] = useState({}); // For tracking active buttons
   const modalizeRef = useRef(null); // Ref for controlling the modal
   const animatedHeight = useRef(new Animated.Value(300)).current; // Initial height for scrollable list
+  const costModalHeight = useRef(new Animated.Value(300)).current; // Initial height for cost modal
 
   const panResponder = useRef(
       PanResponder.create({
@@ -53,11 +54,36 @@ const MapScreen = () => {
         },
         onPanResponderRelease: (e, gestureState) => {
           // Snap to closest position based on the release velocity and dy
-          const newHeight = gestureState.dy > 0 ? 300 : 650;
+          const newHeight = gestureState.dy > 0 ? 300 : 680;
           Animated.spring(animatedHeight, {
             toValue: newHeight,
             useNativeDriver: false,
           }).start();
+        },
+      })
+  ).current;
+
+  const costModalPanResponder = useRef(
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onPanResponderMove: (e, gestureState) => {
+          if (gestureState.dy > 0) {
+            costModalHeight.setValue(300 - gestureState.dy);
+          }
+        },
+        onPanResponderRelease: (e, gestureState) => {
+          if (gestureState.dy > 100) {
+            setIsCostModalVisible(false);
+            setActiveButton((prev) => ({
+              ...prev,
+              Cost: false,
+            }));
+          } else {
+            Animated.spring(costModalHeight, {
+              toValue: 300,
+              useNativeDriver: false,
+            }).start();
+          }
         },
       })
   ).current;
@@ -99,164 +125,17 @@ const MapScreen = () => {
 
   // Hardcoded venue data
   const venueData = [
-    { name: "Ultra Bar DC", latitude: 38.8963, longitude: -77.0241 },
-    { name: "Decades DC", latitude: 38.9066, longitude: -77.0426 },
+    { name: "Ultra Bar DC", latitude: 38.8963, longitude: -77.0241, address: "111 K St NW, Washington, DC 20001", status: "Ongoing", distance: "26 mi" },
+    { name: "Decades DC", latitude: 38.9066, longitude: -77.0426, address: "1219 Connecticut Ave NW, Washington, DC 20036", status: "Closed", distance: "20 mi" },
     {
       name: "Bravo Bravo",
       latitude: 38.9031,
       longitude: -77.0405,
       address: "1001 Connecticut Ave NW, Washington, DC 20036",
+      status: "Ongoing",
+      distance: "15 mi"
     },
-    {
-      name: "Bliss DC",
-      latitude: 38.9106,
-      longitude: -77.0197,
-      address: "2122 24th Pl NE, Washington, DC 20018",
-    },
-    {
-      name: "Kiss Lounge",
-      latitude: 38.9167,
-      longitude: -77.0229,
-      address: "637 T St NW, Washington, DC 20001",
-    },
-    {
-      name: "Kiss Lounge Falls Church",
-      latitude: 38.8462,
-      longitude: -77.1312,
-      address: "5820 Seminary Rd, Falls Church, VA 22041",
-    },
-    {
-      name: "The Park at 14th",
-      latitude: 38.9023,
-      longitude: -77.0317,
-      address: "920 14th St NW, Washington, DC 20005",
-    },
-    {
-      name: "Soundcheck",
-      latitude: 38.9047,
-      longitude: -77.0311,
-      address: "1420 K St NW, Washington, DC 20005",
-    },
-    {
-      name: "Heist Nightclub",
-      latitude: 38.9092,
-      longitude: -77.0433,
-      address: "1216 18th St NW, Washington, DC 20036",
-    },
-    {
-      name: "Rosebar Lounge",
-      latitude: 38.9059,
-      longitude: -77.0436,
-      address: "1215 Connecticut Ave NW, Washington, DC 20036",
-    },
-    {
-      name: "Echostage",
-      latitude: 38.9176,
-      longitude: -76.9773,
-      address: "2135 Queens Chapel Rd NE, Washington, DC 20018",
-    },
-    {
-      name: "Saint Yves",
-      latitude: 38.9096,
-      longitude: -77.0397,
-      address: "1220 Connecticut Ave NW, Washington, DC 20036",
-    },
-    {
-      name: "Opera Ultra Lounge",
-      latitude: 38.9041,
-      longitude: -77.0309,
-      address: "1400 I St NW, Washington, DC 20005",
-    },
-    {
-      name: "Living Room DC",
-      latitude: 38.9074,
-      longitude: -77.0317,
-      address: "1008 Vermont Ave NW, Washington, DC 20005",
-    },
-    {
-      name: "Barcode",
-      latitude: 38.9024,
-      longitude: -77.0363,
-      address: "1101 17th St NW, Washington, DC 20036",
-    },
-    {
-      name: "Abigail Nightclub",
-      latitude: 38.9059,
-      longitude: -77.0436,
-      address: "1730 M St NW, Washington, DC 20036",
-    },
-    {
-      name: "PaperMoon Springfield",
-      latitude: 38.7779,
-      longitude: -77.1854,
-      address: "6315 Amherst Ave, Springfield, VA 22150",
-    },
-    {
-      name: "The Buca Room",
-      latitude: 38.8038,
-      longitude: -77.0475,
-      address: "305 S Washington St, Alexandria, VA 22314",
-    },
-    {
-      name: "O’Malley’s Sports Pub",
-      latitude: 38.8572,
-      longitude: -77.0526,
-      address: "2650 Jefferson Davis Hwy, Arlington, VA 22202",
-    },
-    {
-      name: "Murphy’s Grand Irish Pub",
-      latitude: 38.8048,
-      longitude: -77.0469,
-      address: "713 King St, Alexandria, VA 22314",
-    },
-    {
-      name: "Clarendon Ballroom",
-      latitude: 38.8877,
-      longitude: -77.0953,
-      address: "3185 Wilson Blvd, Arlington, VA 22201",
-    },
-    {
-      name: "Bungalow Billiards",
-      latitude: 39.0363,
-      longitude: -77.4184,
-      address: "13891 Metrotech Dr, Chantilly, VA 20151",
-    },
-    {
-      name: "Black Hoof Brewing Co.",
-      latitude: 39.1142,
-      longitude: -77.5669,
-      address: "11 South King St, Leesburg, VA 20175",
-    },
-    {
-      name: "Samuel Beckett's Irish Gastro Pub",
-      latitude: 38.8675,
-      longitude: -77.1095,
-      address: "2800 S Randolph St, Arlington, VA 22206",
-    },
-    {
-      name: "Carlyle Club",
-      latitude: 38.8059,
-      longitude: -77.0669,
-      address: "2050 Ballenger Ave, Alexandria, VA 22314",
-    },
-    {
-      name: "Fish Market",
-      latitude: 38.8032,
-      longitude: -77.0426,
-      address: "105 King St, Alexandria, VA 22314",
-    },
-    {
-      name: "Atlas Brew Works",
-      latitude: 38.8049,
-      longitude: -77.1224,
-      address: "2429 Mandeville Lane, Alexandria, VA 22332",
-    },
-    {
-      name: "Studio Dhoom",
-      latitude: 38.9661,
-      longitude: -77.3981,
-      address: "14531 Lee Jackson Memorial Hwy, Chantilly, VA 20151",
-    },
+
   ];
 
   useEffect(() => {
@@ -297,7 +176,10 @@ const MapScreen = () => {
   };
 
   const toggleCostModal = () => {
-    setIsCostModalVisible((prev) => !prev);
+    if (!activeButton['Cost']) {
+      setIsCostModalVisible((prev) => !prev);
+      costModalHeight.setValue(300); // Reset to full height whenever opening the modal
+    }
   };
 
   const toggleButtonColor = (buttonName) => {
@@ -305,6 +187,10 @@ const MapScreen = () => {
       ...prev,
       [buttonName]: !prev[buttonName]
     }));
+
+    if (buttonName === 'Cost' && activeButton['Cost']) {
+      setIsCostModalVisible(false);
+    }
   };
 
   const renderMapLayers = () => {
@@ -365,6 +251,8 @@ const MapScreen = () => {
 
   return (
       <View style={{ flex: 1 }}>
+        {/* Overlay Drag Handle */}
+        <View style={styles.overlayDragHandle} />
         {/* Search Bar */}
         <View style={styles.searchBarContainer}>
           <View style={styles.searchBar}>
@@ -400,8 +288,8 @@ const MapScreen = () => {
         </View>
         {/* Cost Modal */}
         {isCostModalVisible && (
-            <View style={styles.costModal}>
-              <View style={styles.dragHandle} />
+            <Animated.View style={[styles.costModal, { height: costModalHeight }]} {...costModalPanResponder.panHandlers}>
+              <View style={styles.dragHandleInPopUp} />
               <Text style={styles.modalTitle}>Cost</Text>
               <View style={styles.modalContent}>
                 <TouchableOpacity style={styles.modalButton}><Text style={styles.modalButtonText}>Free</Text></TouchableOpacity>
@@ -414,7 +302,7 @@ const MapScreen = () => {
                   <View style={styles.modalRangeInput}><Text style={styles.modalRangeText}>Max</Text></View>
                 </View>
               </View>
-            </View>
+            </Animated.View>
         )}
         {/* Map */}
         <MapboxGL.MapView
@@ -497,58 +385,75 @@ const MapScreen = () => {
         <Animated.View
             style={[
               styles.scrollableList,
-              { height: animatedHeight },
+              { height: animatedHeight, zIndex: 25 },
             ]}
         >
-          <View
-              style={styles.dragHandle}
-              {...panResponder.panHandlers}
-          >
-            <Text style={styles.dragHandleText}>Drag Here</Text>
-          </View>
-          <View style={styles.eventListHeader}>
-            <Text style={styles.eventListTitle}>Upcoming Events</Text>
-          </View>
-          <ScrollView>
-            <Text style={styles.eventToday}>Today</Text>
-            {venueData.map((venue, index) => (
-                <View key={index} style={styles.eventCard}>
-                  <Ionicons name="bookmark-outline" size={24} color="white" style={styles.bookmarkIcon} />
-                  <View style={styles.eventImagePlaceholder}>
-                    <Text style={styles.eventPlaceholderText}>Image</Text>
-                  </View>
-                  <View style={styles.eventDetails}>
-                    <Text style={styles.eventTitle}>{venue.name}</Text>
-                    <Text style={styles.eventAddress}>{venue.address}</Text>
-                    <View style={styles.cardBottomRow}>
-                      <View style={styles.profileImagesContainer}>
-                        <View style={styles.profileImagePlaceholder} />
-                        <View style={styles.profileImagePlaceholder} />
-                        <View style={styles.profileImagePlaceholder} />
-                      </View>
-                      <TouchableOpacity style={styles.learnMoreButton}>
-                        <Text style={styles.learnMoreText}>Learn More</Text>
-                      </TouchableOpacity>
-                    </View>
 
+
+        <View
+            style={styles.dragHandle}
+            {...panResponder.panHandlers}
+        >
+        </View>
+        <View style={[styles.dragHandleDecorator, { zIndex: 20 }]} />
+        <View style={styles.eventListHeader}>
+          <Text style={styles.eventListTitle}>Upcoming Events</Text>
+          <View style={styles.iconsRow}>
+            <Ionicons name="calendar" size={24} color="white" style={styles.iconStyle} />
+            <Ionicons name="bookmark" size={24} color="white" style={styles.iconStyle} />
+          </View>
+        </View>
+        <ScrollView>
+          <Text style={styles.eventToday}>Today</Text>
+          {venueData.map((venue, index) => (
+              <View key={index} style={styles.eventCard}>
+                <Ionicons name="bookmark-outline" size={24} color="white" style={styles.bookmarkIcon} />
+                <View style={styles.eventImagePlaceholder}>
+                  <Text style={styles.eventPlaceholderText}>Image</Text>
+                </View>
+                <View style={styles.eventDetails}>
+                  <Text style={styles.eventTitle}>{venue.name}</Text>
+                  <Text style={styles.eventAddress}>{venue.address}</Text>
+                  <Text style={styles.eventStatus}>{venue.status}</Text>
+                  <Text style={[styles.eventDistance, { textAlign: 'right', alignSelf: 'flex-end' }]}>{venue.distance}</Text>
+                  <View style={styles.cardBottomRow}>
+                    <View style={styles.profileImagesContainer}>
+                      <View style={styles.profileImagePlaceholder} />
+                      <View style={styles.profileImagePlaceholder} />
+                      <View style={styles.profileImagePlaceholder} />
+                    </View>
+                    <TouchableOpacity style={styles.learnMoreButton}>
+                      <Text style={styles.learnMoreText}>Learn More</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
-            ))}
-          </ScrollView>
-        </Animated.View>
+              </View>
+          ))}
+        </ScrollView>
+      </Animated.View>
 
-        {/* Added Map Icons */}
-        <TouchableOpacity  style={[styles.settingIcon, { left: "85%", top: "18%" }]}>
-          <Ionicons name="settings-outline" size={24} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.arrowIcon, { left: "85%", top: "25%" }]}>
-          <Ionicons name="navigate" size={24} color="white" />
-        </TouchableOpacity>
-      </View>
-  );
+  {/* Added Map Icons */}
+  <TouchableOpacity  style={[styles.settingIcon, { left: "85%", top: "18%" }]}>
+    <Ionicons name="settings-outline" size={24} color="white" />
+  </TouchableOpacity>
+  <TouchableOpacity style={[styles.arrowIcon, { left: "85%", top: "25%" }]}>
+    <Ionicons name="navigate" size={24} color="white" />
+  </TouchableOpacity>
+</View>
+);
 };
 
 const styles = StyleSheet.create({
+  overlayDragHandle: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 35,
+    backgroundColor: "#2e313b",
+    borderRadius: 3,
+    zIndex: 30,
+  },
   map: {
     position: "absolute",
     top: 0,
@@ -626,27 +531,46 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#121212",
-    paddingTop: 20,
-
+    backgroundColor: "#1c1c1c",
+    paddingTop: 0,
   },
   dragHandle: {
-    width: "40%",
-    height: 5,
+    width: "100%",
+    height: 35,
     borderRadius: 5,
-    backgroundColor: "#444",
+    backgroundColor: "#1c1c1c",
     alignSelf: "center",
     marginVertical: 10,
   },
-
-  dragHandleText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
+  dragHandleDecorator: {
+    height: 6,
+    width: "40%",
+    backgroundColor: "#2e313b",
+    borderRadius: 3,
+    alignSelf: "center",
+    marginVertical: 0,
+    marginBottom: 1,
+    marginTop: -20,
+    zIndex: 20,
+  },
+  dragHandleInPopUp: {
+    height: 6,
+    width: "45%",
+    backgroundColor: "#2e313b",
+    borderRadius: 3,
+    alignSelf: "center",
+    marginVertical: 0,
+    marginBottom: 1,
+    marginTop: 15,
+    zIndex: 20,
   },
   eventListHeader: {
     paddingHorizontal: 20,
+    marginTop: 10,
     marginBottom: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   eventListTitle: {
     fontSize: 29,
@@ -662,14 +586,17 @@ const styles = StyleSheet.create({
   },
   eventCard: {
     flexDirection: "row",
-    padding: 50,
+    padding: 45,
     marginHorizontal: 15,
     marginBottom: 15,
     backgroundColor: "#000000",
     borderRadius: 15, // Updated border radius for a more rounded appearance
     borderWidth: 1.4,
     borderColor: "#FFFFFF", // White border for cards
+    width: "95%",
+    height: 180,
   },
+
   eventImagePlaceholder: {
     width: 110,
     height: 110, // Updated size for larger image placeholder
@@ -692,22 +619,32 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   eventTitle: {
-    fontSize: 22, // Updated size for a larger title
+    fontSize: 22,
     color: "#fff",
     fontWeight: "bold",
+    marginTop: -20,
   },
   eventAddress: {
-    fontSize: 16,
-    color: "#bbb",
+    fontSize: 12,
+    color: "white",
+  },
+  eventStatus: {
+    fontSize: 12,
+    color: "#52980f",
+  },
+  eventDistance: {
+    fontSize: 12,
+    color: "#818695",
+    marginRight: -20,
   },
   learnMoreButton: {
-    backgroundColor: "#6A0DAD",
+    backgroundColor: "#6e2cfd",
     borderRadius: 5,
     paddingVertical: 7,
     paddingHorizontal: 25, // Updated padding for a larger button
     alignSelf: "flex-start",
-    marginLeft: 10,
-    marginTop: 15,
+    marginLeft: 20,
+    marginTop: 0,
   },
 
   learnMoreText: {
@@ -727,6 +664,7 @@ const styles = StyleSheet.create({
   },
   profileImagesContainer: {
     flexDirection: "row",
+    marginTop: -20,
   },
   profileImagePlaceholder: {
     width: 35, // Placeholder for profile images without using PNG
@@ -752,11 +690,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1.4, // Add white border
     borderColor: "#FFFFFF",
-  },
-  settingIconImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "contain",
+    marginTop: 15,
+    zIndex: 0,
   },
   arrowIcon: {
     position: "absolute",
@@ -768,6 +703,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1.4, // Add white border
     borderColor: "#FFFFFF",
+    marginTop: 15,
+    zIndex: 0,
   },
 
   iconImage: {
@@ -783,8 +720,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 15,
     borderTopRightRadius: 15,
     padding: 20,
-    zIndex: 10,
-    height: '44%',
+    zIndex: 30,
+    height: 300,
   },
   modalTitle: {
     fontSize: 28,
@@ -843,6 +780,12 @@ const styles = StyleSheet.create({
   modalRangeText: {
     color: "#000",
     fontSize: 16,
+  },
+  iconsRow: {
+    flexDirection: "row",
+  },
+  iconStyle: {
+    marginLeft: 15,
   },
 });
 
