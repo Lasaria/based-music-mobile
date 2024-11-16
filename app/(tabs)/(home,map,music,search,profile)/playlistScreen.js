@@ -159,6 +159,24 @@ const PlaylistScreen = () => {
     }
   };
 
+  //shuffle the songs
+   const shuffleSongs = () => {
+
+       const shuffleTracks = [...tracks];
+
+       // Shuffle the array using Fisher-Yates algorithm
+       for(let i = shuffleTracks.length - 1; i >= 0; i--){
+        const j = Math.floor(Math.random() * (i * 1));
+        [shuffleTracks[i], shuffleTracks[j]] = [shuffleTracks[j], shuffleTracks[i]];
+       }
+
+       //update the tracks 
+       setTracks(shuffleTracks);
+
+       //update the backend playlist with the updated playlist order
+        updatePlaylist(shuffleTracks);
+   }
+
   const renderTrack = ({ item, drag }) => {
     if (item.loading) {
       return (
@@ -258,7 +276,10 @@ const PlaylistScreen = () => {
           onChangeText={setSearchQuery}
         />
       </View>
-
+      <TouchableOpacity style={{ alignItems:'flex-end', paddingRight:30}} onPress={shuffleSongs} >
+      <Ionicons  name="shuffle" size={24} color="grey" />
+      </TouchableOpacity>
+  
       <DraggableFlatList
         data={filteredTracks}
         renderItem={renderTrack}
