@@ -74,10 +74,7 @@ const MapScreen = () => {
         onPanResponderRelease: (e, gestureState) => {
           if (gestureState.dy > 100) {
             setIsCostModalVisible(false);
-            setActiveButton((prev) => ({
-              ...prev,
-              Cost: false,
-            }));
+            // The button state remains unchanged when the modal is closed via drag
           } else {
             Animated.spring(costModalHeight, {
               toValue: 300,
@@ -390,57 +387,57 @@ const MapScreen = () => {
         >
 
 
-        <View
-            style={styles.dragHandle}
-            {...panResponder.panHandlers}
-        >
-        </View>
-        <View style={[styles.dragHandleDecorator, { zIndex: 20 }]} />
-        <View style={styles.eventListHeader}>
-          <Text style={styles.eventListTitle}>Upcoming Events</Text>
-          <View style={styles.iconsRow}>
-            <Ionicons name="calendar" size={24} color="white" style={styles.iconStyle} />
-            <Ionicons name="bookmark" size={24} color="white" style={styles.iconStyle} />
+          <View
+              style={styles.dragHandle}
+              {...panResponder.panHandlers}
+          >
           </View>
-        </View>
-        <ScrollView>
-          <Text style={styles.eventToday}>Today</Text>
-          {venueData.map((venue, index) => (
-              <View key={index} style={styles.eventCard}>
-                <Ionicons name="bookmark-outline" size={24} color="white" style={styles.bookmarkIcon} />
-                <View style={styles.eventImagePlaceholder}>
-                  <Text style={styles.eventPlaceholderText}>Image</Text>
-                </View>
-                <View style={styles.eventDetails}>
-                  <Text style={styles.eventTitle}>{venue.name}</Text>
-                  <Text style={styles.eventAddress}>{venue.address}</Text>
-                  <Text style={styles.eventStatus}>{venue.status}</Text>
-                  <Text style={[styles.eventDistance, { textAlign: 'right', alignSelf: 'flex-end' }]}>{venue.distance}</Text>
-                  <View style={styles.cardBottomRow}>
-                    <View style={styles.profileImagesContainer}>
-                      <View style={styles.profileImagePlaceholder} />
-                      <View style={styles.profileImagePlaceholder} />
-                      <View style={styles.profileImagePlaceholder} />
+          <View style={[styles.dragHandleDecorator, { zIndex: 20 }]} />
+          <View style={styles.eventListHeader}>
+            <Text style={styles.eventListTitle}>Upcoming Events</Text>
+            <View style={styles.iconsRow}>
+              <Ionicons name="calendar" size={24} color="white" style={styles.iconStyle} />
+              <Ionicons name="bookmark" size={24} color="white" style={styles.iconStyle} />
+            </View>
+          </View>
+          <ScrollView>
+            <Text style={styles.eventToday}>Today</Text>
+            {venueData.map((venue, index) => (
+                <View key={index} style={styles.eventCard}>
+                  <Ionicons name="bookmark-outline" size={24} color="white" style={styles.bookmarkIcon} />
+                  <View style={styles.eventImagePlaceholder}>
+                    <Text style={styles.eventPlaceholderText}>Image</Text>
+                  </View>
+                  <View style={styles.eventDetails}>
+                    <Text style={styles.eventTitle}>{venue.name}</Text>
+                    <Text style={styles.eventAddress}>{venue.address}</Text>
+                    <Text style={styles.eventStatus}>{venue.status}</Text>
+                    <Text style={[styles.eventDistance, { textAlign: 'right', alignSelf: 'flex-end' }]}>{venue.distance}</Text>
+                    <View style={styles.cardBottomRow}>
+                      <View style={styles.profileImagesContainer}>
+                        <View style={styles.profileImagePlaceholder} />
+                        <View style={styles.profileImagePlaceholder} />
+                        <View style={styles.profileImagePlaceholder} />
+                      </View>
+                      <TouchableOpacity style={styles.learnMoreButton}>
+                        <Text style={styles.learnMoreText}>Learn More</Text>
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity style={styles.learnMoreButton}>
-                      <Text style={styles.learnMoreText}>Learn More</Text>
-                    </TouchableOpacity>
                   </View>
                 </View>
-              </View>
-          ))}
-        </ScrollView>
-      </Animated.View>
+            ))}
+          </ScrollView>
+        </Animated.View>
 
-  {/* Added Map Icons */}
-  <TouchableOpacity  style={[styles.settingIcon, { left: "85%", top: "18%" }]}>
-    <Ionicons name="settings-outline" size={24} color="white" />
-  </TouchableOpacity>
-  <TouchableOpacity style={[styles.arrowIcon, { left: "85%", top: "25%" }]}>
-    <Ionicons name="navigate" size={24} color="white" />
-  </TouchableOpacity>
-</View>
-);
+        {/* Added Map Icons */}
+        <TouchableOpacity  style={[styles.settingIcon, { left: "85%", top: "18%" }]}>
+          <Ionicons name="settings-outline" size={24} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.arrowIcon, { left: "85%", top: "25%" }]}>
+          <Ionicons name="navigate" size={24} color="white" />
+        </TouchableOpacity>
+      </View>
+  );
 };
 
 const styles = StyleSheet.create({
