@@ -9,6 +9,7 @@ import {
   Dimensions,
   ActivityIndicator,
   TouchableWithoutFeedback,
+   FlatList
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AudioContext } from "../contexts/AudioContext";
@@ -47,9 +48,14 @@ const StreamMusic = () => {
   const [isLikeLoading, setIsLikeLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [playlistModal, setPlaylistModal] = useState(false);
   const [localSliderValue, setLocalSliderValue] = useState(null);
   const [isSeeking, setIsSeeking] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [playlists, setPlaylists] = useState([]);
+  const [isFetchingPlaylists, setIsFetchingPlaylists] = useState(false);
+  const [isAddingToPlaylist, setIsAddingToPlaylist] = useState(false);
+
   // Debug status effect
   useEffect(() => {
     console.log("StreamMusic Status:", {
@@ -132,6 +138,72 @@ const StreamMusic = () => {
     checkLibraryStatus();
   }, [trackInfo, userId]);
 
+   // Fetch Playlists
+   const fetchPlaylists = async () => {
+    if (!userId) return;
+
+    setIsFetchingPlaylists(true);
+    try {
+      const response = await axiosGet({
+        url: `${MAIN_SERVER_URL}/playlists`,
+        isAuthenticated: true,
+      });
+      console.log("fetching the playlist:", response);
+      
+      setPlaylists(response.playlists || []);
+    } catch (error) {
+      console.error("Error fetching playlists:", error);
+    } finally {
+      setIsFetchingPlaylists(false);
+    }
+  };
+
+    // Add Song to Playlist
+    const handleAddToPlaylist = async (playlist_id) => {
+      if (!trackInfo?.track_id || !userId) return;
+      
+      const token = await tokenManager.getAccessToken();
+
+      try{
+        const playlistResponse = await axiosGet({
+          url: `${MAIN_SERVER_URL}/playlists?playlist_id=${playlist_id}`
+        });
+
+        const existingSongs = playlistResponse?.playlist?.songs || [];
+
+        //Append the new songs to the list
+        const updatedSongs = [...new Set([...existingSongs, trackInfo.track_id])];
+
+        const formData = new FormData();
+      formData.append("songs", JSON.stringify(updatedSongs));
+  
+      setIsAddingToPlaylist(true);
+      
+        const response = await fetch(`${MAIN_SERVER_URL}/playlists/${playlist_id}`, {
+          method:"PUT",
+          headers:{
+            Accept: "application/json",
+            Authorization:`Bearer ${token}`,
+          },
+          body:formData,
+        })
+        setPlaylistModal(false);
+        console.log("success adding playlis", response);
+       // console.log("playlist id was", response.playlist.playlist_id);
+        
+      } catch (error) {
+        console.error("Error adding song to playlist:", error);
+      } finally {
+        setIsAddingToPlaylist(false);
+      }
+    };
+
+      // Open Modal and Fetch Playlists
+  const openModal = () => {
+    setPlaylistModal(true);
+    fetchPlaylists();
+  };
+
   // Function: Handle Like Toggle
   const handleLikeToggle = async () => {
     if (!trackInfo || !userId) {
@@ -186,6 +258,8 @@ const StreamMusic = () => {
       setTimeout(() => setMessage(""), 3000);
     }
   };
+
+  
 
   // Function: Toggle Modal Visibility
   const toggleModal = () => setIsModalVisible(!isModalVisible);
@@ -344,11 +418,53 @@ const StreamMusic = () => {
           <Text style={styles.songInnerText}>
             {trackInfo?.artist_name || "Unknown Artist"}
           </Text>
-          <TouchableOpacity style={styles.addButton}>
+          <TouchableOpacity style={styles.addButton} onPress={openModal}>
             <Ionicons name="add" size={20} color="white" />
           </TouchableOpacity>
         </View>
       </View>
+
+
+        {/* Modal */}
+        <Modal
+        animationType="slide"
+        transparent={true}
+        visible={playlistModal}
+        onRequestClose={() => setPlaylistModal(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setPlaylistModal(false)}>
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalHeader}>Select a Playlist</Text>
+                {isFetchingPlaylists ? (
+                  <ActivityIndicator size="large" color="purple" />
+                ) : (
+                  <FlatList
+                    data={playlists}
+                    keyExtractor={(item) => item.playlist_id}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={styles.playlistItem}
+                        onPress={() => handleAddToPlaylist(item.playlist_id)}
+                        disabled={isAddingToPlaylist}
+                      >
+                        <Text style={styles.playlistName}>{item.title}</Text>
+                      </TouchableOpacity>
+                    )}
+                  />
+                )}
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setPlaylistModal(false)}
+                >
+                  <Ionicons name="close" size={24} color="white" />
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
@@ -662,6 +778,67 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
+  },
+  mainContainer: {
+    flex: 1,
+    backgroundColor: "#1c1c1c",
+    paddingHorizontal: 20,
+  },
+  songView: {
+    alignItems: "center",
+    marginTop: 20,
+    justifyContent: "center",
+  },
+  songText: {
+    color: "white",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  songInnerView: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 5,
+    position: "relative",
+    width: "100%",
+    justifyContent: "center",
+  },
+  songInnerText: {
+    color: "#888",
+    fontSize: 14,
+  },
+  addButton: {
+    position: "absolute",
+    left: "90%",
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContent: {
+    backgroundColor: "#1c1c1c",
+    padding: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  modalHeader: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  playlistItem: {
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#333",
+  },
+  playlistName: {
+    color: "white",
+    fontSize: 16,
+  },
+  closeButton: {
+    alignSelf: "center",
+    marginTop: 10,
   },
 });
 
