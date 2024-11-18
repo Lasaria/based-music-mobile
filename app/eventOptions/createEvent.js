@@ -22,7 +22,7 @@ import calendar from '../../assets/icon/24x24/calendar.png';
 import { router } from 'expo-router';
 import { useLocalSearchParams } from 'expo-router';
 
-const serverURL = 'http://10.3.65.245:3000';
+const serverURL = 'http://localhost:3000';
 
 const VenueEventsScreen = () => {
   // State for event details

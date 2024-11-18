@@ -1,6 +1,6 @@
 import { axiosPost, axiosGet, axiosPut, axiosDelete } from '../utils/axiosCalls';
 
-const serverURL = 'http://10.3.65.248:3000';
+const serverURL = 'http://localhost:3000';
 
 export const EventService = {
   createEvent: async (eventData) => {
