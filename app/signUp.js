@@ -92,6 +92,7 @@ const SignUpScreen = ({ }) => {
   }, [fullName, email, password, termsChecked]);
 
   const handleSignUp = async () => {
+
     try {
       const formattedPhoneNumber = phoneNumber ? `+1${phoneNumber.replace(/\D/g, '')}` : null;
 

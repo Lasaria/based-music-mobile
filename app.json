@@ -5,7 +5,7 @@
     "scheme": "basedmusic",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/basedmusiciconlogo.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/images/splash.png",
@@ -27,9 +27,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.basedmusic.mobile",
-      "permissions": [
-        "android.permission.INTERNET"
-      ]
+      "permissions": ["android.permission.INTERNET"]
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -43,7 +41,21 @@
     "plugins": [
       "expo-font",
       "expo-router",
-      "react-native-email-link"
+      "react-native-email-link",
+      "expo-document-picker",
+      "expo-image-picker",
+      [
+        "expo-av",
+        {
+          "microphonePermission": false
+        }
+      ],
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": "sk.eyJ1IjoibGFzYXJpYSIsImEiOiJjbTJheXlodWswbnpuMmptd2xvM3VxbGhvIn0.Sgl_rqyoKzpW2UdH7lZHkA"
+        }
+      ]
     ]
   }
 }

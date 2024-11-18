@@ -5,11 +5,16 @@ import { View, Text, Button, StyleSheet } from "react-native";
 import { AuthService } from "../../../services/AuthService";
 import { axiosGet, ApiError } from "../../../utils/axiosCalls";
 import { router } from "expo-router";
+import { SERVER_URL, AUTHSERVER_URL } from '@env';
 
 const HomeScreen = ({}) => {
   const handleSignOut = async () => {
-    await AuthService.signOut();
-    router.replace("/welcome");
+    try {
+      await AuthService.signOut();
+      router.replace("/welcome");
+    } catch (err) {
+      console.log("Error while signing out", err);
+    }
   };
 
   const handleRefreshTokens = async () => {
@@ -20,7 +25,7 @@ const HomeScreen = ({}) => {
     const startTime = Date.now();
     try {
       const res = await axiosGet({
-        url: "http://localhost:3000/users/get-user-type/f48824d8-9011-7014-8f35-dfeb5f8f3f69",
+        url: `${SERVER_URL}/users/get-user-type/f48824d8-9011-7014-8f35-dfeb5f8f3f69`,
         isAuthenticated: true,
         timeout: 5000,
       });
@@ -53,6 +58,7 @@ const HomeScreen = ({}) => {
     }
   };
 
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome to Based Music!</Text>
@@ -64,6 +70,10 @@ const HomeScreen = ({}) => {
         onPress={() => router.push("/listenerProfile")}
       />
       <Button title="Music" onPress={playMusic} />
+      <Button title="upload" onPress={() => router.push("/uploadScreen")}/>
+      <Button title="Create a Post" onPress={() => router.push("/createPost")}/>
+      <Button title="View Feed" onPress={() => router.push("/feed")}/>
+      <Button title="Swipe" onPress={() => router.push("/swipe")}/>
     </View>
   );
 };
