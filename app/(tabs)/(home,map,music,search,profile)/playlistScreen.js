@@ -173,7 +173,7 @@ const PlaylistScreen = () => {
        //update the tracks 
        setTracks(shuffleTracks);
 
-       //update the backend playlist with the updated playlist order
+       //update the order of songs in playlist
         updatePlaylist(shuffleTracks);
    }
 
