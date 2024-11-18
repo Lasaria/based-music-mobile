@@ -22,6 +22,7 @@ const InputComponent = ({
   emailError,
   passwordError,
   isPassword,
+  error,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false); // Password visibility toggle
@@ -64,6 +65,7 @@ const InputComponent = ({
         styles.inputContainer,
         isFocused && styles.inputIsFocused,
         (emailError || passwordError) && styles.errorBorderColor,
+        error && styles.errorBorderColor,
       ]}
     >
       <Animated.Text style={labelStyle}>{placeholder}</Animated.Text>

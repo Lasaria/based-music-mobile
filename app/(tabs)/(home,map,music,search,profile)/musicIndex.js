@@ -7,6 +7,7 @@ import {
   Image,
   StyleSheet,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -18,6 +19,7 @@ import Toast from "react-native-toast-message";
 import SongList from "../../../components/SongComponent";
 import LibraryItem from "../../../components/RenderLibraryItem";
 import {SERVER_URL, AUTHSERVER_URL} from "@env"
+import PopularRecommendations from "../../../components/PopularRecommendations";
 
 
 function MusicScreen() {
@@ -251,6 +253,19 @@ function MusicScreen() {
     setLastEvaluatedKey(null);
     setHasMore(true);
   };
+
+  const renderForYou = () => (
+    <ScrollView style={styles.forYouContainer}>
+      <PopularRecommendations 
+        onTrackPress={(track) => {
+          // Handle track selection - we can add more functionality here (e.g. play track)
+          updateCurrentTrack(track);
+        }} 
+      />
+      {/* we can add more recommendation sections here in the future */}
+    </ScrollView>
+  );
+
   const renderMyLibrary = () => (
     <View style={styles.libraryContainer}>
       <View style={styles.libraryHeader}>
@@ -469,15 +484,7 @@ function MusicScreen() {
         </View>
       </View>
 
-      {selectedTab === "My Library" ? (
-        renderMyLibrary()
-      ) : (
-        <View style={styles.forYouContainer}>
-          <Text style={styles.comingSoonText}>
-            For You content coming soon...
-          </Text>
-        </View>
-      )}
+      {selectedTab === "My Library" ? renderMyLibrary() : renderForYou()}
     </View>
   );
 }
@@ -609,12 +616,7 @@ const styles = StyleSheet.create({
   },
   forYouContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  comingSoonText: {
-    color: "white",
-    fontSize: 18,
+    backgroundColor: '#000',
   },
   albumItem: {
     flexDirection: "row",

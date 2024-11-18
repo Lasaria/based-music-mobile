@@ -13,9 +13,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { MaterialIcons } from '@expo/vector-icons';
+import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import useProfileStore from '../zusStore/userFormStore';
 import { UserService } from '../services/UserService';
+import ProgressBar from '../components/ProgressBar';
+import { Colors } from '../constants/Color';
 
 const { width } = Dimensions.get('window');
 const COVER_ASPECT_RATIO = 16 / 9;
@@ -28,7 +30,7 @@ const CoverPhotoScreen = () => {
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
+
       if (status !== 'granted') {
         Alert.alert(
           'Permissions Required',
@@ -98,51 +100,45 @@ const CoverPhotoScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>Add Cover Photo</Text>
+      <ProgressBar currentStep={3} totalSteps={4} />
+      <Text style={styles.header}>Add Cover Image</Text>
       <Text style={styles.subHeader}>
-        Choose a photo to display at the top of your profile
+        Add photo from your camera roll or file to add to your profile.
       </Text>
-      
+
+
       <View style={styles.imageContainer}>
         {coverImage ? (
           <TouchableOpacity onPress={pickImage}>
             <View style={styles.coverPreviewContainer}>
-              <Image 
-                source={{ uri: coverImage }} 
+              <Image
+                source={{ uri: coverImage }}
                 style={styles.coverPreview}
                 resizeMode="cover"
               />
               <View style={styles.editOverlay}>
-                <MaterialIcons name="edit" size={24} color="white" />
+                <MaterialIcons name="edit" size={20} color="white" />
               </View>
             </View>
           </TouchableOpacity>
         ) : (
-          <View style={styles.placeholderContainer}>
-            <MaterialIcons name="photo-library" size={48} color="#666" />
-            <Text style={styles.placeholderText}>
-              Add a cover photo
-            </Text>
+          <TouchableOpacity style={styles.placeholderContainer} onPress={pickImage}>
+            <FontAwesome name="image" size={100} color="#ccc" />
             <Text style={styles.placeholderSubText}>
               Recommended size: 1920 x 1080
             </Text>
-          </View>
+            {!coverImage && (
+              <View style={styles.addIcon}>
+                <FontAwesome name="plus" size={16} color="#000" />
+              </View>
+            )}
+          </TouchableOpacity>
         )}
       </View>
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity 
-          style={styles.uploadButton} 
-          onPress={pickImage}
-        >
-          <MaterialIcons name="photo-library" size={24} color="white" />
-          <Text style={styles.buttonText}>Choose from Gallery</Text>
-        </TouchableOpacity>
-      </View>
-
       {coverImage && (
-        <TouchableOpacity 
-          style={styles.removeButton} 
+        <TouchableOpacity
+          style={styles.removeButton}
           onPress={() => updateField('coverImage', null)}
         >
           <MaterialIcons name="delete-outline" size={24} color="#ff3b30" />
@@ -171,86 +167,58 @@ const CoverPhotoScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 16,
+    backgroundColor: Colors.background,
+    paddingHorizontal: 16,
   },
   header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#1a1a1a',
+    color: Colors.white,
     textAlign: 'center',
+    fontSize: 28,
+    fontWeight: '800',
+    lineHeight: 34,
+    marginTop: 8,
   },
   subHeader: {
-    fontSize: 16,
-    color: '#666',
+    color: Colors.white,
     textAlign: 'center',
-    marginBottom: 24,
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
+    opacity: 0.7,
   },
   imageContainer: {
     alignItems: 'center',
     marginBottom: 32,
   },
   placeholderContainer: {
-    width: width - 32,
+    width: width - 78,
     height: COVER_HEIGHT,
-    backgroundColor: '#e1e1e1',
+    backgroundColor: '#333',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 12,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#ccc',
     borderStyle: 'dashed',
+    position: 'relative',
+    marginTop: 56,
   },
-  placeholderText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#666',
+  addIcon: {
+    position: 'absolute',
+    top: -12,
+    right: -12,
+    backgroundColor: '#FFFFFF',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 5,
+    borderColor: Colors.background,
   },
   placeholderSubText: {
-    marginTop: 4,
-    fontSize: 14,
-    color: '#999',
-  },
-  coverPreviewContainer: {
-    width: width - 32,
-    height: COVER_HEIGHT,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  coverPreview: {
-    width: '100%',
-    height: '100%',
-  },
-  editOverlay: {
-    position: 'absolute',
-    bottom: 12,
-    right: 12,
-    backgroundColor: '#1DB954',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'white',
-  },
-  buttonContainer: {
-    gap: 16,
-  },
-  uploadButton: {
-    backgroundColor: '#1DB954',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    color: Colors.white,
+    opacity: 0.8
   },
   removeButton: {
     flexDirection: 'row',
@@ -265,35 +233,46 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  bottomContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#f5f5f5',
-    padding: 16,
-    paddingBottom: 34,
-    borderTopWidth: 1,
-    borderTopColor: '#e1e1e1',
+  coverPreviewContainer: {
+    width: width - 78,
+    height: COVER_HEIGHT,
+    borderRadius: 12,
+    marginTop: 56,
+    overflow: 'hidden',
   },
-  nextButton: {
-    backgroundColor: '#1DB954',
+  coverPreview: {
+    width: '100%',
+    height: '100%',
+  },
+  editOverlay: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#000',
+  },
+  bottomContainer: {
+    marginTop: 24,
+    paddingBottom: 16,
+  },
+  submitButton: {
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    marginHorizontal: 30,
+    marginVertical: 20,
   },
-  nextButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: 'bold',
+  submitButtonText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

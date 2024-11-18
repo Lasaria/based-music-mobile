@@ -1,13 +1,14 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { Colors } from '../constants/Color';
 
 const SuccessModal = ({ visible, onClose }) => {
   const handleNext = async () => {
     try {
       console.log("Attempting to navigate...");
-      
+
       // First close the modal
       if (onClose) {
         console.log("Closing modal...");
@@ -18,20 +19,20 @@ const SuccessModal = ({ visible, onClose }) => {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       console.log("Navigating to home...");
-      
+
       // Try different navigation approaches
       try {
         // Option 1: Using router.replace
         router.replace('/homeIndex');
       } catch (error) {
         console.error("First navigation attempt failed:", error);
-        
+
         try {
           // Option 2: Using router.push
           router.push('/(tabs)');
         } catch (error) {
           console.error("Second navigation attempt failed:", error);
-          
+
           // Option 3: Basic path
           router.replace('/');
         }
@@ -57,11 +58,11 @@ const SuccessModal = ({ visible, onClose }) => {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.successIcon}>
-            <MaterialIcons name="check-circle" size={64} color="#1DB954" />
+            <Feather name="check-circle" size={64} color="#1DB954" />
           </View>
 
           <Text style={styles.title}>Profile Created!</Text>
-          
+
           <Text style={styles.message}>
             Your profile has been successfully created and is ready to go.
           </Text>
@@ -82,13 +83,13 @@ const SuccessModal = ({ visible, onClose }) => {
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: Colors.background,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: '#272727',
     borderRadius: 20,
     padding: 24,
     width: '100%',
@@ -108,21 +109,22 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
+    fontWeight: '800',
+    fontFamily: "Open Sans",
+    color: Colors.white,
     marginBottom: 8,
     textAlign: 'center',
   },
   message: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
+    color: Colors.white,
     textAlign: 'center',
     marginBottom: 24,
-    lineHeight: 22,
+    opacity: 0.7
   },
   button: {
-    backgroundColor: '#1DB954',
-    paddingVertical: 14,
+    backgroundColor: Colors.primary,
+    paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,
     width: '100%',
