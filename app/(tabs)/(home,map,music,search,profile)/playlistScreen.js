@@ -294,7 +294,7 @@ const PlaylistScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#1c1c1c" },
+  container: { flex: 1, backgroundColor: "#000" },
   header: { flexDirection: "row", alignItems: "center", paddingTop: "15%", paddingLeft:10 },
   headerTitle: {
     color: "white",
