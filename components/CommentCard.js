@@ -20,210 +20,211 @@ import { deleteComment, deleteReply } from './DeleteActions';
 import { formatDate } from '../utils/functions';
 import { LikesModal } from './LikesModal';
 
-import { tokenManager } from "../utils/tokenManager"; 
+import { tokenManager } from "../utils/tokenManager";
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
+import { Colors } from '../constants/Color';
 
 const API_URL = SERVER_URL;
 
 // CommentCard.js - Component for individual comments
 export const CommentCard = ({ onCommentDeleted, isDeleting, comment, comments, postId, currentUserId, setComments, commentCount, setCommentCount }) => {
-    const [showReplies, setShowReplies] = useState(false);
-    const [showReplyInput, setShowReplyInput] = useState(false);
-    const [replies, setReplies] = useState([]);
-    const [isLiked, setIsLiked] = useState(false);
-    const [likeCount, setLikeCount] = useState(comment.like_count || 0);
-    const [replyCount, setReplyCount] = useState(comment.reply_count || 0);
-    const [isReplyDeleting, setIsReplyDeleting] = useState(false);
-    const [likesModalVisible, setLikesModalVisible] = useState(false);
-    const [selectedLikes, setSelectedLikes] = useState([]);
-    
+  const [showReplies, setShowReplies] = useState(false);
+  const [showReplyInput, setShowReplyInput] = useState(false);
+  const [replies, setReplies] = useState([]);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(comment.like_count || 0);
+  const [replyCount, setReplyCount] = useState(comment.reply_count || 0);
+  const [isReplyDeleting, setIsReplyDeleting] = useState(false);
+  const [likesModalVisible, setLikesModalVisible] = useState(false);
+  const [selectedLikes, setSelectedLikes] = useState([]);
 
-    // const handleDeleteComment = async () => {
-    //     if (isDeleting) return;
-    //     console.log("COMMENT IN COMMENT CARD: ", comment)
-    
-    //     confirmDelete('comment', async () => {
-    //       setIsDeleting(true);
-    //       try {
-    //         await deleteComment(postId, comment.comment_id);
-    //         setCommentCount(commentCount - 1);
-    //         setComments(prevComments => prevComments.filter(c => c.comment_id !== comment.comment_id));
-    //       } catch (error) {
-    //         onError('Failed to delete comment');
-    //       } finally {
-    //         setIsDeleting(false);
-    //       }
-    //     });
-    //   };
 
-    // Add this handler
-    const handleReplyAdded = (newReply) => {
-        setReplies([newReply, ...replies]);
-        // Update reply count in comment
-        setReplyCount(replyCount+ 1);
-        // Hide reply input after successful submission
-        setShowReplyInput(false);
-        if (!showReplies) {
-            setShowReplies(true);
+  // const handleDeleteComment = async () => {
+  //     if (isDeleting) return;
+  //     console.log("COMMENT IN COMMENT CARD: ", comment)
+
+  //     confirmDelete('comment', async () => {
+  //       setIsDeleting(true);
+  //       try {
+  //         await deleteComment(postId, comment.comment_id);
+  //         setCommentCount(commentCount - 1);
+  //         setComments(prevComments => prevComments.filter(c => c.comment_id !== comment.comment_id));
+  //       } catch (error) {
+  //         onError('Failed to delete comment');
+  //       } finally {
+  //         setIsDeleting(false);
+  //       }
+  //     });
+  //   };
+
+  // Add this handler
+  const handleReplyAdded = (newReply) => {
+    setReplies([newReply, ...replies]);
+    // Update reply count in comment
+    setReplyCount(replyCount + 1);
+    // Hide reply input after successful submission
+    setShowReplyInput(false);
+    if (!showReplies) {
+      setShowReplies(true);
+    }
+  };
+
+  useEffect(() => {
+    fetchReplies()
+  }, []);
+
+  useEffect(() => {
+    checkLikeStatus();
+    // getLikeCount();
+    // getReplyCount();
+  }, [isLiked]);
+
+  const checkLikeStatus = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/posts/${postId}/comments/${comment.comment_id}/like-status`,
+        {
+          headers: {
+            'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
           }
-    };
-
-    useEffect(() => {
-        fetchReplies()
-    }, []);
-  
-    useEffect(() => {
-      checkLikeStatus();
-      // getLikeCount();
-      // getReplyCount();
-    }, [isLiked]);
-  
-    const checkLikeStatus = async () => {
-      try {
-        const response = await fetch(
-          `${API_URL}/posts/${postId}/comments/${comment.comment_id}/like-status`,
-          {
-            headers: {
-              'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
-            }
-          }
-        );
-        const data = await response.json();
-        setIsLiked(data.liked);
-      } catch (error) {
-        console.error('Error checking like status:', error);
-      }
-    };
-
-    const getLikeCount = async () => {
-        try {
-          const response = await fetch(
-            `${API_URL}/posts/${postId}/comments/${comment.comment_id}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
-              }
-            }
-          );
-          const data = await response.json();
-          console.log(data);
-          setLikeCount(data.like_count);
-        } catch (error) {
-          console.error('Error checking like status:', error);
         }
-      };
+      );
+      const data = await response.json();
+      setIsLiked(data.liked);
+    } catch (error) {
+      console.error('Error checking like status:', error);
+    }
+  };
 
-      const getReplyCount = async () => {
-        try {
-          const response = await fetch(
-            `${API_URL}/posts/${postId}/comments/${comment.comment_id}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
-              }
-            }
-          );
-          const data = await response.json();
-          console.log(data);
-          console.log(data.reply_count);
-          setReplyCount(data.reply_count);
-        } catch (error) {
-          console.error('Error checking like status:', error);
-        }
-      };
-  
-    const toggleLike = async () => {
-      try {
-        const method = isLiked ? 'DELETE' : 'POST';
-        const endpoint = isLiked ? 'unlike' : 'like';
-        
-        await fetch(
-          `${API_URL}/posts/${postId}/comments/${comment.comment_id}/${endpoint}`,
-          {
-            method,
-            headers: {
-              'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
-            }
+  const getLikeCount = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/posts/${postId}/comments/${comment.comment_id}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
           }
-        );
-        
-        setIsLiked(!isLiked);
-        // Update like count in UI
-        const newLikeCount = isLiked ? likeCount - 1 : likeCount + 1;
-        setLikeCount(newLikeCount);
-      } catch (error) {
-        console.error('Error toggling like:', error);
-      }
-    };
-  
-    const fetchReplies = async () => {
-      try {
-        const response = await fetch(
-          `${API_URL}/posts/${postId}/comments/${comment.comment_id}/replies`
-        );
-        const data = await response.json();
-        console.log(data.replies[0]);
-        setReplies(data.replies);
-      } catch (error) {
-        console.error('Error fetching replies:', error);
-      }
-    };
-  
-    const handleShowReplies = () => {
-      if (!showReplies) {
-        fetchReplies();
-      }
-      setShowReplies(!showReplies);
-    };
-
-    const handleDeleteReply = async (reply) => {
-        if (isReplyDeleting) return;
-        console.log("REPLY IN REPLY CARD: ", reply);
-    
-        confirmDelete('reply', async () => {
-          setIsReplyDeleting(true);
-          try {
-            console.log(postId, comment.comment_id, reply.reply_id)
-            await deleteReply(postId, comment.comment_id, reply.reply_id);
-            //onReplyDeleted(reply.reply_id);
-            setReplyCount(replyCount - 1);
-            setReplies(prevReplies => prevReplies.filter(r => r.reply_id !== reply.reply_id));
-          } catch (error) {
-          } finally {
-            setIsReplyDeleting(false);
-          }
-        });
-      };
-
-      const handlePressLikes = async () => {
-        try {
-          const response = await fetch(
-            `${API_URL}/posts/${postId}/comments/${comment.comment_id}/likes`,
-            {
-              headers: {
-                'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
-              }
-            }
-          );
-          
-          if (!response.ok) throw new Error('Failed to fetch likes');
-          
-          const data = await response.json();
-          console.log(data);
-          setSelectedLikes(data.likes);
-          setLikesModalVisible(true);
-        } catch (error) {
-          console.error('Error fetching likes:', error);
-          Alert.alert('Error', 'Failed to load likes');
         }
-      };
+      );
+      const data = await response.json();
+      console.log(data);
+      setLikeCount(data.like_count);
+    } catch (error) {
+      console.error('Error checking like status:', error);
+    }
+  };
+
+  const getReplyCount = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/posts/${postId}/comments/${comment.comment_id}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
+          }
+        }
+      );
+      const data = await response.json();
+      console.log(data);
+      console.log(data.reply_count);
+      setReplyCount(data.reply_count);
+    } catch (error) {
+      console.error('Error checking like status:', error);
+    }
+  };
+
+  const toggleLike = async () => {
+    try {
+      const method = isLiked ? 'DELETE' : 'POST';
+      const endpoint = isLiked ? 'unlike' : 'like';
+
+      await fetch(
+        `${API_URL}/posts/${postId}/comments/${comment.comment_id}/${endpoint}`,
+        {
+          method,
+          headers: {
+            'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
+          }
+        }
+      );
+
+      setIsLiked(!isLiked);
+      // Update like count in UI
+      const newLikeCount = isLiked ? likeCount - 1 : likeCount + 1;
+      setLikeCount(newLikeCount);
+    } catch (error) {
+      console.error('Error toggling like:', error);
+    }
+  };
+
+  const fetchReplies = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/posts/${postId}/comments/${comment.comment_id}/replies`
+      );
+      const data = await response.json();
+      console.log(data.replies[0]);
+      setReplies(data.replies);
+    } catch (error) {
+      console.error('Error fetching replies:', error);
+    }
+  };
+
+  const handleShowReplies = () => {
+    if (!showReplies) {
+      fetchReplies();
+    }
+    setShowReplies(!showReplies);
+  };
+
+  const handleDeleteReply = async (reply) => {
+    if (isReplyDeleting) return;
+    console.log("REPLY IN REPLY CARD: ", reply);
+
+    confirmDelete('reply', async () => {
+      setIsReplyDeleting(true);
+      try {
+        console.log(postId, comment.comment_id, reply.reply_id)
+        await deleteReply(postId, comment.comment_id, reply.reply_id);
+        //onReplyDeleted(reply.reply_id);
+        setReplyCount(replyCount - 1);
+        setReplies(prevReplies => prevReplies.filter(r => r.reply_id !== reply.reply_id));
+      } catch (error) {
+      } finally {
+        setIsReplyDeleting(false);
+      }
+    });
+  };
+
+  const handlePressLikes = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/posts/${postId}/comments/${comment.comment_id}/likes`,
+        {
+          headers: {
+            'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
+          }
+        }
+      );
+
+      if (!response.ok) throw new Error('Failed to fetch likes');
+
+      const data = await response.json();
+      console.log(data);
+      setSelectedLikes(data.likes);
+      setLikesModalVisible(true);
+    } catch (error) {
+      console.error('Error fetching likes:', error);
+      Alert.alert('Error', 'Failed to load likes');
+    }
+  };
 
 
-    const isAuthor = currentUserId === comment.author_id;
-  
-    return (
-      <View style={styles.commentCard}>
-        <View style={styles.commentHeader}>
+  const isAuthor = currentUserId === comment.author_id;
+
+  return (
+    <View style={styles.commentCard}>
+      <View style={styles.commentHeader}>
         <View style={styles.authorContainer}>
           <Image
             source={{ uri: comment.profile_image_url }}
@@ -234,7 +235,7 @@ export const CommentCard = ({ onCommentDeleted, isDeleting, comment, comments, p
         </View>
 
         {isAuthor && (
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => onCommentDeleted(comment)}
             disabled={isDeleting}
             style={styles.deleteButton}
@@ -247,95 +248,95 @@ export const CommentCard = ({ onCommentDeleted, isDeleting, comment, comments, p
           </TouchableOpacity>
         )}
       </View>
-  
-        <Text style={styles.commentContent}>{comment.content}</Text>
-  
-        <View style={styles.commentActions}>
-          <TouchableOpacity onPress={toggleLike}>
-            <Ionicons
-              name={isLiked ? "heart" : "heart-outline"}
-              size={20}
-              color={isLiked ? "red" : "black"}
-            />
-          </TouchableOpacity>
-          {/* <Text style={styles.likeCount}>{likeCount}</Text> */}
-          <TouchableOpacity onPress={handlePressLikes}>
-            <Text style={styles.likeCount}>{likeCount}</Text>
-            </TouchableOpacity>
 
-            {/* Add LikesModal */}
-            <LikesModal
-            visible={likesModalVisible}
-            onClose={() => setLikesModalVisible(false)}
-            likes={selectedLikes}
-            />
-          
-          {replyCount > 0 && (
-            <TouchableOpacity onPress={handleShowReplies}>
-                <Text style={styles.replyButton}>
-                {showReplies ? 'Hide' : 'Show'} {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
-                </Text>
-            </TouchableOpacity>
-            )}
-          <TouchableOpacity 
+      <Text style={styles.commentContent}>{comment.content}</Text>
+
+      <View style={styles.commentActions}>
+        <TouchableOpacity onPress={toggleLike} style={styles.actionButton}>
+          <Ionicons
+            name={isLiked ? "heart" : "heart-outline"}
+            size={20}
+            color={isLiked ? "red" : "#A9A9A9"}
+          />
+          <Text style={styles.likeCount}>{likeCount}</Text>
+        </TouchableOpacity>
+        {replyCount > 0 && (
+          <TouchableOpacity onPress={handleShowReplies}>
+            <Text style={styles.replyButton}>
+              {showReplies ? 'Hide' : 'Show'} {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
+            </Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
           onPress={() => setShowReplyInput(true)}
-          style={styles.replyAction}
+          style={{ flexDirection: 'row' }}
         >
           <Ionicons name="chatbubble-outline" size={16} color="#666" />
-          <Text style={styles.replyActionText}>Reply</Text>
+          <Text style={styles.replyText}>Reply</Text>
         </TouchableOpacity>
-        </View>
 
-  
-  {showReplies && replies.length > 0 && (
-        <View style={styles.repliesContainer}>
-          {replies.map(reply => (
-            <ReplyCard
-              key={reply.reply_id}
-              onReplyDeleted={handleDeleteReply}
-              reply={reply}
-              comment={comment}
-              comments={comments}
-              setComments={setComments}
-              postId={postId}
-              commentId={comment.comment_id}
-              currentUserId={currentUserId}
-            />
-          ))}
+        {/* Add LikesModal */}
+        <LikesModal
+          visible={likesModalVisible}
+          onClose={() => setLikesModalVisible(false)}
+          likes={selectedLikes}
+        />
+      </View>
+
+
+      {
+        showReplies && replies.length > 0 && (
+          <View style={styles.repliesContainer}>
+            {replies.map(reply => (
+              <ReplyCard
+                key={reply.reply_id}
+                onReplyDeleted={handleDeleteReply}
+                reply={reply}
+                comment={comment}
+                comments={comments}
+                setComments={setComments}
+                postId={postId}
+                commentId={comment.comment_id}
+                currentUserId={currentUserId}
+              />
+            ))}
           </View>
-        )}
-        {showReplyInput && (
-            <ReplyInput
+        )
+      }
+      {
+        showReplyInput && (
+          <ReplyInput
             postId={postId}
             currentUserId={currentUserId}
             commentId={comment.comment_id}
             onReplyAdded={handleReplyAdded}
             onCancel={() => setShowReplyInput(false)}
-            />
-        )}
-      </View>
-    );
-  };
+          />
+        )
+      }
+    </View >
+  );
+};
 
 
-  const { width } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
-    authorContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-      },
-      profileImage: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        marginRight: 8,
-      },
-      authorText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#1a1a1a',
-      },
+  authorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profileImage: {
+    width: 38,
+    height: 38,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  authorText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.white,
+  },
   // PostCard Styles
   postCard: {
     backgroundColor: '#fff',
@@ -363,11 +364,12 @@ const styles = StyleSheet.create({
   authorText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: Colors.white,
   },
   dateText: {
     fontSize: 12,
-    color: '#666',
+    color: Colors.white,
+    opacity: 0.7
   },
   contentText: {
     fontSize: 15,
@@ -429,7 +431,7 @@ const styles = StyleSheet.create({
 
   // CommentCard Styles
   commentCard: {
-    backgroundColor: '#f8f9fa',
+    // backgroundColor: '#f8f9fa',
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
@@ -657,60 +659,69 @@ const styles = StyleSheet.create({
   },
 
   // Input Styles
-  commentInput: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginHorizontal: 12,
-    marginVertical: 8,
-    fontSize: 14,
-    backgroundColor: '#fff',
+  commentCard: {
+    backgroundColor: '#363636', // Darker background for comment
+    padding: 12,
+    borderRadius: 12,
+    marginVertical: 6,
   },
-  commentInputContainer: {
+  commentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  authorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    backgroundColor: '#fff',
   },
-  sendButton: {
-    marginLeft: 8,
-    padding: 8,
-  },
-  sendButtonDisabled: {
-    opacity: 0.5,
-  },
-  inputText: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    fontSize: 14,
-    backgroundColor: '#f8f9fa',
-  },
-
-  // Tag Styles
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 12,
-  },
-  tag: {
-    backgroundColor: '#f0f0f0',
+  profileImage: {
+    width: 32,
+    height: 32,
     borderRadius: 16,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
     marginRight: 8,
-    marginBottom: 8,
   },
-  tagText: {
+  authorText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  dateText: {
     fontSize: 12,
-    color: '#666',
+    color: '#A9A9A9',
+    marginLeft: 8,
+  },
+  deleteButton: {
+    padding: 4,
+  },
+  commentContent: {
+    fontSize: 15,
+    color: '#E0E0E0',
+    lineHeight: 20,
+    marginVertical: 4,
+  },
+  commentActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16, // Space between like and reply
+  },
+  likeCount: {
+    marginLeft: 4,
+    fontSize: 13,
+    color: '#A9A9A9',
+  },
+  replyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  replyText: {
+    marginLeft: 4,
+    fontSize: 13,
+    color: '#A9A9A9',
   },
 });

@@ -12,7 +12,7 @@ import {
   Dimensions,
   Text,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { tokenManager } from "../utils/tokenManager";
 
 import PostOptionsMenu from './PostOptionsMenu';
@@ -25,143 +25,144 @@ import { confirmDelete } from './DeleteConfirmDialog';
 import { deleteComment } from './DeleteActions';
 
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
+import { Colors } from '../constants/Color';
 
 const API_URL = SERVER_URL;
 
 // PostCard.js - Component for individual posts
 export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => {
-    const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(false);
 
-    const [comments, setComments] = useState([]);
-    const [isLoadingComments, setIsLoadingComments] = useState(false);
-    const [isLiked, setIsLiked] = useState(post.liked || false);
-    const [likeCount, setLikeCount] = useState(post.like_count || 0);
-    const [commentCount, setCommentCount] = useState(post.comment_count || 0);
-    const [likesModalVisible, setLikesModalVisible] = useState(false);
-    const [selectedLikes, setSelectedLikes] = useState([]);
-    const [isDeleting, setIsDeleting] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [isLiked, setIsLiked] = useState(post.liked || false);
+  const [likeCount, setLikeCount] = useState(post.like_count || 0);
+  const [commentCount, setCommentCount] = useState(post.comment_count || 0);
+  const [likesModalVisible, setLikesModalVisible] = useState(false);
+  const [selectedLikes, setSelectedLikes] = useState([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-    useEffect(() => {
-        checkLikeStatus();
-      }, []);
+  useEffect(() => {
+    checkLikeStatus();
+  }, []);
 
-    // Fetch comments when comments section is opened
+  // Fetch comments when comments section is opened
   useEffect(() => {
     if (showComments) {
       fetchComments();
     }
   }, [showComments]);
 
-    const fetchComments = async () => {
-        setIsLoadingComments(true);
-        try {
-          const token = await tokenManager.getAccessToken();
-          const response = await fetch(`${API_URL}/posts/${post.post_id}/comments`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (!response.ok) throw new Error('Failed to fetch comments');
-          const data = await response.json();
-          setComments(data.comments);
-        } catch (error) {
-          console.error('Error fetching comments:', error);
-        } finally {
-          setIsLoadingComments(false);
+  const fetchComments = async () => {
+    setIsLoadingComments(true);
+    try {
+      const token = await tokenManager.getAccessToken();
+      const response = await fetch(`${API_URL}/posts/${post.post_id}/comments`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      };
+      });
 
-      const checkLikeStatus = async () => {
-        try {
-          const token = await tokenManager.getAccessToken();
-          const response = await fetch(
-            `${API_URL}/posts/${post.post_id}/like-status`,
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            }
-          );
-          
-          if (!response.ok) throw new Error('Failed to check like status');
-          const data = await response.json();
-          setIsLiked(data.liked);
-        } catch (error) {
-          console.error('Error checking like status:', error);
-        }
-      };
-    
-      const handleLike = async () => {
-        try {
-          const token = await tokenManager.getAccessToken();
-          const response = await fetch(`${API_URL}/posts/${post.post_id}/like`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-    
-          if (!response.ok) throw new Error('Failed to like post');
-          
-          setIsLiked(true);
-          setLikeCount(prev => prev + 1);
-        } catch (error) {
-          console.error('Error liking post:', error);
-          Alert.alert('Error', 'Failed to like post');
-        }
-      };
-    
-      const handleUnlike = async () => {
-        try {
-          const token = await tokenManager.getAccessToken();
-          const response = await fetch(`${API_URL}/posts/${post.post_id}/unlike`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-    
-          if (!response.ok) throw new Error('Failed to unlike post');
-          
-          setIsLiked(false);
-          setLikeCount(prev => Math.max(0, prev - 1));
-        } catch (error) {
-          console.error('Error unliking post:', error);
-          Alert.alert('Error', 'Failed to unlike post');
-        }
-      };
-    
-      const handlePressLikes = async () => {
-        try {
-          const token = await tokenManager.getAccessToken();
-          const response = await fetch(
-            `${API_URL}/posts/${post.post_id}/likes`,
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            }
-          );
-          
-          if (!response.ok) throw new Error('Failed to fetch likes');
-          
-          const data = await response.json();
-          setSelectedLikes(data.likes);
-          setLikesModalVisible(true);
-        } catch (error) {
-          console.error('Error fetching likes:', error);
-          Alert.alert('Error', 'Failed to load likes');
-        }
-      };
+      if (!response.ok) throw new Error('Failed to fetch comments');
+      const data = await response.json();
+      setComments(data.comments);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    } finally {
+      setIsLoadingComments(false);
+    }
+  };
 
-    // Add this handler
+  const checkLikeStatus = async () => {
+    try {
+      const token = await tokenManager.getAccessToken();
+      const response = await fetch(
+        `${API_URL}/posts/${post.post_id}/like-status`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.ok) throw new Error('Failed to check like status');
+      const data = await response.json();
+      setIsLiked(data.liked);
+    } catch (error) {
+      console.error('Error checking like status:', error);
+    }
+  };
+
+  const handleLike = async () => {
+    try {
+      const token = await tokenManager.getAccessToken();
+      const response = await fetch(`${API_URL}/posts/${post.post_id}/like`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to like post');
+
+      setIsLiked(true);
+      setLikeCount(prev => prev + 1);
+    } catch (error) {
+      console.error('Error liking post:', error);
+      Alert.alert('Error', 'Failed to like post');
+    }
+  };
+
+  const handleUnlike = async () => {
+    try {
+      const token = await tokenManager.getAccessToken();
+      const response = await fetch(`${API_URL}/posts/${post.post_id}/unlike`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to unlike post');
+
+      setIsLiked(false);
+      setLikeCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Error unliking post:', error);
+      Alert.alert('Error', 'Failed to unlike post');
+    }
+  };
+
+  const handlePressLikes = async () => {
+    try {
+      const token = await tokenManager.getAccessToken();
+      const response = await fetch(
+        `${API_URL}/posts/${post.post_id}/likes`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.ok) throw new Error('Failed to fetch likes');
+
+      const data = await response.json();
+      setSelectedLikes(data.likes);
+      setLikesModalVisible(true);
+    } catch (error) {
+      console.error('Error fetching likes:', error);
+      Alert.alert('Error', 'Failed to load likes');
+    }
+  };
+
+  // Add this handler
   const handleCommentAdded = (newComment) => {
     // Add the new comment to the beginning of the comments array
     setComments(prevComments => [newComment, ...prevComments]);
     // Update comment count in post
     // post.comment_count += 1;
-    setCommentCount(commentCount+ 1);
+    setCommentCount(commentCount + 1);
     // Show comments section if it's not already shown
     if (!showComments) {
       setShowComments(true);
@@ -185,15 +186,16 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
       }
     });
   };
-  
-    return (
-      <View style={styles.postCard}>
-        {/* Author Info */}
-        <View style={styles.postHeader}>
+
+  return (
+    <View style={styles.postCard}>
+      {/* Author Info */}
+      <View style={styles.postHeader}>
         <Image
-            source={{ uri: post.profile_image_url }}
-            style={styles.profileImage}
-          />
+          source={{ uri: post.profile_image_url }}
+          style={styles.profileImage}
+        />
+        <View style={styles.authorInfo}>
           <Text style={styles.authorText}>{post.username}</Text>
           <Text style={styles.dateText}>{formatDate(post.created_at)}</Text>
         </View>
@@ -204,27 +206,29 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
           onPostDeleted={onPostDeleted}
           onEditPost={onEditPost}
         />
-  
-        {/* Content */}
-        <Text style={styles.contentText}>{post.content}</Text>
-  
-        {/* Images */}
-        {post.image_urls?.length > 0 && (
-          <ScrollView horizontal style={styles.imageScrollView}>
-            {post.image_urls.map((url, index) => (
-              <Image
-                key={index}
-                source={{ uri: url }}
-                style={styles.postImage}
-              />
-            ))}
-          </ScrollView>
-        )}
-  
-        {/* Like and Comment Counts */}
-        <View style={styles.interactionBar}>
-        <TouchableOpacity 
-          style={styles.likeButton} 
+      </View>
+
+
+      {/* Content */}
+      <Text style={styles.contentText}>{post.content}</Text>
+
+      {/* Images */}
+      {post.image_urls?.length > 0 && (
+        <ScrollView horizontal style={styles.imageScrollView}>
+          {post.image_urls.map((url, index) => (
+            <Image
+              key={index}
+              source={{ uri: url }}
+              style={styles.postImage}
+            />
+          ))}
+        </ScrollView>
+      )}
+
+      {/* Like and Comment Counts */}
+      <View style={styles.interactionBar}>
+        {/* <TouchableOpacity
+          style={styles.likeButton}
           onPress={() => isLiked ? handleUnlike() : handleLike()}
         >
           <Ionicons
@@ -233,54 +237,78 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
             color={isLiked ? "red" : "black"}
           />
         </TouchableOpacity>
-        
+
         <TouchableOpacity onPress={handlePressLikes}>
           <Text style={styles.countText}>{likeCount} likes</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
-        <TouchableOpacity onPress={() => setShowComments(!showComments)}>
+        {/* <TouchableOpacity onPress={() => setShowComments(!showComments)}>
+          <Text style={styles.countText}>{commentCount} comments</Text>
+        </TouchableOpacity> */}
+
+        <TouchableOpacity
+          style={styles.likeButton}
+          onPress={() => isLiked ? handleUnlike() : handleLike()}
+        >
+          <Ionicons
+            name={isLiked ? "heart" : "heart-outline"}
+            size={26}
+            color={isLiked ? "red" : Colors.secondary}
+          />
+          <TouchableOpacity onPress={handlePressLikes}>
+            <Text style={styles.countText}>{likeCount} likes</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={() => setShowComments(!showComments)}>
+          <Image source={require('../assets/images/Feed/chat.png')} />
           <Text style={styles.countText}>{commentCount} comments</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton}>
+          <Image source={require('../assets/images/Feed/send2.png')} />
+          <Text style={styles.countText}>100 shares</Text>
+        </TouchableOpacity>
       </View>
-  
-        {/* Comments Section */}
-      {showComments && (
-        <>
-          {isLoadingComments ? (
-            <ActivityIndicator size="small" color="#0000ff" style={styles.loadingIndicator} />
-          ) : (
-            <CommentsSection
-              onCommentDeleted={handleDeleteComment}
-              isDeleting={isDeleting}
-              isLoadingComments={isLoadingComments}
-              postId={post.post_id} 
-              comments={comments}
-              commentCount={commentCount}
-              setCommentCount={setCommentCount}
-              currentUserId={currentUserId}
-            />
-          )}
-          <CommentInput 
-            postId={post.post_id} 
-            onCommentAdded={handleCommentAdded}
-          />
-        </>
-      )}
 
-        <LikesModal
+      {/* Comments Section */}
+      {
+        showComments && (
+          <>
+            {isLoadingComments ? (
+              <ActivityIndicator size="small" color="#0000ff" style={styles.loadingIndicator} />
+            ) : (
+              <CommentsSection
+                onCommentDeleted={handleDeleteComment}
+                isDeleting={isDeleting}
+                isLoadingComments={isLoadingComments}
+                postId={post.post_id}
+                comments={comments}
+                commentCount={commentCount}
+                setCommentCount={setCommentCount}
+                currentUserId={currentUserId}
+              />
+            )}
+            <CommentInput
+              postId={post.post_id}
+              onCommentAdded={handleCommentAdded}
+            />
+          </>
+        )
+      }
+
+      <LikesModal
         visible={likesModalVisible}
         onClose={() => setLikesModalVisible(false)}
         likes={selectedLikes}
-        />
-        </View>
-    );
-  };
+      />
+    </View >
+  );
+};
 
 
 const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
-    // Additional styles for author info with profile image
+  // Additional styles for author info with profile image
   authorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -291,82 +319,96 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginRight: 8,
   },
+  postInfo: {
+    flex: 1
+  },
   authorText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1a1a1a',
   },
-  // PostCard Styles
   postCard: {
-    backgroundColor: '#fff',
-    marginBottom: 8,
+    backgroundColor: '#22252F', // Darker card background
+    marginVertical: 12,
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
   },
+
   postHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
+  profileImage: {
+    width: 45,
+    height: 45,
+    borderRadius: 20,
+    marginRight: 8,
+  },
   authorInfo: {
     flex: 1,
+    justifyContent: 'center',
   },
   authorText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   dateText: {
     fontSize: 12,
-    color: '#666',
+    color: '#A9A9A9',
+    marginTop: 2, // Adds a slight spacing between the username and date
   },
+  // Content styling
   contentText: {
-    fontSize: 15,
+    color: Colors.white,
+    fontFamily: "Open Sans",
+    fontSize: 16,
+    fontStyle: 'normal',
+    fontWeight: 400,
     lineHeight: 22,
-    color: '#1a1a1a',
-    padding: 12,
   },
+  // Image styling in horizontal scroll
   imageScrollView: {
     height: width * 0.7,
+    marginBottom: 12,
   },
   postImage: {
-    width: width - 24,
+    width: width - 64,
     height: width * 0.7,
+    borderRadius: 8,
+    marginRight: 8,
+    marginVertical: 8,
     resizeMode: 'cover',
   },
+  // Interaction bar for likes, comments, and shares
   interactionBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    paddingTop: 8,
   },
   likeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 20,
+    marginRight: 16,
   },
   countText: {
+    color: '#B3B3B3',
     fontSize: 14,
-    color: '#666',
     marginLeft: 4,
   },
 
-  // CommentsSection Styles
+  // Comments section styling
   commentsSection: {
     paddingHorizontal: 12,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: '#555555', // Dark border at top
   },
   commentsSectionHeader: {
     flexDirection: 'row',
@@ -539,7 +581,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 4,
   },
-
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16
+  },
   // Loading States
   loadingContainer: {
     padding: 20,

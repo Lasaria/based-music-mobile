@@ -397,6 +397,9 @@ const ListenerProfileScreen = () => {
                 <EditProfilePhotosScreen
                     userId={userId}
                     photos={photos}
+                    setPhotos={setPhotos}
+                    avatarUri={avatarUri}
+                    name={name}
                     onSave={() => {
                         handleSaveChanges();
                         fetchUserProfile();
