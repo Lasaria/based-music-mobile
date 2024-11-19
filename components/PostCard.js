@@ -12,8 +12,9 @@ import {
   Dimensions,
   Text,
 } from 'react-native';
-import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { tokenManager } from "../utils/tokenManager";
+import { router } from 'expo-router';
 
 import PostOptionsMenu from './PostOptionsMenu';
 import { CommentsSection } from './CommentsSection';
@@ -23,9 +24,9 @@ import { formatDate } from '../utils/functions';
 import { LikesModal } from './LikesModal';
 import { confirmDelete } from './DeleteConfirmDialog';
 import { deleteComment } from './DeleteActions';
+import { Colors } from '../constants/Color';
 
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
-import { Colors } from '../constants/Color';
 
 const API_URL = SERVER_URL;
 
@@ -52,6 +53,11 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
       fetchComments();
     }
   }, [showComments]);
+
+  const navigateToProfile = () => {
+    // Navigate to the user's profile using their ID
+    router.push({ pathname: 'profileIndex', params: { userId: post.author_id } });
+  };
 
   const fetchComments = async () => {
     setIsLoadingComments(true);
@@ -191,15 +197,19 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
     <View style={styles.postCard}>
       {/* Author Info */}
       <View style={styles.postHeader}>
-        <Image
-          source={{ uri: post.profile_image_url }}
-          style={styles.profileImage}
-        />
+        <TouchableOpacity
+          style={styles.authorContainer}
+          onPress={navigateToProfile}
+        >
+          <Image
+            source={{ uri: post.profile_image_url }}
+            style={styles.profileImage}
+          />
+        </TouchableOpacity>
         <View style={styles.authorInfo}>
           <Text style={styles.authorText}>{post.username}</Text>
           <Text style={styles.dateText}>{formatDate(post.created_at)}</Text>
         </View>
-
         <PostOptionsMenu
           post={post}
           currentUserId={currentUserId}
@@ -227,42 +237,26 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
 
       {/* Like and Comment Counts */}
       <View style={styles.interactionBar}>
-        {/* <TouchableOpacity
-          style={styles.likeButton}
-          onPress={() => isLiked ? handleUnlike() : handleLike()}
-        >
-          <Ionicons
-            name={isLiked ? "heart" : "heart-outline"}
-            size={24}
-            color={isLiked ? "red" : "black"}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={handlePressLikes}>
-          <Text style={styles.countText}>{likeCount} likes</Text>
-        </TouchableOpacity> */}
-
-        {/* <TouchableOpacity onPress={() => setShowComments(!showComments)}>
-          <Text style={styles.countText}>{commentCount} comments</Text>
-        </TouchableOpacity> */}
-
         <TouchableOpacity
           style={styles.likeButton}
           onPress={() => isLiked ? handleUnlike() : handleLike()}
         >
           <Ionicons
             name={isLiked ? "heart" : "heart-outline"}
-            size={26}
+            size={24}
             color={isLiked ? "red" : Colors.secondary}
           />
-          <TouchableOpacity onPress={handlePressLikes}>
+
+          <TouchableOpacity style={styles.actionButton} onPress={handlePressLikes}>
             <Text style={styles.countText}>{likeCount} likes</Text>
           </TouchableOpacity>
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.actionButton} onPress={() => setShowComments(!showComments)}>
           <Image source={require('../assets/images/Feed/chat.png')} />
           <Text style={styles.countText}>{commentCount} comments</Text>
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.actionButton}>
           <Image source={require('../assets/images/Feed/send2.png')} />
           <Text style={styles.countText}>100 shares</Text>
@@ -270,37 +264,35 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
       </View>
 
       {/* Comments Section */}
-      {
-        showComments && (
-          <>
-            {isLoadingComments ? (
-              <ActivityIndicator size="small" color="#0000ff" style={styles.loadingIndicator} />
-            ) : (
-              <CommentsSection
-                onCommentDeleted={handleDeleteComment}
-                isDeleting={isDeleting}
-                isLoadingComments={isLoadingComments}
-                postId={post.post_id}
-                comments={comments}
-                commentCount={commentCount}
-                setCommentCount={setCommentCount}
-                currentUserId={currentUserId}
-              />
-            )}
-            <CommentInput
+      {showComments && (
+        <>
+          {isLoadingComments ? (
+            <ActivityIndicator size="small" color="#0000ff" style={styles.loadingIndicator} />
+          ) : (
+            <CommentsSection
+              onCommentDeleted={handleDeleteComment}
+              isDeleting={isDeleting}
+              isLoadingComments={isLoadingComments}
               postId={post.post_id}
-              onCommentAdded={handleCommentAdded}
+              comments={comments}
+              commentCount={commentCount}
+              setCommentCount={setCommentCount}
+              currentUserId={currentUserId}
             />
-          </>
-        )
-      }
+          )}
+          <CommentInput
+            postId={post.post_id}
+            onCommentAdded={handleCommentAdded}
+          />
+        </>
+      )}
 
       <LikesModal
         visible={likesModalVisible}
         onClose={() => setLikesModalVisible(false)}
         likes={selectedLikes}
       />
-    </View >
+    </View>
   );
 };
 
