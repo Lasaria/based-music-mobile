@@ -23,11 +23,11 @@ const LibraryItem = ({
             isAuthenticated: true,
           });
           console.log('Playlist data:', response);
-          if(response?.playlist && response.playlist.songs?.length > 0){
+        //   if(response?.playlist && response.playlist.songs?.length > 0){
             setPlaylistData(response);
-          }else {
-            console.warn(`Skipping playlist with no songs or not found: ${item.content_id}`);
-          }
+        //   }else {
+        //     console.warn(`Skipping playlist with no songs or not found: ${item.content_id}`);
+        //   }
       
         } catch (error) {
           console.error('Error fetching playlist:', error);
@@ -90,9 +90,9 @@ const LibraryItem = ({
   };
 
    // Skip rendering if the playlist has no songs
-   if (item.content_type === "playlist" && (!playlistData || playlistData.playlist.songs.length < 1)) {
-    return null;
-  }
+//    if (item.content_type === "playlist" && (!playlistData || playlistData.playlist.songs.length < 1)) {
+//     return null;
+//   }
 
   return (
     <View style={styles.libraryItem}>
