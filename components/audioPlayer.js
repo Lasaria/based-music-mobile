@@ -6,7 +6,7 @@ import { AudioContext } from "../contexts/AudioContext";
 import { useRouter, usePathname } from "expo-router";
 
 const AudioPlayer = () => {
-  const { isPlaying, togglePlayPause, trackInfo, error, isPlayerReady } =
+  const { isPlaying, togglePlayPause, trackInfo, error, isPlayerReady, skipBackward, skipForward } =
     useContext(AudioContext);
   const router = useRouter();
   const pathname = usePathname();
@@ -15,10 +15,14 @@ const AudioPlayer = () => {
   };
 
   // Do not render the AudioPlayer if the player is not ready
-  if ((!isPlayerReady && !trackInfo) || pathname === "/streamMusic"|| pathname === "/signIn") {
+  if (
+    (!isPlayerReady && !trackInfo) ||
+    pathname === "/streamMusic" ||
+    pathname === "/signIn"
+  ) {
     return null;
   }
-console.log("trackInfo CoverURL", trackInfo?.cover_image_url);
+  console.log("trackInfo details", trackInfo);
   return (
     <TouchableOpacity style={styles.container} onPress={handleNavigateToStream}>
       <Image
@@ -29,12 +33,8 @@ console.log("trackInfo CoverURL", trackInfo?.cover_image_url);
       />
       <View style={styles.trackInfo}>
         <Text style={styles.title}>{trackInfo?.title || "Loading..."}</Text>
-        <Text style={styles.genre}>Genre: {trackInfo?.genre || "Unknown"}</Text>
-        <Text style={styles.genre}>
-          Artist ID: {trackInfo?.artist_id || "Unknown"}
-        </Text>
-        <Text style={styles.genre}>
-          Track ID: {trackInfo?.track_id || "Unknown"}
+        <Text style={styles.artist_name}>
+          {trackInfo?.artist_name || "Unknown Artist"}{" "}
         </Text>
         {error && (
           <View>
@@ -45,6 +45,10 @@ console.log("trackInfo CoverURL", trackInfo?.cover_image_url);
           </View>
         )}
       </View>
+      <TouchableOpacity onPress={skipBackward} >
+      <Ionicons name="play-back" size={20} color="grey" />
+      </TouchableOpacity>
+      
       <TouchableOpacity
         onPress={(e) => {
           e.stopPropagation(); // Prevent navigation when pressing play/pause
@@ -54,13 +58,15 @@ console.log("trackInfo CoverURL", trackInfo?.cover_image_url);
         style={styles.playButton}
       >
         <Ionicons
-          name={
-            isPlaying ? "pause-circle" : isPlayerReady ? "play-circle" : "sync"
-          }
-          size={32}
+          name={isPlaying ? "pause" : isPlayerReady ? "play" : "sync"}
+          size={22}
           color="white"
         />
       </TouchableOpacity>
+      <TouchableOpacity  onPress={skipForward} >
+      <Ionicons name="play-forward" size={20} color="grey" />
+      </TouchableOpacity>
+    
     </TouchableOpacity>
   );
 };
@@ -73,9 +79,11 @@ const styles = StyleSheet.create({
     right: 10,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#333",
+    backgroundColor: "black",
     borderRadius: 10,
-    padding: 10,
+    borderColor: "grey",
+    borderWidth: 1,
+    padding: 5,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -86,8 +94,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   coverImage: {
-    width: 50,
-    height: 50,
+    width: 30,
+    height: 30,
     borderRadius: 10,
     backgroundColor: "#444",
   },
@@ -97,11 +105,11 @@ const styles = StyleSheet.create({
   },
   title: {
     color: "white",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "500",
   },
-  genre: {
-    color: "gray",
+  artist_name: {
+    color: "grey",
     fontSize: 12,
     marginTop: 4,
   },

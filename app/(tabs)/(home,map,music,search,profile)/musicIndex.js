@@ -17,14 +17,17 @@ import { tokenManager } from "../../../utils/tokenManager";
 import { AudioContext } from "../../../contexts/AudioContext";
 import Toast from "react-native-toast-message";
 import SongList from "../../../components/SongComponent";
+import LibraryItem from "../../../components/RenderLibraryItem";
+import {SERVER_URL, AUTHSERVER_URL} from "@env"
 import PopularRecommendations from "../../../components/PopularRecommendations";
-import { SERVER_URL } from "@env";
+
 
 function MusicScreen() {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState("My Library");
   const [contentType, setContentType] = useState("playlist");
   const [libraryData, setLibraryData] = useState([]);
+  const [albumsData, setAlbumsData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [userId, setUserId] = useState(null);
@@ -103,92 +106,108 @@ function MusicScreen() {
     }
   };
 
+  const fetchAllAlbums = async (resetData = false) => {
+    if (loading || (!hasMore && !resetData)) return;
+  
+    try {
+      setLoading(true);
+      setError(null);
+  
+      const queryParams = new URLSearchParams({
+        limit: "10",
+      });
+  
+      if (!resetData && lastEvaluatedKey) {
+        queryParams.append("lastEvaluatedKey", lastEvaluatedKey);
+      }
+  
+      if (searchQuery) {
+        queryParams.append("search", searchQuery);
+      }
+  
+      const response = await axiosGet({
+        url: `${SERVER_URL}/albums?limit=50`,
+      });
+      
+      console.log("albums data: ", response.albums);
+      
+      // console.log("Albums response:", JSON.stringify(response.items, null, 2));
+  
+      // Merge data for pagination or reset
+      setAlbumsData(() =>
+        resetData ? response.albums : [...albumsData, ...response.albums]
+      );
+
+      setLastEvaluatedKey(response.lastEvaluatedKey);
+      setHasMore(response.hasMore);
+    } catch (err) {
+      console.error("Error fetching albums:", err);
+      setError(err.data?.error || "Failed to load albums");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+
+  const handlePlay = async (item) => {
+    console.log("Playing item:", item);
+    // if (!isPlayerReady) {
+    //   Toast.show({
+    //     type: "error",
+    //     text1: "Player not ready",
+    //     text2: "Please wait a moment and try again",
+    //   });
+    //   return;
+    // }
+
+    if (item.content_type === "song") {
+      updateCurrentTrack(item);
+    } else if (item.content_type === "playlist") {
+      // route to playlist screen
+      console.log("route to playlist screen");
+      router.push({
+        pathname: '/playlistScreen',
+        params: {
+          playlist_id: item.content_id,
+        }
+       });
+
+    } else {
+      Toast.show({
+        type: "error",
+        text1: "Invalid item",
+        text2: "Please select a song or playlist to play",
+      });
+      return;
+    }
+  }
   // Initial fetch when userId is available
   useEffect(() => {
     if (userId) {
       fetchLibraryData(true);
+      fetchAllAlbums(true);
     }
   }, [userId, contentType]);
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (userId) {
         fetchLibraryData(true);
+        fetchAllAlbums(true);
       }
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  const renderLibraryItem = ({ item }) => {
-    const formatDuration = (duration) => {
-      if (!duration) return "0:00";
-      const minutes = Math.floor(duration / 60);
-      const seconds = Math.floor(duration % 60);
-      return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-    };
-    const isCurrentTrack = trackInfo?.track_id === item.track_id;
-    const showPlayingState = isCurrentTrack && isPlaying;
-    const getSubtitle = () => {
-      switch (item.content_type) {
-        case "playlist":
-          return `${item.track_count} songs • ${formatDuration(
-            item.total_duration
-          )}`;
-        case "song":
-          return `${item.artist_name} • ${formatDuration(item.duration)}`;
-        case "album":
-          return `${item.artist_name} • ${item.track_count || 0} tracks`;
-        case "artist":
-          return `${item.total_albums || 0} albums • ${
-            item.total_tracks || 0
-          } tracks`;
-        default:
-          return "";
-      }
-    };
-
-    return (
-      <View style={styles.libraryItem}>
-        <Image
-          source={{
-            uri:
-              item.cover_image_url ||
-              item.image_url ||
-              "https://via.placeholder.com/50",
-            headers: { "Cache-Control": "max-age=31536000" },
-          }}
-          style={[
-            styles.itemImage,
-            item.content_type === "artist" && styles.artistImage,
-          ]}
-        />
-        <View style={styles.itemInfo}>
-          <Text style={styles.itemTitle} numberOfLines={1}>
-            {item.title || item.artist_name || "Untitled"}
-          </Text>
-          <Text style={styles.itemSubtitle} numberOfLines={1}>
-            {getSubtitle()}
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => handlePlay(item)}
-          style={styles.playButton}
-        >
-          <Ionicons
-            name={
-              item.content_type === "artist"
-                ? "chevron-forward"
-                : showPlayingState
-                ? "pause"
-                : "play"
-            }
-            size={24}
-            color={isCurrentTrack ? "purple" : "white"}
-          />
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  const renderLibraryItem = ({ item }) => (
+    <LibraryItem
+      item={item}
+      isPlaying={isPlaying}
+      trackInfo={trackInfo}
+      onPlay={handlePlay}
+      SERVER_URL={SERVER_URL}
+    />
+  );
 
 
 
@@ -220,6 +239,9 @@ function MusicScreen() {
     setContentType("album");
     setLastEvaluatedKey(null);
     setHasMore(true);
+    
+    console.log("album screen");
+    
   };
 
   const displayArtists = () => {
@@ -349,7 +371,7 @@ function MusicScreen() {
           }
           containerClassName="pb-32"
         />
-      ) : (
+      ) : contentType === "playlist" ? (
         <FlatList
           data={libraryData}
           renderItem={renderLibraryItem}
@@ -372,7 +394,57 @@ function MusicScreen() {
           }
           contentContainerStyle={styles.listContainer}
         />
-      )}
+      ):contentType === "album" ? (
+        <FlatList
+          data={albumsData}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              onPress={() =>
+               {
+                router.push({
+                  pathname:'albumComponent',
+                  params:{album_id: item.album_id},
+                });
+               }
+              }
+            >
+              <View style={styles.albumItem}>
+                <Image
+                  source={{
+                    uri: item.cover_image_url || "https://via.placeholder.com/100",
+                  }}
+                  style={styles.albumImage}
+                />
+                <View style={styles.albumInfo}>
+                  <Text style={styles.albumTitle} numberOfLines={1}>
+                    {item.title || "Untitled Album"}
+                  </Text>
+                  <Text style={styles.albumSubtitle}>
+                    {item.genre|| "Unknown Artist"}
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          )}
+          keyExtractor={(item) => item.album_id}
+          onEndReached={() => hasMore && fetchAllAlbums()}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={() =>
+            loading && <ActivityIndicator color="purple" style={styles.loader} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                {searchQuery
+                  ? "No albums found matching your search"
+                  : "No albums available"}
+              </Text>
+            </View>
+          }
+          contentContainerStyle={styles.listContainer}
+        />
+      ) : null}
+      
     </View>
   );
 
@@ -545,6 +617,46 @@ const styles = StyleSheet.create({
   forYouContainer: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  albumItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 10,
+  },
+  albumImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  albumInfo: {
+    flex: 1,
+  },
+  albumTitle: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  albumSubtitle: {
+    color: "gray",
+    fontSize: 14,
+  },
+  listContainer: {
+    paddingBottom: 100,
+  },
+  loader: {
+    marginVertical: 20,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  emptyText: {
+    color: "gray",
+    fontSize: 16,
+    textAlign: "center",
   },
 });
 
