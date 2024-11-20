@@ -39,6 +39,8 @@ const StreamMusic = () => {
     skipBackward,
     formatTime,
     isInitializing,
+    shuffleSongs,
+    toggleRepeat,
   } = useContext(AudioContext);
 
   const { addToQueue } = useQueue();
@@ -55,6 +57,7 @@ const StreamMusic = () => {
   const [playlists, setPlaylists] = useState([]);
   const [isFetchingPlaylists, setIsFetchingPlaylists] = useState(false);
   const [isAddingToPlaylist, setIsAddingToPlaylist] = useState(false);
+
 
   // Debug status effect
   useEffect(() => {
@@ -312,6 +315,24 @@ const StreamMusic = () => {
     }
   };
 
+  const handleShuffle = () => {
+
+    console.log("playlist before shuffling: ", playlists);
+    
+    if(playlists.length > 0){
+      const shufflePlaylist = shuffleSongs(playlists, setPlaylists);
+      console.log("playlist after shuffling: ", playlists);    
+      setPlaylists(shufflePlaylist); 
+    }else{
+      console.log("no playlist available to shuffle");    
+    }   
+  }
+
+  //repeat the song again
+  const repeatSongs = () => {
+    toggleRepeat();
+  }
+
   // Function: Navigate to Playlist
   const navigatePlaylist = () => {
     router.push("./playlistScreen");
@@ -514,6 +535,9 @@ const StreamMusic = () => {
 
       {/* Playback Controls */}
       <View style={styles.playBackView}>
+        <TouchableOpacity onPress={handleShuffle} >
+          <Ionicons name="shuffle" color="white" size={30}/>
+        </TouchableOpacity>
         <TouchableOpacity onPress={skipBackward} disabled={!isPlayerReady}>
           <Ionicons
             name="play-back"
@@ -525,7 +549,7 @@ const StreamMusic = () => {
         <TouchableOpacity onPress={togglePlayPause} disabled={!isPlayerReady}>
           <Ionicons
             name={isPlaying ? "pause" : "play"}
-            size={50}
+            size={40}
             color={!isPlayerReady ? "gray" : "purple"}
           />
         </TouchableOpacity>
@@ -536,6 +560,9 @@ const StreamMusic = () => {
             size={30}
             color={!isPlayerReady ? "gray" : "white"}
           />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={repeatSongs} >
+          <Ionicons name="repeat" color="white" size={30}/>
         </TouchableOpacity>
       </View>
 
@@ -555,8 +582,11 @@ const StreamMusic = () => {
         />
         <Ionicons name="volume-high" size={24} color="white" />
       </View>
-
+      <View style={{ flexDirection:'row',justifyContent:'flex-end', alignItems:'center' }}>
+      <Ionicons name="headset-outline" size={20} color="white"/>
       <Text style={styles.currentDevice}>Device 1</Text>
+      </View>
+    
 
       {/* Modal */}
       <Modal
@@ -723,13 +753,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    marginTop: 20,
+    marginTop: 15,
   },
   volumeView: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 50,
+    marginTop: 20,
   },
   volumeSlider: {
     flex: 1,
@@ -738,7 +768,9 @@ const styles = StyleSheet.create({
   currentDevice: {
     color: "purple",
     textAlign: "center",
-    marginTop: 20,
+    fontSize:18,
+    marginLeft:8
+
   },
   modalContainer: {
     flex: 1,

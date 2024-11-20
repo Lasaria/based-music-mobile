@@ -27,7 +27,7 @@ const PlaylistScreen = () => {
   const { playlist_id } = useLocalSearchParams();
 
   // Access audio context for play/pause functionality
-  const { trackInfo, isPlaying, togglePlayPause, isPlayerReady, updateCurrentTrack } = useContext(AudioContext);
+  const { trackInfo, isPlaying, togglePlayPause, isPlayerReady, updateCurrentTrack, shuffleSongs } = useContext(AudioContext);
 
   const updatePlaylist = async (updatedTracks) => {
     const token = await tokenManager.getAccessToken();
@@ -160,15 +160,9 @@ const PlaylistScreen = () => {
   };
 
   //shuffle the songs
-   const shuffleSongs = () => {
+   const handleShuffle = () => {
 
-       const shuffleTracks = [...tracks];
-
-       // Shuffle the array using Fisher-Yates algorithm
-       for(let i = shuffleTracks.length - 1; i >= 0; i--){
-        const j = Math.floor(Math.random() * (i * 1));
-        [shuffleTracks[i], shuffleTracks[j]] = [shuffleTracks[j], shuffleTracks[i]];
-       }
+       const shuffleTracks = shuffleSongs(tracks, setTracks);
 
        //update the tracks 
        setTracks(shuffleTracks);
@@ -276,7 +270,7 @@ const PlaylistScreen = () => {
           onChangeText={setSearchQuery}
         />
       </View>
-      <TouchableOpacity style={{ alignItems:'flex-end', paddingRight:30}} onPress={shuffleSongs} >
+      <TouchableOpacity style={{ alignItems:'flex-end', paddingRight:30}} onPress={handleShuffle} >
       <Ionicons  name="shuffle" size={24} color="grey" />
       </TouchableOpacity>
   
