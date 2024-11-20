@@ -13,6 +13,8 @@ import { QueueContext } from "./QueueContext";
 
 export const AudioContext = createContext();
 
+
+
 const debug = (message, data = null) => {
   const timestamp = new Date().getTime();
   const readableTimestamp = new Date(timestamp).toLocaleString("en-US", {
@@ -138,6 +140,31 @@ const measurePerformance = (phase, targetTime, actualTime) => {
   );
 };
 
+
+//shuffle the songs/tracks
+const shuffleSongs = (songsArray, updatePlaylistCallback) => {
+  if (!Array.isArray(songsArray)) {
+    console.warn("shuffleSongs: Expected an array, received:", songsArray);
+    return [];
+  }
+
+  const shuffled = [...songsArray];
+  // Fisher-Yates shuffle algorithm
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  if (updatePlaylistCallback) {
+    updatePlaylistCallback(shuffled); // Update the playlist state if a callback is provided
+  }
+
+  console.log("Shuffled Songs:", shuffled);
+  return shuffled; // Return the shuffled array
+};
+
+
+
 export const AudioProvider = ({ children }) => {
   // State Management - Using refs for values that don't need re-renders
   const [isPlaying, setIsPlaying] = useState(false);
@@ -153,6 +180,7 @@ export const AudioProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const { queue, removeFromQueue } = useContext(QueueContext);
+  const [isRepeat, setIsRepeat] = useState(false);
   // Refs
   const soundRef = useRef(null);
   const loadingPromise = useRef(null);
@@ -165,6 +193,12 @@ export const AudioProvider = ({ children }) => {
     trackId: null,
     isLoaded: false,
   });
+
+
+// Function to toggle repeat mode
+const toggleRepeat = () => {
+  setIsRepeat((prev) => !prev);
+};
 
   // Batch state updates for better performance
   const batchStateUpdate = (updates) => {
@@ -699,6 +733,15 @@ export const AudioProvider = ({ children }) => {
             details: status.error,
           };
         }
+
+
+        //play back the songs when finish
+        if (status.didJustFinish && isRepeat) {
+          // Restart the track
+          soundRef.current.setPositionAsync(0).then(() => {
+            soundRef.current.playAsync();
+          });
+        }
       }
 
       // Apply all state updates in a single batch
@@ -1204,6 +1247,8 @@ export const AudioProvider = ({ children }) => {
         checkSoundStatus,
         isInitializing,
         soundRef,
+        shuffleSongs,
+        toggleRepeat
       }}
     >
       {children}
