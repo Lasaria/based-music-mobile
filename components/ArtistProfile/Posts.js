@@ -1,46 +1,247 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, Alert, TextInput, Modal } from 'react-native';
-import { AntDesign, FontAwesome, MaterialIcons } from '@expo/vector-icons';
-import { Colors } from '../../constants/Color';
+import React, { useState, useEffect } from 'react';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  Image, 
+  TouchableOpacity, 
+  FlatList, 
+  Alert, 
+  TextInput, 
+  Modal,
+  ActivityIndicator,
+  ScrollView,
+  Dimensions
+} from 'react-native';
+import { AntDesign, FontAwesome, MaterialIcons, Ionicons } from '@expo/vector-icons';
+import { tokenManager } from "../../utils/tokenManager";
+import { router } from 'expo-router';
 import numeral from 'numeral';
+import { Colors } from '../../constants/Color';
 
-// DUMMY POSTS DATA
-const initialPosts = [
-    {
-        id: 1,
-        username: 'Estella Boersma',
-        time: '6h ago',
-        content: 'Headlining tonight at the El Rey Theater in Los Angeles! Doors at 9pm, show starts at 10pm. Go to my profile to get your tickets!',
-        likes: 2165,
-        comments: 418,
-        shares: 9,
-        liked: false, // New flag to track if the post is liked
-        avatar: 'https://s3-alpha-sig.figma.com/img/d828/ea0b/2b2446ec17fd510c8126e76cd7de76d0?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=pmevaE5g9jAepm7iqSj30t2UApaOrBIWAmq3NpQO8At9DL~UiPp-nrIQK~WcVwCK2BCIPVEvwe~k8grXTwRGHbr-5DGJ25NKtqAPXkTyA-MDTfGxzkoDcmgSq3XaKVplcM03dKCA0UKtudnqdvSMdb7mmq0dhAns5g-ItIVjpkZlI69xdLzDatxnMO-Egurx5efuPhW63vB0ku5m5~lx8DLWGPQxeoXzS~qCmOeRUTtpC8X47A7Oy9nkJ2uampPbeY9dAkTGwlVZp6SKdDz9IFNRNgkziAOZDaa1nVB9DCT2HjQJFGVcpNCG3ks0dxHhzmdYE4zL9okS2KASKXbrVg__',
-    },
-    {
-        id: 2,
-        username: 'Estella Boersma',
-        time: '1d ago',
-        content: 'Tour’s been amazing. Los Angeles, Fort Lauderdale, Orlando, Atlanta, Raleigh are up next. See you there!',
-        image: 'https://s3-alpha-sig.figma.com/img/0de0/9e60/5f8283339e62a8596ee036050a9a64e8?Expires=1731888000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=GVWYn3TMoOtqFff6LtF~YL76PMUjsHwMeVXdC6qUdysXHYE9d~JcvRvsvh3sTTorJ530ge7FU9w~rvmdQm1Tdd7pgGnPp27HYEFuLq1jLkn054Ex1Q935LbBOuqzWIH~BH0JnQj7z3yvJlvlbwNUCLJQ1KQEv9AzLcfwty6-JDnJiZJkLAkqmjOEy~d7j6g3ehwfWHp3o93mdGFWoA2HdvmoRrY7a-E2x9JA53whAHd1ATfVr9R0AJt1~X4s-~PSoZwhYDLD1m-KkUHlKFHtZ0s504sTUsJK70UsNm5ybUb1yuOgltCGDgjL~9UqlrJ4TWQGzumh4kPzOWRShWSX2g__',
-        likes: 20100,
-        comments: 1400,
-        shares: 954,
-        liked: false, // New flag to track if the post is liked
-        avatar: 'https://s3-alpha-sig.figma.com/img/d828/ea0b/2b2446ec17fd510c8126e76cd7de76d0?Expires=1730678400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=pmevaE5g9jAepm7iqSj30t2UApaOrBIWAmq3NpQO8At9DL~UiPp-nrIQK~WcVwCK2BCIPVEvwe~k8grXTwRGHbr-5DGJ25NKtqAPXkTyA-MDTfGxzkoDcmgSq3XaKVplcM03dKCA0UKtudnqdvSMdb7mmq0dhAns5g-ItIVjpkZlI69xdLzDatxnMO-Egurx5efuPhW63vB0ku5m5~lx8DLWGPQxeoXzS~qCmOeRUTtpC8X47A7Oy9nkJ2uampPbeY9dAkTGwlVZp6SKdDz9IFNRNgkziAOZDaa1nVB9DCT2HjQJFGVcpNCG3ks0dxHhzmdYE4zL9okS2KASKXbrVg__',
-    },
-];
+import { CommentsSection } from '../CommentsSection';
+import { CommentInput } from '../CommentInput';
+import { LikesModal } from '../LikesModal';
+import { confirmDelete } from '../DeleteConfirmDialog';
+import { deleteComment } from '../DeleteActions';
+import { formatDate } from '../../utils/functions';
 
-const Posts = ({ avatarUri, name, isSelfProfile }) => {
-    // POSTS STATES
-    const [posts, setPosts] = useState(initialPosts);
+import { SERVER_URL, AUTHSERVER_URL } from '@env';
+
+const API_URL = SERVER_URL;
+
+const Posts = ({ currentUserId, avatarUri, name, isSelfProfile }) => {
+    const [posts, setPosts] = useState([]);
     const [editId, setEditId] = useState(null);
-    const [liked, setLiked] = useState(false);
     const [editContent, setEditContent] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedPostId, setSelectedPostId] = useState(null);
+    const [likesModalVisible, setLikesModalVisible] = useState(false);
+    const [selectedLikes, setSelectedLikes] = useState([]);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    // FUNCTIONS TO HANDLE EDITING POST
+    // States for individual posts
+    const [showComments, setShowComments] = useState({});
+    const [comments, setComments] = useState({});
+    const [isLoadingComments, setIsLoadingComments] = useState({});
+    const [likeCount, setLikeCount] = useState({});
+    const [commentCount, setCommentCount] = useState({});
+
+    useEffect(() => {
+        // Initialize states for each post
+        const initialStates = posts.reduce((acc, post) => ({
+            showComments: { ...acc.showComments, [post.id]: false },
+            comments: { ...acc.comments, [post.id]: [] },
+            isLoadingComments: { ...acc.isLoadingComments, [post.id]: false },
+            likeCount: { ...acc.likeCount, [post.id]: post.likes },
+            commentCount: { ...acc.commentCount, [post.id]: post.comments },
+        }), {
+            showComments: {},
+            comments: {},
+            isLoadingComments: {},
+            likeCount: {},
+            commentCount: {},
+        });
+
+        setShowComments(initialStates.showComments);
+        setComments(initialStates.comments);
+        setIsLoadingComments(initialStates.isLoadingComments);
+        setLikeCount(initialStates.likeCount);
+        setCommentCount(initialStates.commentCount);
+    }, [posts]);
+
+    useEffect(() => {
+        fetchPosts();
+    }, [currentUserId]);
+
+    const fetchPosts = async (pageNum = 1) => {
+        // Prevent fetching if already loading or refreshing
+        //if (loading || refreshing) return;
+    
+        //if (!hasMore && pageNum > 1) return;
+      
+        try {
+          const response = await fetch(`${API_URL}/posts/user/${currentUserId}`);
+          if (!response.ok) throw new Error('Failed to fetch posts');
+          
+          const data = await response.json();
+          console.log("POSTS", data);
+          
+          // Check if we've reached the end of the posts
+        //   if (data.length < 10) {
+        //     setHasMore(false);
+        //   }
+      
+          // Check like status for each post
+          const postsWithLikeStatus = await Promise.all(
+            data.map(async (post) => {
+              //const likeStatus = await checkPostLikeStatus(post.post_id);
+              return { ...post };
+            })
+          );
+          
+          // If refreshing or first page, replace posts
+          // If loading more, append posts
+          setPosts(prevPosts => {
+            if (pageNum === 1) {
+              return postsWithLikeStatus;
+            } else {
+              // Filter out any duplicates based on post_id
+              const existingPostIds = new Set(prevPosts.map(post => post.post_id));
+              const newPosts = postsWithLikeStatus.filter(post => !existingPostIds.has(post.post_id));
+              return [...prevPosts, ...newPosts];
+            }
+          });
+          
+          //setPage(pageNum);
+          //setError(null);
+        } catch (error) {
+          console.error('Error fetching posts:', error);
+          setError(error.message || 'Failed to load posts');
+        } finally {
+          //setLoading(false);
+          //setRefreshing(false);
+        }
+      };
+
+    const fetchComments = async (postId) => {
+        setIsLoadingComments(prev => ({ ...prev, [postId]: true }));
+        try {
+            const token = await tokenManager.getAccessToken();
+            const response = await fetch(`${API_URL}/posts/${postId}/comments`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to fetch comments');
+            const data = await response.json();
+            setComments(prev => ({ ...prev, [postId]: data.comments }));
+        } catch (error) {
+            console.error('Error fetching comments:', error);
+        } finally {
+            setIsLoadingComments(prev => ({ ...prev, [postId]: false }));
+        }
+    };
+
+    const handleLike = async (postId) => {
+        const isCurrentlyLiked = posts.find(p => p.id === postId)?.liked;
+        try {
+            const token = await tokenManager.getAccessToken();
+            const endpoint = isCurrentlyLiked ? 'unlike' : 'like';
+            const method = isCurrentlyLiked ? 'DELETE' : 'POST';
+            
+            const response = await fetch(`${API_URL}/posts/${postId}/${endpoint}`, {
+                method,
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) throw new Error(`Failed to ${endpoint} post`);
+            
+            setPosts(posts.map(post => {
+                if (post.id === postId) {
+                    return {
+                        ...post,
+                        liked: !isCurrentlyLiked,
+                        likes: isCurrentlyLiked ? post.likes - 1 : post.likes + 1
+                    };
+                }
+                return post;
+            }));
+
+            setLikeCount(prev => ({
+                ...prev,
+                [postId]: isCurrentlyLiked ? prev[postId] - 1 : prev[postId] + 1
+            }));
+        } catch (error) {
+            console.error(`Error ${isCurrentlyLiked ? 'unliking' : 'liking'} post:`, error);
+            Alert.alert('Error', `Failed to ${isCurrentlyLiked ? 'unlike' : 'like'} post`);
+        }
+    };
+
+    const handlePressLikes = async (postId) => {
+        try {
+            const token = await tokenManager.getAccessToken();
+            const response = await fetch(`${API_URL}/posts/${postId}/likes`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to fetch likes');
+            
+            const data = await response.json();
+            setSelectedLikes(data.likes);
+            setLikesModalVisible(true);
+        } catch (error) {
+            console.error('Error fetching likes:', error);
+            Alert.alert('Error', 'Failed to load likes');
+        }
+    };
+
+    const handleCommentAdded = (postId, newComment) => {
+        setComments(prev => ({
+            ...prev,
+            [postId]: [newComment, ...(prev[postId] || [])]
+        }));
+        setCommentCount(prev => ({
+            ...prev,
+            [postId]: prev[postId] + 1
+        }));
+        if (!showComments[postId]) {
+            setShowComments(prev => ({ ...prev, [postId]: true }));
+        }
+    };
+
+    const handleDeleteComment = async (postId, commentId) => {
+        if (isDeleting) return;
+
+        confirmDelete('comment', async () => {
+            setIsDeleting(true);
+            try {
+                await deleteComment(postId, commentId);
+                setCommentCount(prev => ({
+                    ...prev,
+                    [postId]: prev[postId] - 1
+                }));
+                setComments(prev => ({
+                    ...prev,
+                    [postId]: prev[postId].filter(c => c.comment_id !== commentId)
+                }));
+            } catch (error) {
+                Alert.alert('Error', 'Failed to delete comment');
+            } finally {
+                setIsDeleting(false);
+            }
+        });
+    };
+
+    const navigateToProfile = (userId) => {
+        router.push({ pathname: 'profileIndex', params: { userId } });
+    };
+
     const handleEdit = (id) => {
         setEditId(id);
         const postToEdit = posts.find(post => post.id === id);
@@ -48,72 +249,92 @@ const Posts = ({ avatarUri, name, isSelfProfile }) => {
         setModalVisible(false);
     };
 
-    // SAVE UPDATED POST
-    const saveEdit = (id) => {
-        setPosts(posts.map(post => post.id === id ? { ...post, content: editContent } : post));
-        setEditId(null);
+    const saveEdit = async (id) => {
+        try {
+            const token = await tokenManager.getAccessToken();
+            const response = await fetch(`${API_URL}/posts/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content: editContent }),
+            });
+
+            if (!response.ok) throw new Error('Failed to update post');
+
+            setPosts(posts.map(post => post.id === id ? { ...post, content: editContent } : post));
+            setEditId(null);
+        } catch (error) {
+            console.error('Error updating post:', error);
+            Alert.alert('Error', 'Failed to update post');
+        }
     };
 
-    // FUNCTION TO HANDLE DELETING THE POST
     const handleDelete = (id) => {
-        Alert.alert("Delete Post", "Are you sure you want to delete this post?", [
-            {
-                text: "Cancel",
-                style: "cancel"
-            },
-            {
-                text: "Delete",
-                onPress: () => setPosts(posts.filter(post => post.id !== id)),
-                style: "destructive"
-            }
-        ]);
+        Alert.alert(
+            "Delete Post",
+            "Are you sure you want to delete this post?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    onPress: async () => {
+                        try {
+                            const token = await tokenManager.getAccessToken();
+                            const response = await fetch(`${API_URL}/posts/${id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Authorization': `Bearer ${token}`
+                                }
+                            });
+
+                            if (!response.ok) throw new Error('Failed to delete post');
+                            setPosts(posts.filter(post => post.id !== id));
+                        } catch (error) {
+                            console.error('Error deleting post:', error);
+                            Alert.alert('Error', 'Failed to delete post');
+                        }
+                    },
+                    style: "destructive"
+                }
+            ]
+        );
         setModalVisible(false);
     };
 
-    // HANDLE LIKE BUTTON PRESS
-    const handleLike = (id) => {
-        setPosts(posts.map(post => {
-            if (post.id === id) {
-                return {
-                    ...post,
-                    liked: !post.liked,
-                    likes: post.liked ? post.likes - 1 : post.likes + 1,
-                };
-            }
-            return post;
-        }));
-    };
-
-    // FUNCTIONS TO SHOW MODAL WITH EDIT AND DELETE POST
     const showOptions = (id) => {
         setSelectedPostId(id);
         setModalVisible(true);
     };
 
-    const renderPost = ({ item }) => (
+    const renderPost = ( item ) => (
+        
         <View style={styles.postCard}>
             <View style={styles.header}>
-                {/* ARTIST AVATAR IMAGE */}
-                <Image source={{ uri: avatarUri }} style={styles.avatar} />
-                <View style={styles.headerInfo}>
-                    {/* ARTIST USERNAME */}
-                    <Text style={styles.username}>{name}</Text>
-                    {/* ARTIST POST TIME */}
-                    <Text style={styles.time}>{item.time}</Text>
-                </View>
-                {/* THREE DOTS OPTION FOR EDIT DELETE POST */}
+                <TouchableOpacity 
+                    style={styles.authorContainer}
+                    onPress={() => navigateToProfile(item.author_id)}
+                >
+                    <Image 
+                        source={{ uri: item?.profile_image_url || avatarUri }} 
+                        style={styles.avatar}
+                    />
+                    <View style={styles.headerInfo}>
+                        <Text style={styles.username}>{item?.username || name}</Text>
+                        <Text style={styles.time}>{formatDate(item?.created_at)}</Text>
+                    </View>
+                </TouchableOpacity>
                 {isSelfProfile && (
-                    <TouchableOpacity onPress={() => showOptions(item.id)}>
-                        <Image source={require('../../assets/images/UserProfile/morehorizontal.png')} />
+                    <TouchableOpacity onPress={() => showOptions(item.post_id)}>
+                        <MaterialIcons name="more-horiz" size={24} color={Colors.white} />
                     </TouchableOpacity>
                 )}
             </View>
 
-            {/* POST CONTENT */}
             <View style={styles.contentContainer}>
-                {editId === item.id ? (
+                {editId === item.post_id ? (
                     <>
-                        {/* TEXTAREA TO EDIT THE POST CONTENT */}
                         <TextInput
                             style={styles.textarea}
                             value={editContent}
@@ -121,62 +342,93 @@ const Posts = ({ avatarUri, name, isSelfProfile }) => {
                             multiline
                             numberOfLines={4}
                         />
-                        {/* SAVE BUTTON FOR EDIT POST */}
-                        <TouchableOpacity onPress={() => saveEdit(item.id)} style={styles.saveButton}>
+                        <TouchableOpacity 
+                            onPress={() => saveEdit(item.id)} 
+                            style={styles.saveButton}
+                        >
                             <Text style={styles.saveButtonText}>Save</Text>
                         </TouchableOpacity>
                     </>
                 ) : (
-                    // POST CONTENT 
                     <Text style={styles.content}>{item.content}</Text>
                 )}
             </View>
 
-            {/* Post image if available */}
-            {item.image && <Image source={{ uri: item.image }} style={styles.postImage} />}
+            {item.image_urls?.length > 0 && (
+                <ScrollView horizontal style={styles.imageScrollView}>
+                    {item.image_urls.map((url, index) => (
+                        <Image
+                            key={index}
+                            source={{ uri: url }}
+                            style={styles.postImage}
+                        />
+                    ))}
+                </ScrollView>
+            )}
 
-            {/* POST ENGAGEMENT */}
             <View style={styles.engagement}>
                 <View style={styles.likesContainer}>
-                    {/* LIKE ICONS */}
-                    <FontAwesome
-                        name='heart'
-                        color={'red'}
-                        size={24}
-                        onPress={() => handleLike(item.id)}
+                    <TouchableOpacity onPress={() => handleLike(item.id)}>
+                        <FontAwesome
+                            name={item.liked ? 'heart' : 'heart-o'}
+                            color={item.liked ? 'red' : Colors.white}
+                            size={24}
+                        />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handlePressLikes(item.id)}>
+                        <Text style={styles.likes}>
+                            {numeral(likeCount[item.id]).format('0,0a')}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+                <TouchableOpacity 
+                    style={styles.commentsAndShareContainer}
+                    onPress={() => {
+                        const newShowComments = !showComments[item.id];
+                        setShowComments(prev => ({ ...prev, [item.id]: newShowComments }));
+                        if (newShowComments) {
+                            fetchComments(item.id);
+                        }
+                    }}
+                >
+                    <Text style={styles.comments}>
+                        {numeral(commentCount[item.id]).format('0,0a')} comments
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
+            {showComments[item.id] && (
+                <>
+                    {isLoadingComments[item.id] ? (
+                        <ActivityIndicator size="small" color="#0000ff" style={styles.loadingIndicator} />
+                    ) : (
+                        <CommentsSection
+                            onCommentDeleted={(commentId) => handleDeleteComment(item.id, commentId)}
+                            isDeleting={isDeleting}
+                            isLoadingComments={isLoadingComments[item.id]}
+                            postId={item.id}
+                            comments={comments[item.id] || []}
+                            commentCount={commentCount[item.id]}
+                            setCommentCount={(count) => setCommentCount(prev => ({ ...prev, [item.id]: count }))}
+                            currentUserId={currentUserId}
+                        />
+                    )}
+                    <CommentInput
+                        postId={item.id}
+                        onCommentAdded={(comment) => handleCommentAdded(item.id, comment)}
                     />
-                    {/*  LIKES COUNT*/}
-                    <Text style={styles.likes}>{numeral(item.likes).format('0,0a')}</Text>
-                </View>
-                <View style={styles.commentsAndShareContainer}>
-                    {/* COMMENTS COUNT */}
-                    <Text style={styles.comments}>{numeral(item.comments).format('0,0a')} comments</Text>
-                    {/* SHARES COUNT */}
-                    <Text style={styles.shares}>{numeral(item.shares).format('0,0a')} shares</Text>
-                </View>
+                </>
+            )}
+        </View>
+    );
+
+    return (
+        <>
+            <View style={styles.container}>
+                {posts.map((item) => renderPost(item))}
             </View>
 
-            {/* ACTION BUTTONS */}
-            <View style={styles.actions}>
-                <TouchableOpacity style={styles.actionButton}>
-                    <FontAwesome name={liked ? 'heart' : 'heart-o'} color={liked ? 'red' : 'white'} size={24} onPress={() => {
-                        setLiked(!liked)
-                        handleLike(item.id)
-                    }} />
-                    <Text style={styles.actionText}>Like</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton}>
-                    <Image source={require('../../assets/images/UserProfile/chat.png')} />
-                    <Text style={styles.actionText}>Comment</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton}>
-                    <Image source={require('../../assets/images/UserProfile/send.png')} />
-                    <Text style={styles.actionText}>Share</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* DROPDOWN MODAL FOR EDIT OR DELETE POST */}
-            {modalVisible && selectedPostId === item.id && (
+            {modalVisible && (
                 <Modal
                     animationType="fade"
                     transparent={true}
@@ -185,36 +437,38 @@ const Posts = ({ avatarUri, name, isSelfProfile }) => {
                 >
                     <View style={styles.dropdownOverlay}>
                         <View style={styles.dropdownContent}>
-                            {/* ARTIST AVATAR */}
                             <Image
                                 source={{ uri: avatarUri }}
                                 style={styles.modalImage}
                             />
-                            {/* MAIN TEXT IN THE MIDDLE */}
-                            <Text style={styles.mainText}>What would you like to do with your post?</Text>
-                            {/* EDIT BUTTON */}
+                            <Text style={styles.mainText}>
+                                What would you like to do with your post?
+                            </Text>
                             <TouchableOpacity
                                 style={styles.dropdownOption}
-                                onPress={() => handleEdit(item.id)}
+                                onPress={() => handleEdit(selectedPostId)}
                             >
                                 <View style={styles.optionRow}>
                                     <AntDesign name="edit" size={32} color="white" />
                                     <Text style={styles.dropdownText}>Edit Post</Text>
                                 </View>
-                                <Text style={styles.optionDesc}>Make changes to your post.</Text>
+                                <Text style={styles.optionDesc}>
+                                    Make changes to your post.
+                                </Text>
                             </TouchableOpacity>
-                            {/* DELETE BUTTON */}
                             <TouchableOpacity
                                 style={styles.dropdownOption}
-                                onPress={() => handleDelete(item.id)}
+                                onPress={() => handleDelete(selectedPostId)}
                             >
                                 <View style={styles.optionRow}>
                                     <MaterialIcons name="delete-sweep" size={32} color="#FE3F56" />
-                                    <Text style={[styles.dropdownText, { color: '#FE3F56' }]}>Delete Post</Text>
+                                    <Text style={[styles.dropdownText, {color: '#FE3F56'
+                                }]}>Delete Post</Text>
                                 </View>
-                                <Text style={styles.optionDesc}>Permanently remove this post.</Text>
+                                <Text style={styles.optionDesc}>
+                                    Permanently remove this post.
+                                </Text>
                             </TouchableOpacity>
-                            {/* CANCEL BUTTON */}
                             <TouchableOpacity
                                 style={styles.cancelOption}
                                 onPress={() => setModalVisible(false)}
@@ -225,22 +479,17 @@ const Posts = ({ avatarUri, name, isSelfProfile }) => {
                     </View>
                 </Modal>
             )}
-        </View>
-    );
 
-    return (
-        // DISPLAY ALL THE POSTS
-        <FlatList
-            data={posts}
-            renderItem={renderPost}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={styles.container}
-            scrollEnabled={false}
-        />
+            <LikesModal
+                visible={likesModalVisible}
+                onClose={() => setLikesModalVisible(false)}
+                likes={selectedLikes}
+            />
+        </>
     );
 };
 
-export default Posts;
+const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
     container: {
@@ -257,6 +506,11 @@ const styles = StyleSheet.create({
     },
     header: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    authorContainer: {
+        flexDirection: 'row',
         alignItems: 'center',
     },
     avatar: {
@@ -265,7 +519,6 @@ const styles = StyleSheet.create({
         borderRadius: 35,
     },
     headerInfo: {
-        flex: 1,
         marginLeft: 10,
     },
     username: {
@@ -291,8 +544,8 @@ const styles = StyleSheet.create({
         color: Colors.white,
         padding: 10,
         borderRadius: 5,
-        height: 100, // Makes the input more like a textarea
-        textAlignVertical: 'top', // Ensures the text starts at the top
+        height: 100,
+        textAlignVertical: 'top',
     },
     saveButton: {
         backgroundColor: Colors.primary,
@@ -306,17 +559,24 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
     },
-    postImage: {
-        width: '100%',
-        height: 200,
-        borderRadius: 10,
+    imageScrollView: {
+        height: width * 0.7,
         marginTop: 20,
+    },
+    postImage: {
+        width: width - 32,
+        height: width * 0.7,
+        borderRadius: 10,
+        marginRight: 10,
     },
     engagement: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginTop: 10,
+        paddingTop: 10,
+        borderTopWidth: 1,
+        borderTopColor: '#363636',
     },
     likesContainer: {
         flexDirection: 'row',
@@ -332,32 +592,15 @@ const styles = StyleSheet.create({
         color: Colors.white,
         fontSize: 14,
         fontWeight: '700',
+        marginLeft: 5,
     },
     comments: {
         color: Colors.white,
         fontSize: 14,
         fontWeight: '700',
     },
-    shares: {
-        color: Colors.white,
-        fontSize: 14,
-        fontWeight: '700',
-    },
-    actions: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 15,
-        marginHorizontal: 24,
-    },
-    actionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    actionText: {
-        color: Colors.white,
-        fontSize: 14,
-        fontWeight: '700',
-        marginLeft: 5,
+    loadingIndicator: {
+        padding: 20,
     },
     dropdownOverlay: {
         flex: 1,
@@ -382,9 +625,7 @@ const styles = StyleSheet.create({
     },
     mainText: {
         color: Colors.white,
-        fontFamily: 'Open Sans',
         fontSize: 18,
-        fontStyle: 'normal',
         fontWeight: '800',
         textAlign: 'center',
         marginVertical: 10,
@@ -397,31 +638,30 @@ const styles = StyleSheet.create({
         borderColor: '#363636',
         backgroundColor: '#2A2A2A',
         marginBottom: 10,
+        paddingHorizontal: 20,
     },
     cancelOption: {
         paddingVertical: 15,
         backgroundColor: '#363636',
         width: '100%',
         borderRadius: 14,
+        alignItems: 'center',
     },
     dropdownText: {
         color: Colors.white,
-        fontFamily: 'Open Sans',
         fontSize: 18,
-        fontStyle: 'normal',
         fontWeight: '800',
-        textAlign: 'center',
     },
     optionRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
         gap: 10,
     },
     optionDesc: {
         color: '#BBBBBB',
         fontSize: 12,
-        textAlign: 'center',
         marginTop: 5,
     },
 });
+
+export default Posts;

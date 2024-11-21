@@ -208,6 +208,7 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
         </TouchableOpacity>
         <View style={styles.authorInfo}>
           <Text style={styles.authorText}>{post.username}</Text>
+        </TouchableOpacity>
           <Text style={styles.dateText}>{formatDate(post.created_at)}</Text>
         </View>
         <PostOptionsMenu

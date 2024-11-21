@@ -40,7 +40,7 @@ export const QueueProvider = ({ children }) => {
 
   const saveQueue = async () => {
     try {
-      console.log("[saveQueue] Saving queue to storage:", queue);
+      // console.log("[saveQueue] Saving queue to storage:", queue);
       await AsyncStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
       console.log("[saveQueue] Queue saved successfully");
     } catch (error) {
@@ -127,7 +127,7 @@ export const QueueProvider = ({ children }) => {
     reorderQueue,
   };
 
-  console.log("[QueueProvider] Current context value:", contextValue);
+  //console.log("[QueueProvider] Current context value:", contextValue);
 
   return (
     <QueueContext.Provider value={contextValue}>

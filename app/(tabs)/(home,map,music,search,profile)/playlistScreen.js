@@ -1,71 +1,223 @@
-import React, { useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   View,
   Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  FlatList,
-  Modal,
   TextInput,
-  TouchableWithoutFeedback
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import DraggableFlatList from "react-native-draggable-flatlist";
+import { axiosGet } from "../../../utils/axiosCalls";
+import { tokenManager } from "../../../utils/tokenManager";
+import { SERVER_URL } from "@env";
+import { AudioContext } from "../../../contexts/AudioContext";
 
 const PlaylistScreen = () => {
+  const [tracks, setTracks] = useState([]);
+  const [playlist, setPlaylist] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [filterVisible, setFilterVisible] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [title, setTitle] = useState("");
+  const router = useRouter();
+  const { playlist_id } = useLocalSearchParams();
 
-  const albumInfo = {
-    title: "Boyshit",
-    artist: "Madison Beer",
-    album: "Album",
-    year: "2021",
-    songsCount: 18,
-    duration: "2h 20min",
+  // Access audio context for play/pause functionality
+  const { trackInfo, isPlaying, togglePlayPause, isPlayerReady, updateCurrentTrack, shuffleSongs } = useContext(AudioContext);
+
+  const updatePlaylist = async (updatedTracks) => {
+    const token = await tokenManager.getAccessToken();
+    console.log("Updating playlist with song IDs:", updatedTracks);
+
+    const formData = new FormData();
+    formData.append(
+      "songs",
+      JSON.stringify(updatedTracks.map((track) => track.id))
+    );
+
+    try {
+      const response = await fetch(`${SERVER_URL}/playlists/${playlist_id}`, {
+        method: "PUT",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      console.log("success", response);
+    } catch (error) {
+      console.error("Error updating playlist:", error);
+    }
   };
 
-  const tracks = [
-    { id: "1", title: "Eat your young", artist: "Hozier", duration: "3:24" },
-    { id: "2", title: "Little things", artist: "One Direction", duration: "3:24" },
-    { id: "3", title: "Only you", artist: "Zayn", duration: "3:24" },
-    { id: "4", title: "Trash", artist: "Little Mix", duration: "3:24" },
-    { id: "5", title: "Best friend", artist: "Luna bay", duration: "3:24" },
-    { id: "6", title: "Beach", artist: "Lana", duration: "3:24" },
-  ];
+  useEffect(() => {
+    const fetchPlaylistData = async () => {
+      if (!playlist_id) return;
+      try {
+        const response = await axiosGet({
+          url: `${SERVER_URL}/playlists?playlist_id=${playlist_id}`,
+        });
+        setPlaylist(response.playlist);
+        setTitle(response.playlist.title);
 
-  // Filter tracks based on search query
+        const songIds = response.playlist.songs || [];
+        const initialTracks = songIds.map((id) => ({
+          id,
+          loading: true,
+          details: null,
+        }));
+
+        setTracks(initialTracks);
+
+        for (let track of initialTracks) {
+          fetchTrackDetails(track.id);
+        }
+      } catch (error) {
+        console.error("Error fetching playlist data:", error);
+      }
+    };
+
+    const fetchTrackDetails = async (trackId) => {
+      try {
+        const trackResponse = await axiosGet({
+          url: `${SERVER_URL}/tracks?track_id=${trackId}`,
+        });
+
+        setTracks((prevTracks) =>
+          prevTracks.map((track) =>
+            track.id === trackId
+              ? { ...track, details: trackResponse, loading: false }
+              : track
+          )
+        );
+      } catch (error) {
+        console.error(`Error fetching details for track ID ${trackId}:`, error);
+      }
+    };
+
+    fetchPlaylistData();
+  }, [playlist_id]);
+
+  const handleDeleteTrack = (trackId) => {
+    Alert.alert("Delete Track", "Are you sure you want to delete this track?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => {
+          const updatedTracks = tracks.filter((track) => track.id !== trackId);
+          setTracks(updatedTracks);
+          updatePlaylist(updatedTracks);
+        },
+      },
+    ]);
+  };
+
+  const saveTitle = async () => {
+    try {
+      const token = await tokenManager.getAccessToken();
+      const formData = new FormData();
+      formData.append("title", title);
+      try {
+        const response = await fetch(`${SERVER_URL}/playlists/${playlist_id}`, {
+          method: "PUT",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+        console.log("success", response);
+      } catch (error) {
+        console.error("Error updating playlist:", error);
+      }
+      setIsEditing(false); 
+    } catch (error) {
+      console.error("Error saving playlist title:", error);
+    }
+  };
+
+  // Handle play/pause when a track is pressed
+  const handlePlayPause = async (track) => {
+    const trackId = track.id;
+    if (trackInfo?.track_id === trackId && isPlayerReady) {
+      // Toggle play/pause if the track is already loaded
+      await togglePlayPause();
+    } else {
+      // Load and play new track
+      await updateCurrentTrack(trackId);
+      if (isPlayerReady) {
+        await togglePlayPause();
+      }
+    }
+  };
+
+  //shuffle the songs
+   const handleShuffle = () => {
+
+       const shuffleTracks = shuffleSongs(tracks, setTracks);
+
+       //update the tracks 
+       setTracks(shuffleTracks);
+
+       //update the order of songs in playlist
+        updatePlaylist(shuffleTracks);
+   }
+
+  const renderTrack = ({ item, drag }) => {
+    if (item.loading) {
+      return (
+        <View style={styles.trackItem}>
+          <ActivityIndicator size="small" color="purple" />
+        </View>
+      );
+    }
+
+    const isCurrentTrack = trackInfo?.track_id === item.id;
+    const showPlayingState = isCurrentTrack && isPlaying;
+
+    return (
+      <TouchableOpacity style={styles.trackItem} onLongPress={drag}>
+        <Image
+          source={{ uri: item.details.track.cover_image_url }}
+          style={styles.trackCover}
+        />
+        <View style={styles.trackInfo}>
+          <Text style={styles.trackTitle}>{item.details.track.title}</Text>
+        </View>
+        <TouchableOpacity onPress={() => handlePlayPause(item)} style={styles.playButton}>
+          <Ionicons
+            name={showPlayingState ? "pause" : "play"}
+            size={24}
+            color={isCurrentTrack ? "purple" : "white"}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.menuIcon}
+          onPress={() => handleDeleteTrack(item.id)}
+        >
+          <Ionicons name="ellipsis-vertical" size={20} color="white" />
+        </TouchableOpacity>
+      </TouchableOpacity>
+    );
+  };
+
+  const handleDragEnd = ({ data }) => {
+    setTracks(data);
+    updatePlaylist(data);
+  };
+
   const filteredTracks = tracks.filter((track) =>
-    track.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const toggleModal= () => {
-    setIsModalVisible(!isModalVisible);
-  }
-
-  const closeModal = () => {
-    setIsModalVisible(false);
-  };
-
-  const closeFliter = () => {
-    setFilterVisible(false);
-  };
-
-  const toggleFilter = () => {
-    setFilterVisible(!filterVisible);
-  }
-
-
-  const renderTrack = ({ item }) => (
-    <View style={styles.trackItem}>
-      <View>
-        <Text style={styles.trackTitle}>{item.title}</Text>
-        <Text style={styles.trackArtist}>{item.artist}</Text>
-      </View>
-      <Text style={styles.trackDuration}>{item.duration}</Text>
-    </View>
+    track.details?.track.title
+      ?.toLowerCase()
+      .includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -75,13 +227,39 @@ const PlaylistScreen = () => {
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Playlist</Text>
-        <TouchableOpacity onPress={toggleModal}>
-        <Ionicons name="ellipsis-vertical" size={24} color="white" />
-        </TouchableOpacity>
-     
       </View>
 
-      {/* Search Bar */}
+      {playlist && (
+        <View style={styles.playlistHeader}>
+         {playlist.coverImage &&  <Image
+            source={{ uri: playlist.coverImage }}
+            style={styles.playlistCover}
+          />
+         }
+          <View style={styles.titleContainer}>
+            {isEditing ? (
+              <TextInput
+                style={styles.editTitleInput}
+                value={title}
+                onChangeText={setTitle}
+                onSubmitEditing={saveTitle} // Save when submitting the input
+                autoFocus
+              />
+            ) : (
+              <Text style={styles.playlistTitle}>{title}</Text>
+            )}
+            <TouchableOpacity onPress={() => setIsEditing(!isEditing)}>
+              <Ionicons
+                name={isEditing ? "checkmark" : "pencil"}
+                size={20}
+                color="white"
+                style={styles.editIcon}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       <View style={styles.searchBar}>
         <Ionicons name="search" size={20} color="grey" />
         <TextInput
@@ -92,166 +270,36 @@ const PlaylistScreen = () => {
           onChangeText={setSearchQuery}
         />
       </View>
-
-      {/* Album Info */}
-      <View style={styles.albumInfo}>
-        <Image
-          source={require("../../../assets/images/profile6.jpg")}
-          style={styles.albumArt}
-        />
-        <View style={styles.albumDetails}>
-          <Text style={styles.albumTitle}>{albumInfo.title}</Text>
-          <Text style={styles.albumArtist}>{albumInfo.artist}</Text>
-          <Text style={styles.albumMeta}>
-            {albumInfo.album} / {albumInfo.year}
-          </Text>
-          <Text style={styles.albumMeta}>
-            {albumInfo.songsCount} Songs - {albumInfo.duration}
-          </Text>
-        </View>
-        <View style={styles.albumIcons}>
-          <Ionicons name="heart-outline" size={24} color="white" />
-          <Ionicons name="add" size={24} color="white" style={{ marginTop: 15 }} />
-        </View>
-      </View>
-
-      {/* Tracks List */}
-          {/* Tracks Header with Filter Icon */}
-          <View style={styles.tracksHeaderContainer}>
-        <Text style={styles.tracksHeader}>TRACKS</Text>
-        <TouchableOpacity onPress={toggleFilter}>
-          <Ionicons name="filter" size={20} color="grey" />
-        </TouchableOpacity>
-      </View>
-
-      {filteredTracks.length > 0 ? (
-        <FlatList
-          data={filteredTracks}
-          renderItem={renderTrack}
-          keyExtractor={(item) => item.id}
-          style={styles.tracksList}
-          contentContainerStyle={{ paddingBottom: 100 }}
-        />
-      ) : (
-        <Text style={styles.noTracksText}>No tracks found</Text>
-      )}
-
-       {/** bottom sheet modal */}
-
-       <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isModalVisible}
-        onRequestClose={closeModal}
-      >
-        <TouchableWithoutFeedback onPress={closeModal}>
-          <View style={styles.modalContainer}>
-            <TouchableWithoutFeedback>
-              <View style={styles.modalContent}>
-                <TouchableOpacity
-                  style={styles.modalItem}
-                >
-                  <Ionicons name="list" size={24} color="white" />
-                  <Text style={styles.modalText}>Add the playlist to queue</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.modalItem} onPress={() => router.push('./queueList')} >
-                  <Ionicons name="add" size={24} color="white" />
-                  <Text style={styles.modalText}>View queue list</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.modalItem}>
-                  <Ionicons name="share-social" size={24} color="white" />
-                  <Text style={styles.modalText}>Share</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.modalItem}>
-                  <Ionicons name="heart" size={24} color="white" />
-                  <Text style={styles.modalText}>Like</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.modalItem}>
-                  <Ionicons name="information-circle" size={24} color="white" />
-                  <Text style={styles.modalText}>About</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
-
-      {/* Filter Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={filterVisible}
-        onRequestClose={closeFliter}
-      >
-        <TouchableWithoutFeedback onPress={closeFliter}>
-          <View style={styles.modalContainer}>
-            <TouchableWithoutFeedback>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Filter</Text>
-
-                {/* Genre Filter */}
-                <Text style={styles.filterCategory}>GENRE</Text>
-                <View style={styles.filterOptionsContainer}>
-                  {["Pop", "Rock", "RnB", "Blues", "Jazz", "Hiphop", "Funk", "Metal", "Reggae", "Soul", "Classical", "Indie/Alternative"].map((genre) => (
-                    <TouchableOpacity key={genre} style={styles.filterOption}>
-                      <Text style={styles.filterOptionText}>{genre}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {/* Release Date Filter */}
-                <Text style={styles.filterCategory}>RELEASE DATE</Text>
-                <View style={styles.filterOptionsContainer}>
-                  <TouchableOpacity style={styles.filterOption}>
-                    <Text style={styles.filterOptionText}>New - Old</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.filterOption}>
-                    <Text style={styles.filterOptionText}>Old - New</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Alphabetical Order Filter */}
-                <Text style={styles.filterCategory}>ALPHABETICAL ORDER</Text>
-                <View style={styles.filterOptionsContainer}>
-                  <TouchableOpacity style={styles.filterOption}>
-                    <Text style={styles.filterOptionText}>A - Z</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.filterOption}>
-                    <Text style={styles.filterOptionText}>Z - A</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
+      <TouchableOpacity style={{ alignItems:'flex-end', paddingRight:30}} onPress={handleShuffle} >
+      <Ionicons  name="shuffle" size={24} color="grey" />
+      </TouchableOpacity>
+  
+      <DraggableFlatList
+        data={filteredTracks}
+        renderItem={renderTrack}
+        keyExtractor={(item) => item.id}
+        onDragEnd={handleDragEnd}
+        ListEmptyComponent={
+          <Text style={styles.noTracksText}>No tracks found</Text>
+        }
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1c1c1c",
-    paddingHorizontal: 20,
-    paddingTop: 50,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
+  container: { flex: 1, backgroundColor: "#000" },
+  header: { flexDirection: "row", alignItems: "center", paddingTop: "15%", paddingLeft:10 },
   headerTitle: {
     color: "white",
     fontSize: 24,
     fontWeight: "bold",
+    marginLeft: 16,
   },
-  tracksHeaderContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
+  playlistHeader: { alignItems: "center", marginVertical: 16 },
+  playlistCover: { width: 150, height: 150, borderRadius: 8 },
+  playlistTitle: { color: "white", fontSize: 22, fontWeight: "bold" },
+  titleContainer: { flexDirection: "row", alignItems: "center" , paddingTop:20},
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -261,148 +309,29 @@ const styles = StyleSheet.create({
     marginVertical: 20,
     height: 40,
   },
-  searchInput: {
+  editIcon: { marginLeft: 8 },
+  editTitleInput: {
     color: "white",
-    marginLeft: 10,
-    flex: 1,
-  },
-  albumInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  albumArt: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
-  },
-  albumDetails: {
-    flex: 1,
-    marginLeft: 15,
-  },
-  albumTitle: {
-    color: "white",
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "bold",
+    borderBottomWidth: 1,
+    borderBottomColor: "white",
   },
-  albumArtist: {
-    color: "grey",
-    fontSize: 16,
-    marginTop: 2,
-  },
-  albumMeta: {
-    color: "grey",
-    fontSize: 14,
-    marginTop: 2,
-  },
-  albumIcons: {
-    alignItems: "center",
-  },
-  tracksHeader: {
-    color: "grey",
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  tracksList: {
-    marginBottom: 20,
-  },
+  searchInput: { color: "white", marginLeft: 10, flex: 1 },
   trackItem: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 10,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#333",
   },
-  trackTitle: {
-    color: "white",
-    fontSize: 16,
-  },
-  modalTitle: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-  filterCategory: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-    marginTop: 15,
-  },
-  filterOptionsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginTop: 10,
-  },
-  filterOption: {
-    backgroundColor: "#333",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  filterOptionText: {
-    color: "white",
-    fontSize: 14,
-  },
-  trackArtist: {
-    color: "grey",
-    fontSize: 14,
-  },
-  trackDuration: {
-    color: "grey",
-    fontSize: 14,
-  },
-  noTracksText: {
-    color: "grey",
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 20,
-  },
-  bottomNavigation: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "#1c1c1c",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingVertical: 15,
-    borderTopWidth: 1,
-    borderTopColor: "#333",
-  },
-  profileIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  modalContent: {
-    backgroundColor: "#1c1c1c",
-    padding: 20,
-    borderTopEndRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  modalItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "grey",
-  },
-  modalText: {
-    color: "white",
-    fontSize: 16,
-    marginLeft: 18,
-  },
+  trackCover: { width: 50, height: 50, borderRadius: 4 },
+  trackInfo: { flex: 1, marginLeft: 10 },
+  trackTitle: { color: "white", fontSize: 16 },
+  playButton: { padding: 10 },
+  menuIcon: { padding: 10 },
+  noTracksText: { color: "grey", textAlign: "center", marginTop: 20 },
 });
 
 export default PlaylistScreen;

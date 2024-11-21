@@ -24,8 +24,8 @@ import SearchFilters from "../../../components/SearchFilters";
 import SearchResultItem from "../../../components/SearchResultItem";
 import SearchEmptyState from "../../../components/SearchEmptyState";
 import { AudioContext } from "../../../contexts/AudioContext";
+import {SERVER_URL, AUTHSERVER_URL} from "@env"
 
-const MAIN_SERVER_URL = "http://localhost:3000";
 
 const SearchScreen = () => {
   console.log("\n=== [START] SearchScreen Component ===");
@@ -117,7 +117,7 @@ const SearchScreen = () => {
           );
         }
 
-        const requestUrl = `${MAIN_SERVER_URL}/search?${queryParams.toString()}`;
+        const requestUrl = `${SERVER_URL}/search?${queryParams.toString()}`;
         console.log("[SearchScreen] Executing search:", {
           query: queryToSearch,
           filter: currentFilter,
@@ -330,18 +330,22 @@ const SearchScreen = () => {
           param: "songId",
         },
         playlist: {
-          path: "/playlistDetail",
-          param: "playlistId",
+          path: "/playlistScreen",
+          param: "playlist_id",
         },
       };
 
       const route = routes[item.type];
+      console.log("item id:", item.id);
+      
       if (route) {
         router.push({
           pathname: route.path,
           params: { [route.param]: item.id },
         });
       }
+      console.log("hitting: ", route.path);
+      
     },
     [router]
   );
