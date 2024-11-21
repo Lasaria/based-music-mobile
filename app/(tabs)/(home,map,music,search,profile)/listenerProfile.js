@@ -421,6 +421,9 @@ export const ListenerProfileScreen = ({ userData, onUpdateProfile, refreshContro
                 <EditProfilePhotosScreen
                     userId={userId}
                     photos={photos}
+                    setPhotos={setPhotos}
+                    avatarUri={avatarUri}
+                    name={name}
                     onSave={() => {
                         handleSaveChanges();
                         fetchUserProfile();

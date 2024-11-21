@@ -467,6 +467,8 @@ export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl,
           userId={userId}
           photos={photos}
           setPhotos={setPhotos}
+          avatarUri={avatarUri}
+          name={name}
           onSave={() => {
             handleSaveChanges();
             fetchUserProfile();
@@ -492,14 +494,14 @@ export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl,
           setName={setName}
           username={username}
           setUsername={setUsername}
+          coverImageUri={coverImageUri}
           description={description}
           setDescription={setDescription}
-          coverImageUri={coverImageUri}
           setCoverImageUri={setCoverImageUri}
           defaultCover={DEFAULT_COVER_IMAGE}
           avatarUri={avatarUri}
           defaultProfile={DEFAULT_PROFILE_IMAGE}
-          currentUsername={username} // Pass the current username here
+          currentUsername={username}
           lastUpdatedUsername={lastUpdatedUsername}
           openEditProfilePhotosScreen={openEditProfilePhotosScreen}
           onCancel={() => {

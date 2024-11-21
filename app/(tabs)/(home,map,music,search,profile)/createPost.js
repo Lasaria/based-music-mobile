@@ -1,22 +1,21 @@
 import React, { useState } from 'react';
-import {
-  StyleSheet,
-  View,
-  TextInput,
-  TouchableOpacity,
-  Image,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-  Platform
-} from 'react-native';
-import { Text } from 'react-native-elements';
+import { View, Text, TextInput, Image, TouchableOpacity, StyleSheet, Alert, Dimensions, Platform, ActivityIndicator } from 'react-native';
+import { Ionicons, Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { Colors } from '../../../constants/Color';
+import Animated, {
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  interpolate,
+  Extrapolate,
+  withSpring
+} from 'react-native-reanimated';
+import { useNavigation } from 'expo-router';
 import { tokenManager } from '../../../utils/tokenManager';
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
 
+const { width } = Dimensions.get('window');
 const API_URL = SERVER_URL;
 
 const CreatePostScreen = () => {
@@ -26,8 +25,13 @@ const CreatePostScreen = () => {
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showAddIcon, setShowAddIcon] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const inputHeight = useSharedValue(70); // Initial height of the TextInput container
 
-  // Request permissions for iOS
+  const suggestedTags = ['Creative', 'DJ', 'LiveMusic', 'Vibes', 'Beat', 'Studio', 'Concert', 'Instrument'];
+
+  //  Request permissions for iOS
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -70,17 +74,21 @@ const CreatePostScreen = () => {
     setImages(images.filter((_, i) => i !== index));
   };
 
+  // Toggle tags
+  const toggleTag = (tag) => {
+    if (tags.includes(tag)) {
+      setTags(tags.filter(t => t !== tag));
+    } else {
+      setTags([...tags, tag]);
+    }
+  };
+
   // Add tag
   const addTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
       setTags([...tags, tagInput.trim()]);
       setTagInput('');
     }
-  };
-
-  // Remove tag
-  const removeTag = (index) => {
-    setTags(tags.filter((_, i) => i !== index));
   };
 
   // Create post
@@ -131,7 +139,7 @@ const CreatePostScreen = () => {
       }
 
       const data = await response.json();
-      
+
       Alert.alert('Success', 'Post created successfully!', [
         {
           text: 'OK',
@@ -154,10 +162,10 @@ const CreatePostScreen = () => {
     try {
       // Example using AsyncStorage:
       // return await AsyncStorage.getItem('userToken');
-      
+
       // Or if you're using a secure store:
       // return await SecureStore.getItemAsync('userToken');
-      
+
       // Replace this with your actual token retrieval logic
       return 'your-auth-token';
     } catch (error) {
@@ -173,203 +181,436 @@ const CreatePostScreen = () => {
     return allowedTypes.includes(extension);
   };
 
+  const handleFocus = () => {
+    setIsFocused(true);
+    inputHeight.value = withSpring(175);  // Target height when focused
+  };
+
+  // Handle blur event (when the input field loses focus)
+  const handleBlur = () => {
+    setIsFocused(false);
+    inputHeight.value = withSpring(120);  // Original height when blurred
+  };
+
+  // Animated style for the text area container
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      height: inputHeight.value,  // Apply the animated height
+    };
+  });
+
+
+  const wordCount = content.trim().split(/\s+/).filter(Boolean).join('').length;
+
+  const handleTagTextChange = (text) => {
+    setTagInput(text);
+    setShowAddIcon(text.trim().length >= 3); // Add icon if user types at least 3 letters
+  };
+
+  const isPostEnabled = content.trim() && images.length > 0;
+
+  // Animation Scroll Handling
+  const scrollY = useSharedValue(0);
+  const containerOneOffset = useSharedValue(0);
+  const containerTwoOffset = useSharedValue(0);
+  const containerThreeOffset = useSharedValue(0);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+
+      containerOneOffset.value = interpolate(
+        scrollY.value,
+        [0, 200],
+        [0, -50],
+        Extrapolate.CLAMP
+      );
+
+      containerTwoOffset.value = interpolate(
+        scrollY.value,
+        [200, 400],
+        [0, -50],
+        Extrapolate.CLAMP
+      );
+
+      containerThreeOffset.value = interpolate(
+        scrollY.value,
+        [400, 600],
+        [0, -50],
+        Extrapolate.CLAMP
+      );
+    },
+  });
+
+  const containerOneStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: containerOneOffset.value }],
+      zIndex: containerOneOffset.value === 0 ? 3 : 1,
+    };
+  });
+
+  const containerTwoStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: containerTwoOffset.value }],
+      zIndex: containerTwoOffset.value === 0 ? 3 : 2,
+    };
+  });
+
+  const containerThreeStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: containerThreeOffset.value }],
+      zIndex: containerThreeOffset.value === 0 ? 3 : 1,
+    };
+  });
+
+  const headerStyle = useAnimatedStyle(() => {
+    return {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
+    };
+  });
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        {/* Content Input */}
-        <TextInput
-          style={styles.input}
-          multiline
-          placeholder="What's on your mind?"
-          value={content}
-          onChangeText={setContent}
-          maxLength={1000} // Add a reasonable character limit
-        />
+    <View style={styles.container}>
+      <Animated.View style={headerStyle}>
+        <View
+          style={styles.header}
+        >
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={24} color="white" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Create Post</Text>
+          <TouchableOpacity onPress={handleCreatePost}>
+            {isLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={[styles.postButtonText, (!isPostEnabled || isLoading) && styles.disabledPostButton]}>
+                Post
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
 
-        {/* Character Count */}
-        <Text style={styles.charCount}>
-          {content.length}/1000
-        </Text>
+      <Animated.ScrollView
+        style={styles.scrollView}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <Animated.View style={[styles.containerBox, containerOneStyle]}>
+          <Animated.View style={[styles.textAreaContainer, animatedStyle]}>
+            <TextInput
+              style={styles.textArea}
+              placeholder="What's on your mind?"
+              placeholderTextColor="#8c8e96"
+              multiline
+              value={content}
+              onChangeText={setContent}
+              onFocus={handleFocus}  // Trigger the focus function
+              onBlur={handleBlur}    // Trigger the blur function
+            />
+            <Text style={styles.wordCount}>
+              {content.length} / 1000
+            </Text>
+          </Animated.View>
+        </Animated.View>
 
-        {/* Image Preview */}
-        {images.length > 0 && (
-          <View style={styles.imagePreviewContainer}>
+        <Animated.View style={[styles.containerBox, containerTwoStyle]}>
+          <View style={styles.sectionHeader}>
+            <Feather name="image" size={24} color='#8c8e96' />
+            <Text style={styles.sectionTitle}>Upload Photos</Text>
+            <Text style={styles.imageLimit}>{images.length}/4</Text>
+          </View>
+          <View style={styles.imageGrid}>
             {images.map((image, index) => (
-              <View key={index} style={styles.imageWrapper}>
-                <Image source={{ uri: image.uri }} style={styles.imagePreview} />
+              <View key={index} style={styles.imageContainer}>
+                <Image source={{ uri: image.uri }} style={styles.image} />
                 <TouchableOpacity
-                  style={styles.removeImageButton}
+                  style={styles.removeButton}
                   onPress={() => removeImage(index)}
                 >
-                  <Ionicons name="close-circle" size={24} color="red" />
+                  <Ionicons name="close" size={20} color="white" />
                 </TouchableOpacity>
               </View>
             ))}
-          </View>
-        )}
-
-        {/* Image Upload Button */}
-        {images.length < 4 && (
-          <TouchableOpacity 
-            style={styles.uploadButton} 
-            onPress={pickImage}
-          >
-            <Ionicons name="image" size={24} color="#007AFF" />
-            <Text style={styles.uploadButtonText}>
-              Add Images ({images.length}/4)
+            {images.length < 4 && (
+              <TouchableOpacity style={[styles.imageContainer, styles.addImageButton]} onPress={pickImage}>
+                <Ionicons name="add-circle-outline" size={28} color="#8c8e96" />
+              </TouchableOpacity>
+            )}
+            <Text style={styles.note}>
+              Add up to 4 images to make your post more engaging
             </Text>
-          </TouchableOpacity>
-        )}
 
-        {/* Tags Input */}
-        <View style={styles.tagsContainer}>
-          {tags.map((tag, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.tag}
-              onPress={() => removeTag(index)}
-            >
-              <Text style={styles.tagText}>{tag}</Text>
-              <Ionicons name="close-circle" size={16} color="white" />
-            </TouchableOpacity>
-          ))}
+          </View>
+        </Animated.View>
+
+        <Animated.View style={[styles.containerBox, containerThreeStyle]}>
+          <View style={styles.sectionHeader}>
+            <Feather name="tag" size={20} color='#8c8e96' />
+            <Text style={styles.sectionTitle}>Add Tags</Text>
+            <Text style={styles.imageLimit}>optional</Text>
+          </View>
+
           <View style={styles.tagInputContainer}>
             <TextInput
               style={styles.tagInput}
-              placeholder="Add tags..."
+              placeholder="Add a new tag"
+              placeholderTextColor="#666"
               value={tagInput}
-              onChangeText={setTagInput}
+              onChangeText={handleTagTextChange}
               onSubmitEditing={addTag}
-              maxLength={20}
             />
+            {showAddIcon && (
+              <TouchableOpacity
+                style={styles.addTagButton}
+                onPress={addTag}
+              >
+                <Feather name="check" size={16} color="white" />
+              </TouchableOpacity>
+            )}
           </View>
-        </View>
 
-        {/* Submit Button */}
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (!content.trim() || isLoading) && styles.submitButtonDisabled
-          ]}
-          onPress={handleCreatePost}
-          disabled={!content.trim() || isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.submitButtonText}>Create Post</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          <View style={styles.tags}>
+            {tags.map((tag) => (
+              <TouchableOpacity
+                key={tag}
+                style={styles.tagChip}
+                onPress={() => toggleTag(tag)}
+              >
+                <Text style={styles.tagText}>{tag}</Text>
+                <Ionicons name="close" size={16} color="white" />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.suggestedTitle}>Suggested Tags</Text>
+          <View style={styles.suggestedTags}>
+            {suggestedTags.map((tag) => (
+              <TouchableOpacity
+                key={tag}
+                style={[
+                  styles.suggestedChip,
+                  tags.includes(tag) && styles.selectedSuggestedChip
+                ]}
+                onPress={() => toggleTag(tag)}
+              >
+                <Text style={[
+                  styles.suggestedText,
+                  tags.includes(tag) && styles.selectedSuggestedText
+                ]}>
+                  {tag}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Animated.View>
+      </Animated.ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#121212',
   },
-  content: {
+  scrollView: {
+    flex: 1,
+    marginTop: 120,
+  },
+  scrollContent: {
     padding: 16,
+    gap: 16,
   },
-  input: {
-    minHeight: 100,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 4,
-    fontSize: 16,
+  header: {
+    height: 120,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingHorizontal: 16,
+    paddingBottom: 24,
   },
-  charCount: {
-    textAlign: 'right',
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  postButtonText: {
+    color: Colors.white,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  disabledPostButton: {
     color: '#666',
-    marginBottom: 16,
-    fontSize: 12,
   },
-  imagePreviewContainer: {
+  containerBox: {
+    backgroundColor: '#222329',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  textAreaContainer: {
+    width: '100%',
+    backgroundColor: '#222329',
+    borderRadius: 16,
+    paddingHorizontal: 4,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    overflow: 'hidden', // Ensure content doesn't overflow when animating
+    position: 'relative', // To allow absolute positioning inside
+  },
+  textArea: {
+    color: 'white',
+    fontSize: 14,
+    textAlignVertical: 'top',
+    flex: 1,
+    minHeight: 120, // Make sure there is space to show content
+  },
+  wordCount: {
+    color: '#8c8e96',
+    fontSize: 12,
+    position: 'absolute',
+    bottom: 8, // Position from the bottom
+    right: 16, // Position from the right
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '800',
+    marginLeft: 8,
+  },
+  imageLimit: {
+    color: '#8c8e96',
+    marginLeft: 'auto',
+  },
+  note: {
+    color: '#8c8e96',
+    fontSize: 12,
+    marginBottom: 12,
+  },
+  imageGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 16,
+    gap: 12,
+    justifyContent: 'space-between',
   },
-  imageWrapper: {
+  imageContainer: {
     width: '48%',
-    aspectRatio: 1,
-    margin: '1%',
+    height: 150,
+    borderRadius: 12,
+    overflow: 'hidden',
     position: 'relative',
   },
-  imagePreview: {
+  image: {
     width: '100%',
     height: '100%',
-    borderRadius: 8,
+    resizeMode: 'cover',
   },
-  removeImageButton: {
+  removeButton: {
     position: 'absolute',
-    top: -12,
-    right: -12,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1,
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 16,
+    padding: 4,
   },
-  uploadButton: {
+  addImageButton: {
+    borderWidth: 2,
+    borderColor: '#8c8e96',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(140, 142, 150, 0.1)',
+  },
+  tagInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    borderRadius: 8,
     marginBottom: 16,
   },
-  uploadButtonText: {
-    color: '#007AFF',
-    marginLeft: 8,
-    fontSize: 16,
+  tagInput: {
+    flex: 1,
+    height: 40,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#8c8e96',
+    borderRadius: 8,
+    color: 'white',
+    backgroundColor: '#1E1E1E',
+    marginRight: 8,
   },
-  tagsContainer: {
+  addTagButton: {
+    width: 40,
+    height: 40,
+    backgroundColor: Colors.primary,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tags: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 16,
-    minHeight: 40,
   },
-  tag: {
+  tagChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
-    borderRadius: 16,
-    paddingVertical: 6,
+    backgroundColor: Colors.primary,
     paddingHorizontal: 12,
-    margin: 4,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 4,
   },
   tagText: {
     color: 'white',
-    marginRight: 4,
+    fontSize: 14,
   },
-  tagInputContainer: {
-    flex: 1,
-    minWidth: 100,
+  suggestedTitle: {
+    color: '#8c8e96',
+    fontSize: 14,
+    marginBottom: 12,
   },
-  tagInput: {
-    padding: 8,
+  suggestedTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  submitButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
+  suggestedChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#8c8e96',
   },
-  submitButtonDisabled: {
-    backgroundColor: '#ccc',
+  selectedSuggestedChip: {
+    backgroundColor: '#8B5CF6',
+    borderColor: '#8c8e96',
   },
-  submitButtonText: {
+  suggestedText: {
+    color: '#8c8e96',
+    fontSize: 14,
+  },
+  selectedSuggestedText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 });
 
 export default CreatePostScreen;
+
+
+
+
+
+
+
+
