@@ -208,7 +208,6 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
         </TouchableOpacity>
         <View style={styles.authorInfo}>
           <Text style={styles.authorText}>{post.username}</Text>
-        </TouchableOpacity>
           <Text style={styles.dateText}>{formatDate(post.created_at)}</Text>
         </View>
         <PostOptionsMenu
@@ -218,7 +217,6 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
           onEditPost={onEditPost}
         />
       </View>
-
 
       {/* Content */}
       <Text style={styles.contentText}>{post.content}</Text>
@@ -247,7 +245,6 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
             size={24}
             color={isLiked ? "red" : Colors.secondary}
           />
-
           <TouchableOpacity style={styles.actionButton} onPress={handlePressLikes}>
             <Text style={styles.countText}>{likeCount} likes</Text>
           </TouchableOpacity>
