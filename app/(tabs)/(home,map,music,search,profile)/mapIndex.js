@@ -21,6 +21,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { color } from "react-native-elements/dist/helpers";
 import { Dimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import MultiSelect from "react-native-multiple-select";
 
 MapboxGL.setAccessToken(
     "pk.eyJ1IjoibGFzYXJpYSIsImEiOiJjbTJheXV0cjcwNG9zMmxwdnlxZWdoMjc5In0.NoBtaBj9cNvdemNp52pxGQ"
@@ -36,10 +37,14 @@ const MapScreen = () => {
   const [selectedLayer, setSelectedLayer] = useState(null); // For tracking the selected polygon
   const [venuesInPolygon, setVenuesInPolygon] = useState([]); // For tracking the venues inside the polygon
   const [isCostModalVisible, setIsCostModalVisible] = useState(false); // For controlling cost modal visibility
+  const [isGenreModalVisible, setIsGenreModalVisible] = useState(false); // For controlling genre modal visibility
   const [activeButton, setActiveButton] = useState({}); // For tracking active buttons
+  const [selectedGenres, setSelectedGenres] = useState([]); // For tracking selected genres
   const modalizeRef = useRef(null); // Ref for controlling the modal
   const animatedHeight = useRef(new Animated.Value(300)).current; // Initial height for scrollable list
-  const costModalHeight = useRef(new Animated.Value(300)).current; // Initial height for cost modal
+  const costModalHeight = useRef(new Animated.Value(380)).current; // Initial height for cost modal
+  const genreModalHeight = useRef(new Animated.Value(380)).current; // Separate height for genre modal
+
 
   const panResponder = useRef(
       PanResponder.create({
@@ -68,16 +73,36 @@ const MapScreen = () => {
         onStartShouldSetPanResponder: () => true,
         onPanResponderMove: (e, gestureState) => {
           if (gestureState.dy > 0) {
-            costModalHeight.setValue(300 - gestureState.dy);
+            costModalHeight.setValue(380 - gestureState.dy);
           }
         },
         onPanResponderRelease: (e, gestureState) => {
           if (gestureState.dy > 100) {
             setIsCostModalVisible(false);
-            // The button state remains unchanged when the modal is closed via drag
           } else {
             Animated.spring(costModalHeight, {
-              toValue: 300,
+              toValue: 380,
+              useNativeDriver: false,
+            }).start();
+          }
+        },
+      })
+  ).current;
+
+  const genreModalPanResponder = useRef(
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onPanResponderMove: (e, gestureState) => {
+          if (gestureState.dy > 0) {
+            genreModalHeight.setValue(380 - gestureState.dy);
+          }
+        },
+        onPanResponderRelease: (e, gestureState) => {
+          if (gestureState.dy > 100) {
+            setIsGenreModalVisible(false);
+          } else {
+            Animated.spring(genreModalHeight, {
+              toValue: 380,
               useNativeDriver: false,
             }).start();
           }
@@ -175,7 +200,14 @@ const MapScreen = () => {
   const toggleCostModal = () => {
     if (!activeButton['Cost']) {
       setIsCostModalVisible((prev) => !prev);
-      costModalHeight.setValue(300); // Reset to full height whenever opening the modal
+      costModalHeight.setValue(380); // Reset to full height whenever opening the modal
+    }
+  };
+
+  const toggleGenreModal = () => {
+    if (!activeButton['Genre']) {
+      setIsGenreModalVisible((prev) => !prev);
+      genreModalHeight.setValue(380); // Reset to full height whenever opening the modal
     }
   };
 
@@ -188,6 +220,13 @@ const MapScreen = () => {
     if (buttonName === 'Cost' && activeButton['Cost']) {
       setIsCostModalVisible(false);
     }
+    if (buttonName === 'Genre' && activeButton['Genre']) {
+      setIsGenreModalVisible(false);
+    }
+  };
+
+  const handleGenreSelect = (genres) => {
+    setSelectedGenres(genres);
   };
 
   const renderMapLayers = () => {
@@ -265,7 +304,7 @@ const MapScreen = () => {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ alignItems: "flex-start" }} // 将 alignItems 放在这里
           >
-            <TouchableOpacity style={[styles.buttonStyle, activeButton['Genre'] && styles.activeButton]} onPress={() => toggleButtonColor('Genre')}>
+            <TouchableOpacity style={[styles.buttonStyle, activeButton['Genre'] && styles.activeButton]} onPress={() => { toggleButtonColor('Genre'); toggleGenreModal(); }}>
               <Text style={styles.buttonText}>Genre</Text>
               <Ionicons name="chevron-down" size={22} color="white" />
             </TouchableOpacity>
@@ -294,13 +333,84 @@ const MapScreen = () => {
                 <TouchableOpacity style={styles.modalButton}><Text style={styles.modalButtonText}>$$</Text></TouchableOpacity>
                 <TouchableOpacity style={styles.modalButton}><Text style={styles.modalButtonText}>$$$</Text></TouchableOpacity>
                 <View style={styles.modalRangeInputContainer}>
-                  <View style={styles.modalRangeInput}><Text style={styles.modalRangeText}>Min</Text></View>
+                  <TextInput style={styles.modalRangeInputBox} placeholder="Min" placeholderTextColor="#000" />
                   <Text style={styles.connect}>-</Text>
-                  <View style={styles.modalRangeInput}><Text style={styles.modalRangeText}>Max</Text></View>
+                  <TextInput style={styles.modalRangeInputBox} placeholder="Max" placeholderTextColor="#000" />
                 </View>
               </View>
             </Animated.View>
         )}
+        {/* Genre Modal */}
+        {isGenreModalVisible && (
+            <Animated.View style={[styles.genreModal, { height: genreModalHeight }]} {...genreModalPanResponder.panHandlers}>
+              <View style={styles.dragHandleInPopUp} />
+              <Text style={styles.genreModalTitle}>Music Genre</Text>
+              <View style={styles.genreModalContent}>
+                <Text style={styles.modalGenreText}>Genre</Text>
+                <ScrollView style={{ width: "100%" }}>
+                  <MultiSelect
+                      items={[
+                        { id: "Pop", name: "Pop" },
+                        { id: "RnB", name: "RnB" },
+                        { id: "Hip Hop", name: "Hip Hop" },
+                        { id: "Jazz", name: "Jazz" },
+                      ]}
+                      uniqueKey="id"
+                      onSelectedItemsChange={(genres) => {
+                        console.log("Selected Genres: ", genres);
+                        handleGenreSelect(genres);
+                      }}
+                      selectedItems={selectedGenres}
+                      selectText="Select Genre"
+                      searchInputPlaceholderText="Search Genre"
+                      tagRemoveIconColor="#6A0DAD"
+                      tagBorderColor="#6A0DAD"
+                      tagTextColor="#6A0DAD"
+                      selectedItemTextColor="#6A0DAD"
+                      selectedItemIconColor="#6A0DAD"
+                      itemTextColor="#000"
+                      displayKey="name"
+                      searchInputStyle={{ color: "#000" }}
+                      submitButtonColor="#6A0DAD"
+                      submitButtonText="Submit"
+                      hideTags={true}
+                      hideSubmitButton = {true}
+                      hideDropdown = {true}
+                      styleTextDropdown={{ fontWeight: 'bold',fontSize:15 }}
+                      styleDropdownMenu={styles.styleDropdownMenu}
+                      styleInputGroup={styles.styleDropdownMenu}
+                      // styleIndicator={{ display: 'none' }}
+                      styleListContainer={{
+                        width: '100%',
+                        alignSelf: 'center',
+                      }}
+                      styleItemsContainer={{
+                        width: '95%',
+                        marginLeft: 0,
+                      }}
+                      styleMainWrapper={{
+                        width: '100%',
+                        paddingHorizontal: 0,
+                      }}
+                      styleDropdownMenuSubsection={{
+                        paddingLeft: 20,
+                        borderRadius: 10,
+                      }}
+                  />
+                  {/*<Ionicons name="chevron-down" size={22} color="black" style={{ position: 'absolute', marginLeft:"85%", marginTop:"8%"}} />*/}
+                </ScrollView>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 20 }}>
+                  {selectedGenres.map((genre, index) => (
+                      <TouchableOpacity key={index} style={[styles.genreModalButton]} onPress={() => handleGenreSelect(selectedGenres.filter(g => g !== genre))}>
+                        <Text style={styles.genreModalButtonText}>{genre}</Text>
+                        <Ionicons name="close" size={24} color="white" style={{ marginLeft: 5 }} />
+                      </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </Animated.View>
+        )}
+
         {/* Map */}
         <MapboxGL.MapView
             style={styles.map}
@@ -385,7 +495,6 @@ const MapScreen = () => {
               { height: animatedHeight, zIndex: 25 },
             ]}
         >
-
 
           <View
               style={styles.dragHandle}
@@ -718,13 +827,35 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 15,
     padding: 20,
     zIndex: 30,
-    height: 300,
+    height: 380,
+    width: "100%",
+  },
+  genreModal: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+    padding: 20,
+    zIndex: 30,
+    height: 380,
+    width: "100%",
   },
   modalTitle: {
     fontSize: 28,
     fontWeight: "bold",
     marginTop: 27,
     marginBottom: 20,
+    marginLeft: 10,
+    fontFamily: "Inter"
+  },
+  genreModalTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginTop: 27,
+    marginBottom: 5,
     marginLeft: 10,
     fontFamily: "Inter"
   },
@@ -735,6 +866,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginLeft: 10,
   },
+  genreModalContent: {
+    flexDirection: "column",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginLeft: 20,
+    width: "100%",
+  },
+  styleDropdownMenu: {
+    height: 60,
+    width: "95%",
+    borderColor: "#949494",
+    borderWidth: 1.5,
+    marginTop: 10,
+    borderRadius: 15,
+  },
+  // styleInputGroup:{
+  //   height: 50,
+  //   width: 350,
+  //   borderColor: "#212121",
+  //   borderWidth: 1,
+  //   borderRadius: 10
+  // },
+  selectItems: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 20
+  },
   modalButton: {
     backgroundColor: "#000",
     paddingVertical: 9,
@@ -742,8 +901,19 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 10,
   },
+  genreModalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: "#6e2cfd",
+    paddingVertical: 6,
+    paddingHorizontal: 20,
+    borderRadius: 13,
+    marginBottom: 20,
+    marginRight: 10,
+    marginTop: -10,
+  },
   modalButtonSelected: {
-    backgroundColor: "#6A0DAD",
+    backgroundColor: "#6e2cfd",
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 10,
@@ -752,6 +922,17 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: "#fff",
     fontSize: 16,
+  },
+  genreModalButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  modalGenreText: {
+    color: "#131313",
+    fontSize: 16,
+    fontFamily: "Inter",
+    fontWeight: "bold",
   },
   modalRangeInputContainer: {
     flexDirection: "row",
@@ -764,7 +945,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontFamily: "Inter"
   },
-  modalRangeInput: {
+  modalRangeInputBox: {
     width: 110,
     height: 60,
     backgroundColor: "#ddd",
@@ -772,9 +953,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginHorizontal: 10,
-  },
-
-  modalRangeText: {
+    paddingHorizontal: 39,
     color: "#000",
     fontSize: 16,
   },
@@ -783,6 +962,13 @@ const styles = StyleSheet.create({
   },
   iconStyle: {
     marginLeft: 15,
+  },
+  pickerStyle: {
+    height: 50,
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    marginBottom: 15,
   },
 });
 
