@@ -74,7 +74,8 @@ const SignInScreen = () => {
         router.push("userTypeChoice");
       } else {
         router.back();
-        router.replace("/homeIndex");
+        // router.replace("/homeIndex");
+        router.replace("/chatUserList");
         // router.setParams({ index: 0 })
       }
     } catch (error) {
@@ -117,7 +118,8 @@ const SignInScreen = () => {
     try {
       await AuthService.signIn(email, password);
       router.back();
-      router.replace("/homeIndex");
+      // router.replace("/homeIndex");
+      router.replace("/chatUserList");
       // Reset EMAIL and PASSWORD input fields
       setEmail("");
       setPassword("");

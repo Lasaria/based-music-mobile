@@ -63,6 +63,7 @@
     "react-native-toast-message": "^2.2.1",
     "react-native-web": "~0.19.10",
     "supercluster": "^8.0.1",
+    "watchman": "^1.0.0",
     "whatwg-fetch": "^3.6.20",
     "zustand": "^5.0.1"
   },

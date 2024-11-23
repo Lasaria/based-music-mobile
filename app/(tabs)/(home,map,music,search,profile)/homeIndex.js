@@ -7,7 +7,7 @@ import { axiosGet, ApiError } from "../../../utils/axiosCalls";
 import { router } from "expo-router";
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
 
-const HomeScreen = ({}) => {
+const HomeScreen = ({ }) => {
   const handleSignOut = async () => {
     try {
       await AuthService.signOut();
@@ -70,10 +70,12 @@ const HomeScreen = ({}) => {
         onPress={() => router.push("/listenerProfile")}
       />
       <Button title="Music" onPress={playMusic} />
-      <Button title="upload" onPress={() => router.push("/uploadScreen")}/>
-      <Button title="Create a Post" onPress={() => router.push("/createPost")}/>
-      <Button title="View Feed" onPress={() => router.push("/feed")}/>
-      <Button title="Swipe" onPress={() => router.push("/swipe")}/>
+      <Button title="upload" onPress={() => router.push("/uploadScreen")} />
+      <Button title="Create a Post" onPress={() => router.push("/createPost")} />
+      <Button title="View Feed" onPress={() => router.push("/feed")} />
+      <Button title="Swipe" onPress={() => router.push("/swipe")} />
+      <Button title="Chat" onPress={() => router.push("/chatUserList")} />
+      <Button title="Group Chat" onPress={() => router.push("/groupChatListScreen")} />
     </View>
   );
 };
