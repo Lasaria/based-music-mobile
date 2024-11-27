@@ -329,7 +329,7 @@ const Music = ({ name, isSelfProfile }) => {
             const artistId = await tokenManager.getUserId();
 
             // Fetch albums
-            const albumsResponse = await UserService.fetchAlbums('912312838', lastAlbumKeyRef.current);
+            const albumsResponse = await UserService.fetchAlbums(artistId, lastAlbumKeyRef.current);
             if (albumsResponse.albums && Array.isArray(albumsResponse.albums)) {
                 albumsRef.current = isInitialFetch
                     ? albumsResponse.albums
@@ -339,7 +339,7 @@ const Music = ({ name, isSelfProfile }) => {
             }
 
             // Fetch tracks
-            const tracksResponse = await UserService.fetchTracks('912312838', lastTrackKeyRef.current);
+            const tracksResponse = await UserService.fetchTracks(artistId, lastTrackKeyRef.current);
             if (tracksResponse.tracks && Array.isArray(tracksResponse.tracks)) {
                 tracksRef.current = isInitialFetch
                     ? tracksResponse.tracks
@@ -521,7 +521,7 @@ const Music = ({ name, isSelfProfile }) => {
     const renderItemsSection = (type, data, title) => {
         // Filter the data based on the search text for all types
         const filteredData = data.filter(item =>
-            item.title && item.title.toLowerCase().startsWith(searchText.toLowerCase())
+            item.title && item.title.toLowerCase().includes(searchText.toLowerCase())
         );
 
         // Determine how much data to display based on showAll flag

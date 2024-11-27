@@ -39,7 +39,7 @@ const GenreSelectionScreen = () => {
   const [searchText, setSearchText] = useState("");
 
   const filteredGenres = genres.filter(genre =>
-    genre.genre.toLowerCase().split(' ').some(word => word.startsWith(searchText.toLowerCase()))
+    genre.genre.toLowerCase().split(' ').some(word => word.includes(searchText.toLowerCase()))
   );
 
   // Initialize access token

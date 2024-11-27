@@ -76,6 +76,7 @@ const HomeScreen = ({ }) => {
       <Button title="Swipe" onPress={() => router.push("/swipe")} />
       <Button title="Chat" onPress={() => router.push("/chatUserList")} />
       <Button title="Group Chat" onPress={() => router.push("/groupChatListScreen")} />
+      <Button title="Create a playlist" onPress={() => router.push("/createPlaylist")}  />
     </View>
   );
 };

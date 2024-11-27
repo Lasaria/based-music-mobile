@@ -31,6 +31,18 @@ export const formatDate = (dateString) => {
     const weeks = Math.floor(diffInWeeks);
     return `${weeks}w`;
   };
+
+export const formatCount = (count) => {
+    if (count < 10000) {
+      return count.toString(); // Full number up to 9,999
+    } else if (count < 100000) {
+      return (count / 1000).toFixed(1) + 'k'; // Format as 10.1k to 99.9k
+    } else if (count < 1000000) {
+      return Math.floor(count / 1000) + 'k'; // Format as 100k, 101k, etc.
+    } else {
+      return (count / 1000000).toFixed(1) + 'M'; // Format as 1.1M, 1.2M, etc.
+    }
+  };
   
   // Helper function to test different times
   const testFormatter = () => {

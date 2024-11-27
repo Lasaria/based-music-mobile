@@ -12,20 +12,19 @@ import {
   Platform,
   Alert,
   FlatList,
-  Animated,
   Image,
-  Dimensions,
 } from 'react-native';
 import useProfileStore from '../zusStore/userFormStore';
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 import ProgressBar from '../components/ProgressBar';
 import InputComponent from '../components/InputComponent';
 import { Colors } from '../constants/Color';
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome6, Ionicons } from '@expo/vector-icons';
+import { UserService } from '../services/UserService';
+import { ActivityIndicator } from 'react-native';
 
 const geocodingClient = mbxGeocoding({ accessToken: 'pk.eyJ1IjoibGFzYXJpYSIsImEiOiJjbTJheXV0cjcwNG9zMmxwdnlxZWdoMjc5In0.NoBtaBj9cNvdemNp52pxGQ' });
 
-const { width } = Dimensions.get("window");
 const ProfileSetupScreen = () => {
   const {
     username,
@@ -41,9 +40,14 @@ const ProfileSetupScreen = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [locationSelected, setLocationSelected] = useState(false);
   const [descriptionFocused, setDescriptionFocused] = useState(false);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  const [suggestedUsernames, setSuggestedUsernames] = useState([]);
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState(null); // null means not checked
+
 
   const handleLocationChange = async (text) => {
     updateField('location', text);
+    setLocationSelected(false); // Reset when typing
     if (text.length > 2) {
       try {
         const response = await geocodingClient.forwardGeocode({
@@ -51,7 +55,6 @@ const ProfileSetupScreen = () => {
           autocomplete: true,
           limit: 5,
         }).send();
-
         setSuggestions(response.body.features.map((feature) => feature.place_name));
       } catch (error) {
         console.error('Error fetching location suggestions:', error);
@@ -61,21 +64,15 @@ const ProfileSetupScreen = () => {
     }
   };
 
-  const handleLocationSelect = (selectedLocation) => {
-    updateField('location', selectedLocation);
-    setSuggestions([]);
-    setLocationSelected(true); // Ensuring locationSelected is set to true upon selection
-  };
-
 
   const validateForm = () => {
     let newErrors = {};
-    
+
     // Username validation
     if (!username.trim()) {
       newErrors.username = 'Username is required';
-    } else if (username.length < 3) {
-      newErrors.username = 'Username must be at least 3 characters';
+    } else if (username.length < 6) {
+      newErrors.username = 'Username must be at least 6 characters';
     } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
       newErrors.username = 'Username can only contain letters, numbers, and underscores';
     }
@@ -87,14 +84,15 @@ const ProfileSetupScreen = () => {
       newErrors.displayname = 'Display name must be at least 2 characters';
     }
 
-    // Description validation (optional but with max length)
-    if (description.length >= 120) {
-      newErrors.description = 'Description must be less than 120 characters';
+    // Location validation
+    if (!locationSelected) {
+      newErrors.location = 'Please select a valid location from the suggestions.';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
 
   const handleNext = () => {
     if (validateForm()) {
@@ -107,18 +105,95 @@ const ProfileSetupScreen = () => {
     }
   };
 
-
   useEffect(() => {
-    // Only valid if there are no errors and all fields are non-empty with location selected
     const isValid =
       Object.values(errors).every((err) => !err) &&
       username &&
       displayname &&
-      description &&
       location &&
-      locationSelected; // Ensure location is selected
+      locationSelected;
     setIsFormValid(isValid);
-  }, [errors, username, displayname, description, location, locationSelected]); // Added `location` to dependency
+  }, [errors, username, displayname, location, locationSelected]);
+
+  const handleUsernameChange = async (text) => {
+    updateField('username', text);
+    setErrors((prevErrors) => ({ ...prevErrors, username: null }));
+    setIsUsernameAvailable(null);
+    setIsCheckingAvailability(true);
+    setSuggestedUsernames([]); // Clear suggestions when typing
+
+    if (!text.trim()) {
+      setErrors((prevErrors) => ({ ...prevErrors, username: 'Username is required' }));
+      setIsCheckingAvailability(false);
+      return;
+    } else if (text.length < 6) {
+      setErrors((prevErrors) => ({ ...prevErrors, username: 'Username must be at least 6 characters' }));
+      setIsCheckingAvailability(false);
+      return;
+    } else if (!/^[a-zA-Z0-9_]+$/.test(text)) {
+      setErrors((prevErrors) => ({ ...prevErrors, username: 'Username can only contain letters, numbers, and underscores' }));
+      setIsCheckingAvailability(false);
+      return;
+    }
+
+    // Check username availability and generate suggestions
+    try {
+      const isAvailable = await UserService.checkUsernameAvailability(text, false);
+      setIsUsernameAvailable(isAvailable);
+      setTimeout(() => {
+        setIsCheckingAvailability(false);
+      }, 800);
+
+      if (!isAvailable) {
+        // Generate suggestions if username is taken
+        const suggestions = await generateUsernameSuggestions(text);
+        setSuggestedUsernames(suggestions);
+      }
+    } catch (error) {
+      console.error('Error checking username availability:', error);
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        username: 'Error checking username availability. Please try again.',
+      }));
+      setIsCheckingAvailability(false);
+    }
+  };
+
+  // Function to generate unique username suggestions
+  const generateUsernameSuggestions = async (baseUsername) => {
+    const suggestions = [];
+    for (let i = 0; i < 5; i++) {
+      const suggestedUsername = `${baseUsername}${Math.floor(Math.random() * 10000)}`;
+      const isAvailable = await UserService.checkUsernameAvailability(suggestedUsername);
+      if (isAvailable) {
+        suggestions.push(suggestedUsername);
+      }
+    }
+    return suggestions;
+  };
+
+  const handleDisplaynameChange = (text) => {
+    updateField('displayname', text);
+    setErrors((prevErrors) => ({ ...prevErrors, displayname: null }));
+
+    // Live validation
+    if (!text.trim()) {
+      setErrors((prevErrors) => ({ ...prevErrors, displayname: 'Display name is required' }));
+    } else if (text.length < 2) {
+      setErrors((prevErrors) => ({ ...prevErrors, displayname: 'Display name must be at least 2 characters' }));
+    }
+  };
+
+  const handleDescriptionChange = (text) => {
+    updateField('description', text);
+  };
+
+  const handleLocationSelect = (selectedLocation) => {
+    updateField('location', selectedLocation);
+    setSuggestions([]);
+    setLocationSelected(true);
+    setErrors((prevErrors) => ({ ...prevErrors, location: null })); // Clear location error
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -126,9 +201,7 @@ const ProfileSetupScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoid}
       >
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-        >
+        <ScrollView keyboardShouldPersistTaps="handled">
           <ProgressBar currentStep={1} totalSteps={4} />
           <Text style={styles.header}>Set Up Profile</Text>
 
@@ -138,41 +211,62 @@ const ProfileSetupScreen = () => {
           </View>
 
           <View style={styles.inputContainer}>
-            <InputComponent
-              placeholder="Username"
-              placeholderTextColor={Colors.secondary}
-              value={username}
-              onChangeText={(text) => {
-                updateField('username', text);
-                console.log(text);
-                if (errors.username) {
-                  setErrors({ ...errors, username: null });
-                }
-              }}
-              keyboardType="default"
-              autoCapitalize="none"
-              autoCorrect={false}
-              maxLength={30}
-              style={styles.input}
-            />
+            <View style={styles.inputWrapper}>
+              <InputComponent
+                placeholder="Username"
+                placeholderTextColor={Colors.secondary}
+                value={username}
+                onChangeText={handleUsernameChange}
+                keyboardType="default"
+                autoCapitalize="none"
+                autoCorrect={false}
+                maxLength={30}
+                style={styles.input}
+                error={!!errors.username || (isUsernameAvailable === false)}
+              />
+
+              {/* Loader or Check Icon */}
+              {isCheckingAvailability ? (
+                <ActivityIndicator size="small" color={Colors.secondary} style={styles.icon} />
+              ) : isUsernameAvailable === true ? (
+                <Ionicons name="checkmark-circle-outline" size={26} color="green" style={styles.icon} />
+              ) : null}
+            </View>
+
+            {isUsernameAvailable === false && (
+              <Text style={styles.errorText}>The username {username} is not available.</Text>
+            )}
+
+            {suggestedUsernames.length > 0 && (
+              <View style={styles.usernameSuggestionsContainer}>
+                {suggestedUsernames.map((suggestion, index) => (
+                  <View key={index}>
+                    <TouchableOpacity key={index} onPress={() => handleUsernameChange(suggestion)} style={styles.usernameSuggestionItem}>
+                      <Text style={styles.suggestionText}>{suggestion}</Text>
+                      <Ionicons name="checkmark-circle-outline" size={26} color="green" />
+                    </TouchableOpacity>
+                    {index < suggestedUsernames.length - 1 && <View style={styles.usernameDivider} />}
+                  </View>
+                ))}
+              </View>
+            )}
+
             {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
           </View>
+
+
 
           <View style={styles.inputContainer}>
             <InputComponent
               placeholder="Display Name"
               placeholderTextColor={Colors.secondary}
               value={displayname}
-              onChangeText={(text) => {
-                updateField('displayname', text);
-                if (errors.displayname) {
-                  setErrors({ ...errors, displayname: null });
-                }
-              }}
+              onChangeText={handleDisplaynameChange}
               keyboardType="default"
               autoCapitalize="none"
               maxLength={50}
               style={styles.input}
+              error={!!errors.displayname}
             />
             {errors.displayname && <Text style={styles.errorText}>{errors.displayname}</Text>}
           </View>
@@ -187,12 +281,7 @@ const ProfileSetupScreen = () => {
                   descriptionFocused && styles.textAreaFocused,
                 ]}
                 value={description}
-                onChangeText={(text) => {
-                  updateField('description', text);
-                  if (errors.description) {
-                    setErrors({ ...errors, description: null });
-                  }
-                }}
+                onChangeText={handleDescriptionChange}
                 maxLength={120}
                 multiline
                 numberOfLines={4}
@@ -206,7 +295,7 @@ const ProfileSetupScreen = () => {
             </View>
           </View>
 
-
+          {/* Location Input and Suggestion List */}
           <View style={styles.inputContainer}>
             <InputComponent
               placeholder="Location"
@@ -217,6 +306,7 @@ const ProfileSetupScreen = () => {
               autoCapitalize="none"
               maxLength={100}
               style={styles.input}
+              error={!!errors.location} // Show error border if location is invalid
             />
             {errors.location && <Text style={styles.errorText}>{errors.location}</Text>}
             {suggestions.length > 0 && (
@@ -241,7 +331,7 @@ const ProfileSetupScreen = () => {
                   return (
                     <View>
                       <TouchableOpacity onPress={() => handleLocationSelect(item)} style={styles.suggestionItem}>
-                        <Ionicons name="location-sharp" size={24} color={Colors.secondary} style={styles.suggestionIcon} />
+                        <FontAwesome6 name="location-dot" size={26} color={Colors.secondary} style={styles.suggestionIcon} />
                         {highlightedText}
                       </TouchableOpacity>
                       {index < suggestions.length - 1 && (
@@ -256,6 +346,8 @@ const ProfileSetupScreen = () => {
             )}
           </View>
 
+
+          {/* Bottom Container with Next Button */}
           <View style={styles.bottomContainer}>
             <TouchableOpacity
               style={[
@@ -285,7 +377,7 @@ const styles = StyleSheet.create({
   iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 52,
+    marginVertical: 36,
   },
   glowImage: {
     width: 100,
@@ -321,8 +413,20 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginHorizontal: 4,
   },
+  usernameSuggestionsContainer: {
+    backgroundColor: '#1B1B1B',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginTop: 8,
+  },
+  icon: {
+    position: 'absolute',
+    right: 14,
+    top: '50%',
+    transform: [{ translateY: -12 }],
+  },
   textArea: {
-    backgroundColor: '#1a1a1a',
     borderRadius: 8,
     padding: 12,
     paddingRight: 50,
@@ -345,7 +449,6 @@ const styles = StyleSheet.create({
     color: Colors.secondary,
     fontSize: 12,
   },
-
   descriptionInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -356,17 +459,24 @@ const styles = StyleSheet.create({
     color: Colors.secondary,
   },
   suggestionsContainer: {
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#1B1B1B',
     width: 343,
     borderRadius: 8,
-    marginTop: 4,
+    marginTop: 12,
+  },
+  usernameSuggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    marginVertical: 4,
   },
   suggestionItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#1B1B1B',
     marginVertical: 10,
   },
   suggestionIcon: {
@@ -374,15 +484,20 @@ const styles = StyleSheet.create({
   },
   suggestionText: {
     color: Colors.white,
-    marginLeft: 18,
+    marginHorizontal: 18,
+    fontSize: 14
   },
   highlightedText: {
     color: 'gold',
     fontWeight: 'bold',
   },
+  usernameDivider: {
+    height: 1,
+    backgroundColor: '#30302d',
+  },
   divider: {
     height: 1,
-    backgroundColor: '#444',
+    backgroundColor: '#30302d',
     marginHorizontal: 16,
   },
   bottomContainer: {

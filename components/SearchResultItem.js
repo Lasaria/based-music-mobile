@@ -10,7 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { AudioContext } from "../contexts/AudioContext";
 
-const SearchResultItem = ({ item, onPress }) => {
+const SearchResultItem = ({ item, onPress,disablePlay = false }) => {
   const {
     trackInfo,
     isPlaying,
@@ -24,9 +24,18 @@ const SearchResultItem = ({ item, onPress }) => {
     const minutes = Math.floor(duration / 60);
     const seconds = Math.floor(duration % 60);
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  }
+
+  const handlePress = () => {
+    if (disablePlay) {
+      onPress(); // Only call onPress without triggering play if disablePlay is true
+    } else {
+      handlePlay(item);
+    }
   };
 
   const handlePlay = async (item) => {
+
     console.log("\n=== [START] SearchResultItem.handlePlay ===");
 
     // Extract and validate track ID
@@ -157,14 +166,14 @@ const SearchResultItem = ({ item, onPress }) => {
 
   // Validate required item properties
   if (!item || (!item.title && !item.name)) {
-    console.error("[SearchResultItem] Invalid item data:", item);
+    console.warn("[SearchResultItem] Invalid item data:", item);
     return null;
   }
 
   return (
     <TouchableOpacity
       style={[styles.container, isCurrentTrack && styles.currentTrackContainer]}
-      onPress={() => handlePlay(item)}
+      onPress={handlePress}
     >
       <Image
         source={{

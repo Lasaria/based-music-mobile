@@ -1,34 +1,109 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Image } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from 'react-native-vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { tokenManager } from '../../utils/tokenManager';
 import { UserService } from '../../services/UserService';
 import { Colors } from '../../constants/Color';
 
+
+const LIMIT = 87600.1;
+// const LIMIT = 1;
+
 const EditProfileScreen = ({ name, setName, coverImageUri, setCoverImageUri, avatarUri, onCancel, currentUsername, description, setDescription, lastUpdatedUsername, defaultCover, defaultProfile, openEditProfilePhotosScreen }) => {
     const [isUsernameDisabled, setIsUsernameDisabled] = useState(false);
     const [username, setUsername] = useState(currentUsername);
+    const [tempCoverImageUri, setTempCoverImageUri] = useState(null); // Add temporary state
+    const [timeLeftToChange, setTimeLeftToChange] = useState("");
+    const [saveEnabled, setSaveEnabled] = useState(false);  // Track if "Save" button should be enabled
+    const [suggestions, setSuggestions] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [usernameAvailable, setUsernameAvailable] = useState(null);
+    const [errors, setErrors] = useState({});
 
+    // Store initial values in refs for comparison
+    const initialNameRef = useRef(name);
+    const initialUsernameRef = useRef(currentUsername);
+    const initialDescriptionRef = useRef(description);
+    const initialCoverImageUriRef = useRef(tempCoverImageUri);
+
+    // Check if any field has changed from its initial value
+    const checkChanges = () => {
+        if (
+            name !== initialNameRef.current ||
+            username !== initialUsernameRef.current ||
+            description !== initialDescriptionRef.current ||
+            tempCoverImageUri !== initialCoverImageUriRef.current
+        ) {
+            setSaveEnabled(true);
+        } else {
+            setSaveEnabled(false);
+        }
+    };
+
+    // Call checkChanges whenever the relevant fields update
+    useEffect(() => {
+        checkChanges();
+    }, [name, username, description, tempCoverImageUri]);
+
+    const calculateTimeRemaining = (lastUpdatedTime) => {
+        const currentTime = new Date();
+        const lastUpdateTime = new Date(lastUpdatedTime);
+        const timeDifference = LIMIT * 60 * 1000 - (currentTime - lastUpdateTime); // Time remaining in milliseconds
+
+        if (timeDifference <= 0) {
+            return { canChange: true, message: "" };
+        }
+
+        let message = "You can change your username again after ";
+        const totalMinutes = Math.ceil(timeDifference / (60 * 1000));
+        const days = Math.floor(totalMinutes / 1440); // 1440 minutes in a day
+        const hours = Math.floor((totalMinutes % 1440) / 60);
+        const minutes = totalMinutes % 60;
+
+        // For days 
+        if (LIMIT >= 1440) {
+            if (days > 0) {
+                message += `${days} day${days > 1 ? 's' : ''}.`;
+            } else if (hours > 0) {
+                message += `${hours} hour${hours > 1 ? 's' : ''}.`;
+            } else {
+                message += `${Math.max(1, minutes)} minute${minutes > 1 ? 's' : ''}.`;
+            }
+        }
+        // For hours
+        else if (LIMIT >= 60) {
+            const totalHours = Math.floor(totalMinutes / 60);
+            if (totalHours > 0) {
+                message += `${totalHours} hour${totalHours > 1 ? 's' : ''}.`;
+            } else {
+                message += `${Math.max(1, minutes)} minute${minutes > 1 ? 's' : ''}.`;
+            }
+        }
+        // For minutes
+        else {
+            message += `${Math.max(1, totalMinutes)} minute${totalMinutes > 1 ? 's' : ''}.`;
+        }
+
+        return { canChange: false, message };
+    };
+
+    // Update the useEffect hook
     useEffect(() => {
         const checkUsernameUpdateTime = () => {
             if (lastUpdatedUsername) {
-                const lastUpdateTime = new Date(lastUpdatedUsername);
-                const currentTime = new Date();
-                const timeDifference = (currentTime - lastUpdateTime) / 1000 / 60; // Convert to minutes
-
-                // Restrict if the username was updated within the last 2 months (or based on your requirement)
-                if (timeDifference < 87600) {
-                    setIsUsernameDisabled(true);
-                } else {
-                    setIsUsernameDisabled(false);
-                }
+                const result = calculateTimeRemaining(lastUpdatedUsername);
+                setIsUsernameDisabled(!result.canChange);
+                setTimeLeftToChange(result.message);
             }
         };
 
         checkUsernameUpdateTime();
-    }, [lastUpdatedUsername, currentUsername]);
+        // Set up an interval to update the countdown every minute
+        const interval = setInterval(checkUsernameUpdateTime, 60000);
 
+        return () => clearInterval(interval);
+    }, [lastUpdatedUsername, currentUsername]);
 
 
     const isValidUsername = (username) => {
@@ -54,10 +129,8 @@ const EditProfileScreen = ({ name, setName, coverImageUri, setCoverImageUri, ava
         if (!result.canceled) {
             const imageUri = result.uri || (result.assets && result.assets[0].uri);
             if (imageUri) {
-                setCoverImageUri(imageUri); // This must be defined in props
-                console.log('Selected cover image URI:', imageUri);
-            } else {
-                console.log('Cover image URI not found');
+                setTempCoverImageUri(imageUri); // Set the local URI for preview only
+                console.log('Selected local cover image URI (preview only):', imageUri);
             }
         } else {
             console.log('User cancelled image picker');
@@ -70,41 +143,56 @@ const EditProfileScreen = ({ name, setName, coverImageUri, setCoverImageUri, ava
         console.log('Is Username Disabled:', isUsernameDisabled);
 
         try {
-            // Check if the username field is disabled due to 5-minute restriction
+            // Basic validation checks
             if (username !== currentUsername && isUsernameDisabled) {
                 alert('You can only update your username every 2 months. Please wait.');
                 return;
             }
 
-            // Validate username format if it has changed
             if (username !== currentUsername && !isValidUsername(username)) {
                 alert('Username must be at least 6 characters long and can contain letters, numbers, underscores, and periods only.');
                 return;
             }
 
-            // Only check availability if username is changed to a different one than the current username
-            if (username !== currentUsername) {
+            const lowercaseNewUsername = username.toLowerCase();
+            const lowercaseCurrentUsername = currentUsername.toLowerCase();
+
+            if (lowercaseNewUsername !== lowercaseCurrentUsername) {
                 console.log("Checking availability for new username:", username);
                 const isAvailable = await UserService.checkUsernameAvailability(username);
                 console.log("Username availability for", username, ":", isAvailable);
 
                 if (!isAvailable) {
                     alert('Username is already taken. Please choose a different one.');
-                    return; // Stop further execution if username is taken
+                    return;
                 }
             } else {
                 console.log("Username is unchanged, skipping availability check.");
             }
 
-            // Proceed with updating the profile since all validations are passed
             const userId = await tokenManager.getUserId();
             const token = await tokenManager.getAccessToken();
+
+            let coverImageUrl = coverImageUri; // Default to existing URI if no new image selected
+
+            // Upload to S3 if a new cover image was selected
+            if (tempCoverImageUri && tempCoverImageUri !== coverImageUri) {
+                const formData = new FormData();
+                formData.append('coverImage', {
+                    uri: tempCoverImageUri,
+                    name: `cover-${Date.now()}.jpg`,
+                    type: 'image/jpeg',
+                });
+                const response = await UserService.updateUserCoverImage(userId, formData);
+                coverImageUrl = response.cover_image_url; // Update cover image URI to the new S3 URL
+                console.log('Cover image updated successfully:', coverImageUrl);
+            }
 
             const profileData = {
                 display_name: name,
                 description: description,
                 username: username,
-                cover_image_url: coverImageUri || null,
+                cover_image_url: coverImageUrl, // Use the updated S3 URL or existing URL
             };
 
             console.log('Data to be updated:', profileData);
@@ -117,7 +205,8 @@ const EditProfileScreen = ({ name, setName, coverImageUri, setCoverImageUri, ava
 
             if (profileData) {
                 alert('Profile updated successfully!');
-                onCancel()
+                setCoverImageUri(coverImageUrl); // Update state with the new cover image URI if changed
+                onCancel(); // Navigate back or close the screen after saving
             }
         } catch (error) {
             console.error('Error updating profile:', error);
@@ -149,14 +238,74 @@ const EditProfileScreen = ({ name, setName, coverImageUri, setCoverImageUri, ava
         setEditing((prev) => ({ ...prev, [platform]: !prev[platform] }));
     };
 
-    const handleUsernameChange = (text, platform) => {
-        setLinks((prev) => ({ ...prev, [platform]: text }));
-        if (isUsernameDisabled) {
-            alert("You can only update your username every 2 months. Please wait.");
+    const handleUsernameChange = async (text) => {
+        setUsername(text);
+        setUsernameAvailable(null);
+        setLoading(true);
+        setSuggestions([]);
+        setErrors({}); // Clear previous errors
+
+        // Skip the check if the username matches the current one
+        if (text === currentUsername) {
+            setUsernameAvailable(true);
+            setLoading(false);
             return;
         }
-        setUsername(text);
+
+        // Validating username length
+        if (text.length < 6) {
+            setErrors((prevErrors) => ({
+                ...prevErrors,
+                length: "Username must be at least 6 characters long.",
+            }));
+            setLoading(false);
+            return;
+        }
+
+        // Validating allowed characters (letters, numbers, underscores, and periods)
+        if (!/^[a-zA-Z0-9._]+$/.test(text)) {
+            setErrors((prevErrors) => ({
+                ...prevErrors,
+                format: "Username can only contain letters, numbers, underscores, and periods.",
+            }));
+            setLoading(false);
+            return;
+        }
+
+        try {
+            const isAvailable = await UserService.checkUsernameAvailability(text, true);
+            setUsernameAvailable(isAvailable);
+
+            // If not available, generate suggestions
+            if (!isAvailable) {
+                const generatedSuggestions = await generateUsernameSuggestions(text);
+                setSuggestions(generatedSuggestions);
+            }
+        } catch (error) {
+            console.error('Error checking username availability:', error);
+        } finally {
+            setLoading(false);
+        }
     };
+
+    const generateUsernameSuggestions = async (baseUsername) => {
+        const suggestions = [];
+        for (let i = 0; i < 5; i++) {
+            const suggestedUsername = `${baseUsername}${Math.floor(Math.random() * 10000)}`;
+            const isAvailable = await UserService.checkUsernameAvailability(suggestedUsername);
+            if (isAvailable) {
+                suggestions.push(suggestedUsername);
+            }
+        }
+        return suggestions;
+    };
+
+    const handleUsernameSelect = (suggestion) => {
+        setUsername(suggestion);
+        setUsernameAvailable(true);
+        setSuggestions([]);
+    };
+
 
     const handleRemoveLink = (platform) => {
         setLinks((prev) => ({ ...prev, [platform]: '' }));
@@ -177,6 +326,9 @@ const EditProfileScreen = ({ name, setName, coverImageUri, setCoverImageUri, ava
                     <Ionicons name="chevron-back" size={20} color={Colors.white} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Profile</Text>
+                <TouchableOpacity onPress={handleSaveChanges} disabled={!saveEnabled} style={styles.saveButton}>
+                    <Text style={[styles.saveButtonText, { opacity: saveEnabled ? 1 : 0.5 }]}>Save</Text>
+                </TouchableOpacity>
             </View>
 
 
@@ -184,7 +336,7 @@ const EditProfileScreen = ({ name, setName, coverImageUri, setCoverImageUri, ava
                 {/* Cover Image Container */}
                 <View style={styles.coverImageContainer}>
                     <Image
-                        source={{ uri: !!coverImageUri ? coverImageUri : defaultCover }}
+                        source={{ uri: tempCoverImageUri || coverImageUri || defaultCover }}
                         style={styles.coverImage}
                     />
                     <TouchableOpacity style={[styles.editIconContainer, {
@@ -232,7 +384,7 @@ const EditProfileScreen = ({ name, setName, coverImageUri, setCoverImageUri, ava
                             placeholderTextColor="#888"
                             autoCapitalize="none"
                             value={name}
-                            onChangeText={setName}
+                            onChangeText={(text) => { setName(text); checkChanges(); }}
                         />
                         {name.length > 0 && (
                             <TouchableOpacity onPress={() => setName('')} style={styles.clearIcon}>
@@ -241,26 +393,54 @@ const EditProfileScreen = ({ name, setName, coverImageUri, setCoverImageUri, ava
                         )}
                     </View>
 
-                    <Text style={styles.label}> Username</Text>
+
+                    <Text style={styles.label}>Username</Text>
                     <View style={styles.inputWrapper}>
                         <TextInput
                             style={styles.input}
                             placeholder="Enter your username"
                             placeholderTextColor="#888"
-                            autoCapitalize="none"
                             value={username}
-                            onChangeText={setUsername}
+                            onChangeText={handleUsernameChange}
                             editable={!isUsernameDisabled}
+                            autoCapitalize='none'
                         />
-                        {!isUsernameDisabled && username.length > 0 && (
-                            <TouchableOpacity onPress={() => setUsername('')} style={styles.clearIcon}>
-                                <Ionicons name="close-circle" size={20} color="#888" />
-                            </TouchableOpacity>
-                        )}
-
+                        {loading ? (
+                            <ActivityIndicator size="small" color={Colors.secondary} style={styles.suggestionIcon} />
+                        ) : usernameAvailable === true && username.length > 0 && username !== currentUsername ? (
+                            <Ionicons name="checkmark-circle-outline" size={26} color="green" style={styles.suggestionIcon} />
+                        ) : null}
                     </View>
-                    {isUsernameDisabled && (
-                        <Text style={styles.restrictionMessage}>You can only change your username once every 2 months.</Text>
+                    {errors.length && <Text style={styles.errorText}>{errors.length}</Text>}
+                    {errors.format && <Text style={styles.errorText}>{errors.format}</Text>}
+                    {!isUsernameDisabled && usernameAvailable !== false && !errors.length && !errors.format && (
+                        <Text style={[styles.restrictionMessage, { color: Colors.white, opacity: 0.7, marginBottom: 18 }]}>
+                            You can change your username once every 2 months.
+                        </Text>
+                    )}
+                    {usernameAvailable === false && (
+                        <Text style={styles.errorText}>The username {username} is not available.</Text>
+                    )}
+                    {suggestions.length > 0 && (
+                        <View style={styles.suggestionsContainer}>
+                            {suggestions.map((suggestion, index) => (
+                                <View key={index}>
+                                    <TouchableOpacity
+                                        onPress={() => handleUsernameSelect(suggestion)}
+                                        style={styles.suggestionItem}
+                                    >
+                                        <Text style={styles.suggestionText}>{suggestion}</Text>
+                                        <Ionicons name="checkmark-circle-outline" size={26} color="green" />
+                                    </TouchableOpacity>
+                                    {index < suggestions.length - 1 && <View style={styles.divider} />}
+                                </View>
+                            ))}
+                        </View>
+                    )}
+                    {timeLeftToChange && isUsernameDisabled && (
+                        <Text style={styles.restrictionMessage}>
+                            {timeLeftToChange}
+                        </Text>
                     )}
                     {/* Social Links Section */}
                     <Text style={styles.label}>Connected Accounts</Text>
@@ -343,12 +523,6 @@ const EditProfileScreen = ({ name, setName, coverImageUri, setCoverImageUri, ava
                         <Text style={styles.charCount}>{description.length} / {maxDescriptionLength}</Text>
                     </View>
                 </View>
-                {/* Bottom Button */}
-                <View style={styles.bottomButtonContainer}>
-                    <TouchableOpacity style={styles.bottomButton} onPress={handleSaveChanges}>
-                        <Text style={styles.bottomButtonText}>Save</Text>
-                    </TouchableOpacity>
-                </View>
             </ScrollView>
 
         </View>
@@ -388,6 +562,17 @@ const styles = StyleSheet.create({
         fontStyle: 'normal',
         fontWeight: 'bold',
         lineHeight: 22,
+    },
+    saveButton: {
+        marginRight: 15,
+        padding: 10,
+        borderRadius: 5,
+        position: 'absolute',
+        top: 64,
+        right: -6, // Adjust based on desired padding
+    },
+    saveButtonText: {
+        color: Colors.white,
     },
     content: {
         paddingHorizontal: 20,
@@ -444,6 +629,9 @@ const styles = StyleSheet.create({
         padding: 20,
         paddingVertical: 36,
     },
+    content: {
+        paddingHorizontal: 20,
+    },
     label: {
         color: '#888',
         fontFamily: 'Open Sans',
@@ -461,6 +649,12 @@ const styles = StyleSheet.create({
         // paddingHorizontal: 10,
         // marginBottom: 20,
     },
+    suggestionIcon: {
+        position: 'absolute',
+        right: 14,
+        top: '50%',
+        transform: [{ translateY: -24 }],
+    },
     input: {
         // backgroundColor: '#2b2c30',
         color: '#fff',
@@ -474,18 +668,50 @@ const styles = StyleSheet.create({
     },
     clearIcon: {
         position: 'absolute',
-        right: 14, // Position the icon inside the input field on the right
-        top: 18,
+        right: 14,
+        top: 20,
+    },
+    clearUserIcon: {
+        position: 'absolute',
+        top: 20,
+    },
+    errorText: {
+        color: '#ff3b30',
+        fontSize: 12,
+        marginTop: -26,
+        marginBottom: 14
+    },
+    suggestionsContainer: {
+        backgroundColor: '#212324',
+        borderRadius: 10,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+    },
+    suggestionItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 8,
+        marginVertical: 4,
+    },
+    suggestionText: {
+        color: Colors.white,
+        marginHorizontal: 18,
+        fontSize: 14,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: '#333',
+        marginHorizontal: 16,
     },
     restrictionMessage: {
         color: '#FF6347', // Red color for visibility
         fontSize: 12,
-        marginTop: -20,
+        marginTop: -24,
         marginBottom: 10,
         textAlign: 'left',
     },
     socialLinksContainer: {
-        // backgroundColor: '#2b2c30',
         borderRadius: 10,
         padding: 10,
         marginTop: 10,
@@ -549,21 +775,6 @@ const styles = StyleSheet.create({
         right: 10,
         color: '#888',
         fontSize: 12,
-    },
-    bottomButtonContainer: {
-        marginBottom: 100,
-        borderTopColor: '#3a3b3d',
-    },
-    bottomButton: {
-        backgroundColor: Colors.themeColor,
-        paddingVertical: 15,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    bottomButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
     },
 });
 

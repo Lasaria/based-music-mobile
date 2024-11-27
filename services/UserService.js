@@ -1,6 +1,6 @@
 
 import axios from 'axios';
-import { axiosGet, axiosPost, axiosPatch } from '../utils/axiosCalls';
+import { axiosGet, axiosPost, axiosPatch, axiosDelete } from '../utils/axiosCalls';
 import * as FileSystem from 'expo-file-system';
 import { Platform } from 'react-native';
 import { tokenManager } from '../utils/tokenManager';
@@ -10,7 +10,6 @@ import { AuthService } from './AuthService';
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
 
 const serverURL = SERVER_URL;
-
 
 export const UserService = {
     setUserType: async (userType) => {
@@ -341,24 +340,94 @@ export const UserService = {
         }
     },
 
+    // * Update user cover image
+    updateUserCoverImage: async (userId, formData) => {
+        try {
+            const response = await axios.patch( // Change to patch
+                `${serverURL}/users/${userId}/cover-image`,
+                formData,
+                {
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                        Authorization: `Bearer ${await tokenManager.getAccessToken()}`,
+                    },
+                }
+            );
+            console.log("Cover image updated successfully:", response.data);
+            return response.data;
+        } catch (error) {
+            console.error("Failed to update cover image:", error.response ? error.response.data : error.message);
+            throw new Error(error.response ? error.response.data.message : error.message);
+        }
+    },
+
     // * Check if user is available or taken
-    checkUsernameAvailability: async (username) => {
+    checkUsernameAvailability: async (username, requiresAuth = false) => {
         try {
             console.log("Checking username availability in service for:", username);
-            const response = await axios.post(`${serverURL}/users/check-username`, { username }, {
-                headers: {
-                    Authorization: `Bearer ${await tokenManager.getAccessToken()}`,
-                },
-            });
+
+            // Prepare headers conditionally based on whether authentication is required
+            const headers = requiresAuth
+                ? { Authorization: `Bearer ${await tokenManager.getAccessToken()}` }
+                : {};
+
+            const response = await axios.post(
+                `${serverURL}/users/check-username`,
+                { username },
+                { headers }
+            );
+
             console.log("Received response from username check:", response.data);
-            return response.data.available; // This should be true or false based on server response
+            return response.data.available;
         } catch (err) {
             console.error('Error checking username availability:', err.message);
             return false; // Assume username is taken if an error occurs
         }
     },
 
-    
+    // Check if a user is following a another user
+    checkIsFollowing: async (followee_id) => {
+        try {
+            const response = await axiosGet({
+                url: `${serverURL}/follow/isFollowing/${followee_id}`
+            })
+            console.log("Check if following: ", response);
+            return response.isFollowing;
+        } catch (err) {
+            console.error(`Error checking if user is following user ${followee_id}:`, err.message);
+            return false;
+        }
+    },
+
+    // Follow another user
+    follow: async (followee_id) => {
+        try {
+            const response = await axiosPost({
+                url: `${serverURL}/follow`,
+                body: {followee_id: followee_id}
+            })
+            console.log(`Followed user:  ${followee_id}`, response);
+            return true;
+        } catch (err) {
+            console.error(`Error following user ${followee_id}:`, err.message);
+            return false;
+        }
+    },
+
+    // Unfollow another user
+    unfollow: async (followee_id) => {
+        try {
+            const response = await axiosDelete({
+                url: `${serverURL}/follow`,
+                body: {followee_id: followee_id}
+            })
+            console.log(`Unfollowed user:  ${followee_id}`, response);
+            return false;
+        } catch (err) {
+            console.error(`Error unfollowing user ${followee_id}:`, err.message);
+            return true;
+        }
+    },
 };
 
 
