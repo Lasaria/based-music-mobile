@@ -37,7 +37,7 @@ export const tokenManager = {
       const accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
       // console.log(" [tokenManager.js] accessToken: " + accessToken);
 
-      return await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+      return accessToken;
     } catch (error) {
       console.error("Error getting access token:", error);
       return null;
