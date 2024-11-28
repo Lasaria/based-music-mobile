@@ -23,6 +23,7 @@ import { formatCount } from '../../../utils/functions';
 import { FollowersModal } from '../../../components/FollowersModal';
 import { FolloweesModal } from '../../../components/FolloweesModal';
 import { SERVER_URL, AUTHSERVER_URL } from "@env";
+import { fetchPatch } from "../../../utils/fetchCalls";
 
 // SERVER URL
 const serverURL = SERVER_URL;
@@ -240,12 +241,8 @@ export const ListenerProfileScreen = ({ userData, onUpdateProfile, refreshContro
                     type: 'image/jpeg',
                 });
 
-                await fetch(`${serverURL}/artists/${userId}/profile-image`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                        Authorization: `Bearer ${token}`,
-                    },
+                await fetchPatch({
+                    url: `${serverURL}/artists/${userId}/profile-image`,
                     body: formData,
                 });
             }
@@ -258,12 +255,8 @@ export const ListenerProfileScreen = ({ userData, onUpdateProfile, refreshContro
                     type: 'image/jpeg',
                 });
 
-                await fetch(`${serverURL}/artists/${userId}/cover-image`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                        Authorization: `Bearer ${token}`,
-                    },
+                await fetchPatch({
+                    url: `${serverURL}/artists/${userId}/cover-image`,
                     body: coverFormData,
                 });
             }

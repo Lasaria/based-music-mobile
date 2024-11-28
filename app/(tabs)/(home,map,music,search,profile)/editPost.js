@@ -14,6 +14,7 @@ import {
 import { Text } from 'react-native-elements';
 import { Ionicons } from '@expo/vector-icons';
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
+import { fetchPatch } from "../../../utils/fetchCalls";
 
 const API_URL = SERVER_URL;
 import { tokenManager } from '../../../utils/tokenManager';
@@ -108,21 +109,17 @@ try {
         });
       });
 
-      const response = await fetch(`${API_URL}/posts/${params.post_id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        },
+      const response = await fetchPatch({
+        url: `${API_URL}/posts/${params.post_id}`,
         body: formData
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update post');
-      }
+    //   if (!response.ok) {
+    //     const errorData = await response.json();
+    //     throw new Error(errorData.message || 'Failed to update post');
+    //   }
 
-      const updatedPost = await response.json();
+    //   const updatedPost = await response.json();
       router.back();
 
     } catch (error) {

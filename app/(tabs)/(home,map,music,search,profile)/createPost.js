@@ -14,6 +14,7 @@ import Animated, {
 import { useNavigation } from 'expo-router';
 import { tokenManager } from '../../../utils/tokenManager';
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
+import { fetchPost } from "../../../utils/fetchCalls";
 
 const { width } = Dimensions.get('window');
 const API_URL = SERVER_URL;
@@ -124,21 +125,17 @@ const CreatePostScreen = () => {
       const token = await tokenManager.getAccessToken();
 
       // Make API request
-      const response = await fetch(`${API_URL}/posts`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-        },
+      const response = await fetchPost({
+        url: `${API_URL}/posts`,
         body: formData,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
+    //   if (!response.ok) {
+    //     const errorData = await response.json();
+    //     throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    //   }
 
-      const data = await response.json();
+    //   const data = await response.json();
 
       Alert.alert('Success', 'Post created successfully!', [
         {

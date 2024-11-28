@@ -37,7 +37,7 @@ const ProfileScreen = () => {
   const isRootProfile = !params.userId;
 
 
-  // Fetch user type when component mounts
+  // Fetch user profile when component mounts
     const fetchUserProfile = async (showLoadingSpinner = true) => {
       try {
         if (showLoadingSpinner) {
@@ -45,6 +45,7 @@ const ProfileScreen = () => {
         }
         const userId = params.userId || await tokenManager.getUserId();
         const response = await UserService.getUserProfile(userId);
+
 
         if (response) {
           // Determine if user is viewing their own profile
@@ -60,8 +61,14 @@ const ProfileScreen = () => {
             ? response.cover_image_url
             : DEFAULT_COVER_IMAGE;
 
+          // Set display_name to first_name if display_name is empty
+          const displayName = (!response.display_name || response.display_name.trim() === '') 
+            ? response.first_name 
+            : response.display_name;
+
           setProfileData({
             ...response,
+            display_name: displayName,
             profile_image_url: validProfileImageUrl,
             cover_image_url: validCoverImageUrl,
             isSelfProfile: isUserSelfProfile
@@ -83,11 +90,12 @@ const ProfileScreen = () => {
   useEffect(() => {
     fetchUserProfile();
     navigation.setOptions({ headerShown: false });
-  }, []);
+  }, [refreshing]);
 
-  const onRefresh = useCallback(() => {
+
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    fetchUserProfile(false); // Don't show loading spinner when refreshing
+    await fetchUserProfile(false); // Wait for the fetch to complete
   }, []);
 
   const handleProfileUpdate = async (updatedData) => {

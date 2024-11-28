@@ -10,7 +10,7 @@ import {
     TextInput,
 } from "react-native";
 import { Text } from "react-native";
-import { ChatService } from "../services/ChatService";
+import { ChatService } from "../../../services/ChatService";
 import { router } from "expo-router";
 
 

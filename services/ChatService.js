@@ -7,7 +7,7 @@ export const ChatService = {
     getAllChatUsers: async () => {
         try {
             const response = await axiosGet({
-                url: `${serverURL}/chats/get-all-chat-users`
+                url: `${serverURL}/chat/get-all-chat-users`
             });
 
             if (response.data && response.success) {
@@ -30,7 +30,7 @@ export const ChatService = {
             // TODO: Need to think of a way to avoid sending real otherUserId.
             console.log("[ChatService][InitializeChat] otheruserid----------------", otherUserId)
             const response = await axiosPost({
-                url: `${serverURL}/chats/initialize`,
+                url: `${serverURL}/chat/initialize`,
                 body: { otherUserId }
             });
 
@@ -48,7 +48,7 @@ export const ChatService = {
     getChatMessages: async (chatId) => {
         try {
             const response = await axiosGet({
-                url: `${serverURL}/chats/${chatId}/messages`
+                url: `${serverURL}/chat/${chatId}/messages`
             });
             return response;
         } catch (error) {
@@ -60,7 +60,7 @@ export const ChatService = {
     getAllGroupChats: async () => {
         try {
             const response = await axiosGet({
-                url: `${serverURL}/chats/groups`
+                url: `${serverURL}/chat/groups`
             });
 
             if (response.success && response.data) {  // Changed to match backend response structure
@@ -84,7 +84,7 @@ export const ChatService = {
 
         try {
             const response = await axiosPost({
-                url: `${serverURL}/chats/groups/create`,
+                url: `${serverURL}/chat/groups/create`,
                 // TODO: Need to encode them, or find another way to not send ids directly.
                 body: { name, members: userIds }
             });

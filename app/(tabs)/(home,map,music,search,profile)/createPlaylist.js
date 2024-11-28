@@ -8,6 +8,7 @@ import { TouchableOpacity } from "react-native-gesture-handler";
 import { useRouter } from "expo-router";
 import { tokenManager } from "../../../utils/tokenManager";
 import {SERVER_URL, AUTHSERVER_URL} from "@env"
+import { fetchPost } from "../../../utils/fetchCalls";
 
 
 const createPlaylist = () => {
@@ -106,24 +107,20 @@ const createPlaylist = () => {
     
     
     try {
-      const response = await fetch(`${SERVER_URL}/playlists`, {
-        method: "POST",
+      const response = await fetchPost({
+        url: `${SERVER_URL}/playlists`,
         body: formData,
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`, 
-        },
       });
 
-      if (!response.ok) {
-        // Try to parse error message from response
-        const errorData = await response.json().catch(() => null);
-        throw new Error(
-          errorData?.message || `HTTP error! status: ${response.status}`
-        );
-      }
+      // if (!response.ok) {
+      //   // Try to parse error message from response
+      //   const errorData = await response.json().catch(() => null);
+      //   throw new Error(
+      //     errorData?.message || `HTTP error! status: ${response.status}`
+      //   );
+      // }
 
-      const result = await response.json();
+      const result = response;
 
       Alert.alert("successfully created playlist");
       console.log("playlist created sucessfully", result);

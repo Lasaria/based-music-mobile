@@ -19,6 +19,7 @@ import { Feather, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { tokenManager } from "../../../utils/tokenManager";
 import { SERVER_URL } from '@env';
 import FilterScreen from '../../../components/FilterScreen';
+import { fetchGet, fetchPost } from "../../../utils/fetchCalls";
 
 
 const API_URL = SERVER_URL;
@@ -267,14 +268,12 @@ export default function SwipeScreen() {
   const fetchUsers = async () => {
     try {
       const token = await tokenManager.getAccessToken();
-      const response = await fetch(`${API_URL}/match/people`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await fetchGet({
+        url: `${API_URL}/match/people`
       });
 
-      if (!response.ok) throw new Error('Failed to fetch users');
-      const data = await response.json();
+      // if (!response.ok) throw new Error('Failed to fetch users');
+      const data = response;
       setUsers(data.users);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -290,19 +289,15 @@ export default function SwipeScreen() {
       const token = await tokenManager.getAccessToken();
       const action = direction === 'right' ? 'like' : 'dislike';
 
-      const response = await fetch(`${API_URL}/match`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
+      const response = await fetchPost({
+        url: `${API_URL}/match`,
+        body: {
           swiped_user_id: swipedUser.id,
           action: action
-        })
+        }
       });
 
-      const data = await response.json();
+      const data = response;
       if (data.message === "It's a match!") {
         Alert.alert(
           "It's a Match! 🎉",

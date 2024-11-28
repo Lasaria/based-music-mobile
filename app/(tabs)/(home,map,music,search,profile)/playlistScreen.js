@@ -16,6 +16,7 @@ import { axiosGet } from "../../../utils/axiosCalls";
 import { tokenManager } from "../../../utils/tokenManager";
 import { SERVER_URL } from "@env";
 import { AudioContext } from "../../../contexts/AudioContext";
+import { fetchPut } from "../../../utils/fetchCalls";
 
 const PlaylistScreen = () => {
   const [tracks, setTracks] = useState([]);
@@ -40,12 +41,8 @@ const PlaylistScreen = () => {
     );
 
     try {
-      const response = await fetch(`${SERVER_URL}/playlists/${playlist_id}`, {
-        method: "PUT",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await fetchPut({
+        url: `${SERVER_URL}/playlists/${playlist_id}`,
         body: formData,
       });
       console.log("success", response);
@@ -126,12 +123,8 @@ const PlaylistScreen = () => {
       const formData = new FormData();
       formData.append("title", title);
       try {
-        const response = await fetch(`${SERVER_URL}/playlists/${playlist_id}`, {
-          method: "PUT",
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+        const response = await fetchPut({
+          url: `${SERVER_URL}/playlists/${playlist_id}`,
           body: formData,
         });
         console.log("success", response);

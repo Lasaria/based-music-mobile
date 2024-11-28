@@ -134,8 +134,11 @@ export const FolloweesModal = ({ visible, onClose, userId }) => {
                     />
                     <View style={styles.followUserText}>
                       <Text style={styles.followUsername}>{item.username}</Text>
-                      {item.name && (
-                        <Text style={styles.followName}>{item.name}</Text>
+                      {item.display_name ? (
+                        <Text style={styles.followName}>{item.display_name}</Text>
+                      ): 
+                      (
+                        <Text style={styles.followName}>{item.first_name}</Text>
                       )}
                     </View>
                   </View>

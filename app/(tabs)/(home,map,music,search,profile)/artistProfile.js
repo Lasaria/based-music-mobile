@@ -21,6 +21,7 @@ import EditProfileScreen from '../../../components/EditProfile/EditProfileScreen
 import { formatCount } from '../../../utils/functions';
 import { FollowersModal } from '../../../components/FollowersModal';
 import { SERVER_URL, AUTHSERVER_URL } from "@env";
+import { fetchPatch } from '../../../utils/fetchCalls';
 
 
 // SERVER URL
@@ -259,12 +260,8 @@ export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl,
           type: 'image/jpeg',
         });
 
-        await fetch(`${serverURL}/artists/${userId}/profile-image`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${token}`,
-          },
+        await fetchPatch({
+          url: `${serverURL}/artists/${userId}/profile-image`,
           body: formData,
         });
       }
@@ -278,12 +275,8 @@ export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl,
           type: 'image/jpeg',
         });
 
-        await fetch(`${serverURL}/artists/${userId}/cover-image`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${token}`,
-          },
+        await fetchPatch({ 
+          url: `${serverURL}/artists/${userId}/cover-image`,
           body: coverFormData,
         });
       }
@@ -369,7 +362,7 @@ export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl,
   useEffect(() => {
     fetchUserProfile();
     navigation.setOptions({ headerShown: !loading });
-  }, [avatarUri, loading, userId]);
+  }, [avatarUri, loading, userId, userData]);
 
   // TOP HEADER PART
   useLayoutEffect(() => {

@@ -14,6 +14,11 @@ const uploadScreen = () => {
       <TouchableOpacity style={styles.backArrow} onPress={() => router.back()}>
         <Text style={styles.arrowText}>←</Text>
       </TouchableOpacity>
+      <TouchableOpacity 
+              style={styles.roundButton} 
+              onPress={() => router.back()}
+            >
+      </TouchableOpacity>
 
       <View style={styles.container}>
         <Text style={styles.uploadText}> Upload</Text>
@@ -47,11 +52,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   backArrow: {
-    paddingTop: 65,
-    paddingLeft: 40,
+    paddingTop: 55,
+    paddingLeft: 20,
     position: "absolute",
-    left: 5,
-    top: 5,
+    left: 0,
+    top: 0,
+    zIndex: 1
   },
   arrowText: {
     color: "white",

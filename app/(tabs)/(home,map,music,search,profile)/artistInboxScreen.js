@@ -11,6 +11,8 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { router } from "expo-router";
+import { UserService } from "../../../services/UserService";
+
 
 
 const messagesData = [
@@ -87,6 +89,15 @@ const ArtistInboxScreen = () => {
   const [searchText, setSearchText] = useState("");
 
   const navigation = useNavigation();
+
+  useEffect(() => {
+    const fetchData = async () =>{
+      const userData = await UserService.getUserInfo();
+      
+    };
+    
+    fetchData();
+  }, []);
 
   const renderRecentContact = ({ item }) => (
     <View style={styles.contactContainer}>

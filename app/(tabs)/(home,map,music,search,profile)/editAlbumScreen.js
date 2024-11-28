@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { tokenManager } from "../../../utils/tokenManager";
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
+import { fetchPost } from "../../../utils/fetchCalls";
 
 const editAlbumScreen = () => {
   const router = useRouter();
@@ -116,22 +117,18 @@ const editAlbumScreen = () => {
    })
   
     try {
-      const response = await fetch(`${SERVER_URL}/albums`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+      const response = await fetchPost({
+        url: `${SERVER_URL}/albums`,
         body: formData
       });
   
-      if (!response.ok) {
-        // Try to parse error message from response
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
-      }
+      // if (!response.ok) {
+      //   // Try to parse error message from response
+      //   const errorData = await response.json().catch(() => null);
+      //   throw new Error(errorData?.message || `HTTP error! status: ${response.status}`);
+      // }
   
-      const result = await response.json();
+      const result = response;
   
       Alert.alert("Success", "Uploaded successfully");
       console.log("Track uploaded successfully:", result);

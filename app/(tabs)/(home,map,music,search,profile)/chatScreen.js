@@ -1,4 +1,4 @@
-import { tokenManager } from "../utils/tokenManager";
+import { tokenManager } from "../../../utils/tokenManager";
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -12,11 +12,11 @@ import {
   Alert,
 } from "react-native";
 import { Text } from "react-native";
-import { ChatService } from "../services/ChatService";
+import { ChatService } from "../../../services/ChatService";
 import { router, useLocalSearchParams } from "expo-router";
-import MessageBubble from "./messageBubble";
+import MessageBubble from "../../../components/messageBubble";
 import { jwtDecode } from "jwt-decode";
-import { AuthService } from "../services/AuthService";
+import { AuthService } from "../../../services/AuthService";
 
 export default function ChatScreen() {
   const [currentUserId] = useState(async () => {

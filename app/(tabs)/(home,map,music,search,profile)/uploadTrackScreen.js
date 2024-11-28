@@ -19,6 +19,7 @@ import { tokenManager } from "../../../utils/tokenManager";
 import { Audio } from "expo-av";
 import { axiosPost } from "../../../utils/axiosCalls";
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
+import { fetchPost } from "../../../utils/fetchCalls";
 
 const uploadTrackScreen = () => {
   const [title, setTitile] = useState("");
@@ -354,26 +355,20 @@ const uploadTrackScreen = () => {
     }
 
     try {
-      const response = await fetch(`${SERVER_URL}/tracks`, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-          // Don't set Content-Type when sending FormData,
-          // browser will set it automatically with the correct boundary
-        },
+      const response = await fetchPost({
+        url: `${SERVER_URL}/tracks`,
         body: formData,
       });
 
-      if (!response.ok) {
-        // Try to parse error message from response
-        const errorData = await response.json().catch(() => null);
-        throw new Error(
-          errorData?.message || `HTTP error! status: ${response.status}`
-        );
-      }
+      // if (!response.ok) {
+      //   // Try to parse error message from response
+      //   const errorData = await response.json().catch(() => null);
+      //   throw new Error(
+      //     errorData?.message || `HTTP error! status: ${response.status}`
+      //   );
+      // }
 
-      const result = await response.json();
+      const result = response;
 
       Alert.alert("Success", "Uploaded successfully");
       console.log("Track uploaded successfully:", result);

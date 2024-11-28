@@ -19,6 +19,7 @@ import Slider from "@react-native-community/slider";
 import { StatusBar } from "expo-status-bar";
 import { axiosPost, axiosGet, axiosDelete } from "../utils/axiosCalls";
 import { tokenManager } from "../utils/tokenManager";
+import { fetchPut } from "../utils/fetchCalls";
 
 const { width, height } = Dimensions.get("window");
 const MAIN_SERVER_URL = "http://localhost:3000";
@@ -182,15 +183,9 @@ const StreamMusic = () => {
 
       setIsAddingToPlaylist(true);
 
-      const response = await fetch(
-        `${MAIN_SERVER_URL}/playlists/${playlist_id}`,
-        {
-          method: "PUT",
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
+      const response = await fetchPut({
+        url: `${MAIN_SERVER_URL}/playlists/${playlist_id}`,
+        body: formData,
         }
       );
       setPlaylistModal(false);
