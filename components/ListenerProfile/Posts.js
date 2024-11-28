@@ -25,6 +25,7 @@ import { LikesModal } from '../LikesModal';
 import { confirmDelete } from '../DeleteConfirmDialog';
 import { deleteComment } from '../DeleteActions';
 import { formatDate } from '../../utils/functions';
+import { fetchGet, fetchPost, fetchPut, fetchDelete } from "../../utils/fetchCalls";
 
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
 
@@ -81,10 +82,11 @@ const Posts = ({ currentUserId, avatarUri, name, isSelfProfile }) => {
         //if (!hasMore && pageNum > 1) return;
       
         try {
-          const response = await fetch(`${API_URL}/posts/user/${currentUserId}`);
-          if (!response.ok) throw new Error('Failed to fetch posts');
+          const response = await fetchGet({
+            url: `${API_URL}/posts/user/${currentUserId}`});
+          //if (!response.ok) throw new Error('Failed to fetch posts');
           
-          const data = await response.json();
+          const data = response;
           console.log("POSTS", data);
           
           // Check if we've reached the end of the posts
@@ -128,14 +130,12 @@ const Posts = ({ currentUserId, avatarUri, name, isSelfProfile }) => {
         setIsLoadingComments(prev => ({ ...prev, [postId]: true }));
         try {
             const token = await tokenManager.getAccessToken();
-            const response = await fetch(`${API_URL}/posts/${postId}/comments`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+            const response = await fetchGet({
+                url: `${API_URL}/posts/${postId}/comments`
             });
             
-            if (!response.ok) throw new Error('Failed to fetch comments');
-            const data = await response.json();
+            //if (!response.ok) throw new Error('Failed to fetch comments');
+            const data = response;
             setComments(prev => ({ ...prev, [postId]: data.comments }));
         } catch (error) {
             console.error('Error fetching comments:', error);
@@ -151,14 +151,28 @@ const Posts = ({ currentUserId, avatarUri, name, isSelfProfile }) => {
             const endpoint = isCurrentlyLiked ? 'unlike' : 'like';
             const method = isCurrentlyLiked ? 'DELETE' : 'POST';
             
-            const response = await fetch(`${API_URL}/posts/${postId}/${endpoint}`, {
-                method,
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            // const response = await fetch(`${API_URL}/posts/${postId}/${endpoint}`, {
+            //     method,
+            //     headers: {
+            //         'Authorization': `Bearer ${token}`
+            //     }
+            // });
 
-            if (!response.ok) throw new Error(`Failed to ${endpoint} post`);
+            let response;
+
+            if (isCurrentlyLiked) {
+                response = await fetchDelete({
+                    url: `${API_URL}/posts/${postId}/unlike`
+                }) 
+            } else {
+                response = await fetchPost({
+                    url: `${API_URL}/posts/${postId}/like`
+                }) 
+            }
+
+
+
+            //if (!response.ok) throw new Error(`Failed to ${endpoint} post`);
             
             setPosts(posts.map(post => {
                 if (post.id === postId) {
@@ -184,15 +198,13 @@ const Posts = ({ currentUserId, avatarUri, name, isSelfProfile }) => {
     const handlePressLikes = async (postId) => {
         try {
             const token = await tokenManager.getAccessToken();
-            const response = await fetch(`${API_URL}/posts/${postId}/likes`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+            const response = await fetchGet({
+                url: `${API_URL}/posts/${postId}/likes`
             });
             
-            if (!response.ok) throw new Error('Failed to fetch likes');
+            //if (!response.ok) throw new Error('Failed to fetch likes');
             
-            const data = await response.json();
+            const data = response;
             setSelectedLikes(data.likes);
             setLikesModalVisible(true);
         } catch (error) {
@@ -252,16 +264,12 @@ const Posts = ({ currentUserId, avatarUri, name, isSelfProfile }) => {
     const saveEdit = async (id) => {
         try {
             const token = await tokenManager.getAccessToken();
-            const response = await fetch(`${API_URL}/posts/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
+            const response = await fetchPut({
+                url: `${API_URL}/posts/${id}`,
                 body: JSON.stringify({ content: editContent }),
             });
 
-            if (!response.ok) throw new Error('Failed to update post');
+            //if (!response.ok) throw new Error('Failed to update post');
 
             setPosts(posts.map(post => post.id === id ? { ...post, content: editContent } : post));
             setEditId(null);
@@ -282,14 +290,11 @@ const Posts = ({ currentUserId, avatarUri, name, isSelfProfile }) => {
                     onPress: async () => {
                         try {
                             const token = await tokenManager.getAccessToken();
-                            const response = await fetch(`${API_URL}/posts/${id}`, {
-                                method: 'DELETE',
-                                headers: {
-                                    'Authorization': `Bearer ${token}`
-                                }
+                            const response = await fetchDelete({
+                                url: `${API_URL}/posts/${id}`
                             });
 
-                            if (!response.ok) throw new Error('Failed to delete post');
+                            //if (!response.ok) throw new Error('Failed to delete post');
                             setPosts(posts.filter(post => post.id !== id));
                         } catch (error) {
                             console.error('Error deleting post:', error);

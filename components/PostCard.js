@@ -25,6 +25,7 @@ import { LikesModal } from './LikesModal';
 import { confirmDelete } from './DeleteConfirmDialog';
 import { deleteComment } from './DeleteActions';
 import { Colors } from '../constants/Color';
+import { fetchGet, fetchDelete, fetchPost } from "../utils/fetchCalls";
 
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
 
@@ -63,14 +64,12 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
     setIsLoadingComments(true);
     try {
       const token = await tokenManager.getAccessToken();
-      const response = await fetch(`${API_URL}/posts/${post.post_id}/comments`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await fetchGet({
+        url: `${API_URL}/posts/${post.post_id}/comments`
       });
 
-      if (!response.ok) throw new Error('Failed to fetch comments');
-      const data = await response.json();
+      // if (!response.ok) throw new Error('Failed to fetch comments');
+      const data = response;
       setComments(data.comments);
     } catch (error) {
       console.error('Error fetching comments:', error);
@@ -82,17 +81,13 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
   const checkLikeStatus = async () => {
     try {
       const token = await tokenManager.getAccessToken();
-      const response = await fetch(
-        `${API_URL}/posts/${post.post_id}/like-status`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+      const response = await fetchGet({
+        url: `${API_URL}/posts/${post.post_id}/like-status`,
         }
       );
 
-      if (!response.ok) throw new Error('Failed to check like status');
-      const data = await response.json();
+      // if (!response.ok) throw new Error('Failed to check like status');
+      const data = response;
       setIsLiked(data.liked);
     } catch (error) {
       console.error('Error checking like status:', error);
@@ -102,14 +97,11 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
   const handleLike = async () => {
     try {
       const token = await tokenManager.getAccessToken();
-      const response = await fetch(`${API_URL}/posts/${post.post_id}/like`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await fetchPost({
+        url: `${API_URL}/posts/${post.post_id}/like`
       });
 
-      if (!response.ok) throw new Error('Failed to like post');
+      // if (!response.ok) throw new Error('Failed to like post');
 
       setIsLiked(true);
       setLikeCount(prev => prev + 1);
@@ -122,14 +114,11 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
   const handleUnlike = async () => {
     try {
       const token = await tokenManager.getAccessToken();
-      const response = await fetch(`${API_URL}/posts/${post.post_id}/unlike`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await fetchDelete({
+        url: `${API_URL}/posts/${post.post_id}/unlike`
       });
 
-      if (!response.ok) throw new Error('Failed to unlike post');
+      // if (!response.ok) throw new Error('Failed to unlike post');
 
       setIsLiked(false);
       setLikeCount(prev => Math.max(0, prev - 1));
@@ -142,18 +131,14 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
   const handlePressLikes = async () => {
     try {
       const token = await tokenManager.getAccessToken();
-      const response = await fetch(
-        `${API_URL}/posts/${post.post_id}/likes`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+      const response = await fetchGet({
+        url: `${API_URL}/posts/${post.post_id}/likes`
         }
       );
 
-      if (!response.ok) throw new Error('Failed to fetch likes');
+      // if (!response.ok) throw new Error('Failed to fetch likes');
 
-      const data = await response.json();
+      const data = response;
       setSelectedLikes(data.likes);
       setLikesModalVisible(true);
     } catch (error) {

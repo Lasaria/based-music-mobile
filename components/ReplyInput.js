@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
 import { tokenManager } from "../utils/tokenManager";
 import { Colors } from '../constants/Color';
+import { fetchGet, fetchPost } from "../utils/fetchCalls";
 
 const API_URL = SERVER_URL;
 // ReplyInput.js
@@ -27,36 +28,30 @@ export const ReplyInput = ({ postId, currentUserId, commentId, onReplyAdded, onC
     setIsSubmitting(true);
     try {
       const token = await tokenManager.getAccessToken();
-      const response = await fetch(
-        `${API_URL}/posts/${postId}/comments/${commentId}/replies`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
+      const response = await fetchPost({
+        url: `${API_URL}/posts/${postId}/comments/${commentId}/replies`,
+          body: {
             content: reply.trim()
-          })
+          }
         }
       );
 
-      if (!response.ok) {
-        throw new Error('Failed to add reply');
-      }
+    //   if (!response.ok) {
+    //     throw new Error('Failed to add reply');
+    //   }
 
-      const data = await response.json();
+      const data = response;
       console.log("REPLY ADdED DATA: ", data)
 
-      const userResponse = await fetch(`${API_URL}/users/${currentUserId}`, {
-        method: 'GET'
+      const userResponse = await fetchGet({
+        url: `${API_URL}/users/${currentUserId}`
       });
 
-      if (!userResponse.ok) {
-        throw new Error('Failed to add comment');
-      }
+    //   if (!userResponse.ok) {
+    //     throw new Error('Failed to add comment');
+    //   }
 
-      const userData = await userResponse.json();
+      const userData = userResponse;
       console.log(userData);
 
       setReply('');

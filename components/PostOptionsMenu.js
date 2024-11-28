@@ -171,6 +171,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { tokenManager } from '../utils/tokenManager';
 import { SERVER_URL } from '@env';
 import { Colors } from '../constants/Color';
+import { fetchDelete } from "../utils/fetchCalls";
 
 const API_URL = SERVER_URL;
 
@@ -193,12 +194,11 @@ const PostOptionsMenu = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
             try {
               setLoading(true);
               const token = await tokenManager.getAccessToken();
-              const response = await fetch(`${API_URL}/posts/${post.post_id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` },
+              const response = await fetchDelete({
+                url: `${API_URL}/posts/${post.post_id}`
               });
 
-              if (!response.ok) throw new Error('Failed to delete post');
+              //if (!response.ok) throw new Error('Failed to delete post');
               setMenuVisible(false);
               onPostDeleted(post.post_id);
             } catch (error) {

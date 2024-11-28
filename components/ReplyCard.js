@@ -19,6 +19,7 @@ import { confirmDelete } from '../components/DeleteConfirmDialog';
 import { deleteReply } from '../components/DeleteActions';
 import { formatDate } from '../utils/functions';
 import { LikesModal } from './LikesModal';
+import { fetchGet, fetchDelete, fetchPost } from "../utils/fetchCalls";
 
 const API_URL = SERVER_URL;
 
@@ -41,15 +42,11 @@ export const ReplyCard = ({ onReplyDeleted, reply, comment, comments, setComment
   
     const checkLikeStatus = async () => {
       try {
-        const response = await fetch(
-          `${API_URL}/posts/${postId}/comments/${commentId}/replies/${reply.reply_id}/like-status`,
-          {
-            headers: {
-              'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
-            }
+        const response = await fetchGet({
+          url: `${API_URL}/posts/${postId}/comments/${commentId}/replies/${reply.reply_id}/like-status`
           }
         );
-        const data = await response.json();
+        const data = response;
         console.log(data);
         setIsLiked(data.liked);
       } catch (error) {
@@ -59,15 +56,11 @@ export const ReplyCard = ({ onReplyDeleted, reply, comment, comments, setComment
 
     const getLikeCount = async () => {
         try {
-          const response = await fetch(
-            `${API_URL}/posts/${postId}/comments/${commentId}/replies/${reply.reply_id}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
-              }
+          const response = await fetchGet({
+            url: `${API_URL}/posts/${postId}/comments/${commentId}/replies/${reply.reply_id}`
             }
           );
-          const data = await response.json();
+          const data = response;
           console.log(data);
           setLikeCount(data.reply.like_count);
         } catch (error) {
@@ -80,15 +73,27 @@ export const ReplyCard = ({ onReplyDeleted, reply, comment, comments, setComment
         const method = isLiked ? 'DELETE' : 'POST';
         const endpoint = isLiked ? 'unlike' : 'like';
         
-        await fetch(
-          `${API_URL}/posts/${postId}/comments/${commentId}/replies/${reply.reply_id}/${endpoint}`,
-          {
-            method,
-            headers: {
-              'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
-            }
+        // await fetch(
+        //   `${API_URL}/posts/${postId}/comments/${commentId}/replies/${reply.reply_id}/${endpoint}`,
+        //   {
+        //     method,
+        //     headers: {
+        //       'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
+        //     }
+        //   }
+        // );
+
+        if (isLiked){
+            await fetchDelete({
+                url: `${API_URL}/posts/${postId}/comments/${commentId}/replies/${reply.reply_id}/unlike`,
+                }
+              );
+          } else {
+            await fetchPost({
+                url: `${API_URL}/posts/${postId}/comments/${commentId}/replies/${reply.reply_id}/like`,
+                }
+              );
           }
-        );
         
         setIsLiked(!isLiked);
         const newLikeCount = isLiked ? likeCount - 1 : likeCount + 1;
@@ -100,18 +105,14 @@ export const ReplyCard = ({ onReplyDeleted, reply, comment, comments, setComment
 
     const handlePressLikes = async () => {
         try {
-          const response = await fetch(
-            `${API_URL}/posts/${postId}/comments/${commentId}/replies/${reply.reply_id}/likes`,
-            {
-              headers: {
-                'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
-              }
+          const response = await fetchGet({
+            url: `${API_URL}/posts/${postId}/comments/${commentId}/replies/${reply.reply_id}/likes`
             }
           );
           
-          if (!response.ok) throw new Error('Failed to fetch likes');
+          //if (!response.ok) throw new Error('Failed to fetch likes');
           
-          const data = await response.json();
+          const data = response;
           setSelectedLikes(data.likes);
           setLikesModalVisible(true);
         } catch (error) {

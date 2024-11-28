@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { tokenManager } from "../utils/tokenManager";
 import { router } from 'expo-router';
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
+import { fetchGet } from "../utils/fetchCalls";
 
 const API_URL = SERVER_URL;
 
@@ -42,18 +43,14 @@ export const FollowersModal = ({ visible, onClose, userId }) => {
         ...(key && { lastKey: key })
       }).toString();
       
-      const response = await fetch(
-        `${API_URL}/follow/listFollowers/${userId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+      const response = await fetchGey({
+        url: `${API_URL}/follow/listFollowers/${userId}`
         }
       );
       
-      if (!response.ok) throw new Error('Failed to fetch followers');
+      // if (!response.ok) throw new Error('Failed to fetch followers');
       
-      const data = await response.json();
+      const data = response;
       
       setFollowers(prev => key ? [...prev, ...data.followers] : data.followers);
       setLastKey(data.lastEvaluatedKey);

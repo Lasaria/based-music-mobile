@@ -1,6 +1,7 @@
 // deleteActions.js
 import { tokenManager } from "../utils/tokenManager"; 
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
+import { fetchDelete } from "../utils/fetchCalls";
 
 const API_URL = SERVER_URL;
 
@@ -8,19 +9,14 @@ export const deleteComment = async (postId, commentId) => {
   try {
     const token = await tokenManager.getAccessToken();
     console.log("DELETE COMMENT ACTIONS", postId, commentId)
-    const response = await fetch(
-      `${API_URL}/posts/${postId}/comments/${commentId}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+    const response = await fetchDelete({
+      url: `${API_URL}/posts/${postId}/comments/${commentId}`
       }
     );
 
-    if (!response.ok) {
-      throw new Error('Failed to delete comment');
-    }
+    // if (!response.ok) {
+    //   throw new Error('Failed to delete comment');
+    // }
 
     return true;
   } catch (error) {
@@ -32,19 +28,14 @@ export const deleteComment = async (postId, commentId) => {
 export const deleteReply = async (postId, commentId, replyId) => {
   try {
     const token = await tokenManager.getAccessToken();
-    const response = await fetch(
-      `${API_URL}/posts/${postId}/comments/${commentId}/replies/${replyId}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+    const response = await fetchDelete({
+      url: `${API_URL}/posts/${postId}/comments/${commentId}/replies/${replyId}`
       }
     );
 
-    if (!response.ok) {
-      throw new Error('Failed to delete reply');
-    }
+    // if (!response.ok) {
+    //   throw new Error('Failed to delete reply');
+    // }
 
     return true;
   } catch (error) {

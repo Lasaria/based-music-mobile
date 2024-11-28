@@ -23,6 +23,7 @@ import { LikesModal } from './LikesModal';
 import { tokenManager } from "../utils/tokenManager";
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
 import { Colors } from '../constants/Color';
+import { fetchGet, fetchDelete, fetchPost } from "../utils/fetchCalls";
 
 const API_URL = SERVER_URL;
 
@@ -81,15 +82,11 @@ export const CommentCard = ({ onCommentDeleted, isDeleting, comment, comments, p
 
   const checkLikeStatus = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/posts/${postId}/comments/${comment.comment_id}/like-status`,
-        {
-          headers: {
-            'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
-          }
-        }
+      const response = await fetchGet({
+        url: `${API_URL}/posts/${postId}/comments/${comment.comment_id}/like-status`,
+      }
       );
-      const data = await response.json();
+      const data = response;
       setIsLiked(data.liked);
     } catch (error) {
       console.error('Error checking like status:', error);
@@ -98,15 +95,11 @@ export const CommentCard = ({ onCommentDeleted, isDeleting, comment, comments, p
 
   const getLikeCount = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/posts/${postId}/comments/${comment.comment_id}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
-          }
+      const response = await fetchGet({
+        url: `${API_URL}/posts/${postId}/comments/${comment.comment_id}`,
         }
       );
-      const data = await response.json();
+      const data = response;
       console.log(data);
       setLikeCount(data.like_count);
     } catch (error) {
@@ -116,15 +109,11 @@ export const CommentCard = ({ onCommentDeleted, isDeleting, comment, comments, p
 
   const getReplyCount = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/posts/${postId}/comments/${comment.comment_id}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
-          }
+      const response = await fetchGet({
+        url: `${API_URL}/posts/${postId}/comments/${comment.comment_id}`,
         }
       );
-      const data = await response.json();
+      const data = response;
       console.log(data);
       console.log(data.reply_count);
       setReplyCount(data.reply_count);
@@ -138,15 +127,18 @@ export const CommentCard = ({ onCommentDeleted, isDeleting, comment, comments, p
       const method = isLiked ? 'DELETE' : 'POST';
       const endpoint = isLiked ? 'unlike' : 'like';
 
-      await fetch(
-        `${API_URL}/posts/${postId}/comments/${comment.comment_id}/${endpoint}`,
-        {
-          method,
-          headers: {
-            'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
-          }
-        }
-      );
+      
+      if (isLiked){
+        await fetchDelete({
+            url: `${API_URL}/posts/${postId}/comments/${comment.comment_id}/unlike`,
+            }
+          );
+      } else {
+        await fetchPost({
+            url: `${API_URL}/posts/${postId}/comments/${comment.comment_id}/like`,
+            }
+          );
+      }
 
       setIsLiked(!isLiked);
       // Update like count in UI
@@ -159,10 +151,10 @@ export const CommentCard = ({ onCommentDeleted, isDeleting, comment, comments, p
 
   const fetchReplies = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/posts/${postId}/comments/${comment.comment_id}/replies`
-      );
-      const data = await response.json();
+      const response = await fetchGet({
+        url: `${API_URL}/posts/${postId}/comments/${comment.comment_id}/replies`
+    });
+      const data = response;
       console.log(data.replies[0]);
       setReplies(data.replies);
     } catch (error) {
@@ -198,18 +190,14 @@ export const CommentCard = ({ onCommentDeleted, isDeleting, comment, comments, p
 
   const handlePressLikes = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/posts/${postId}/comments/${comment.comment_id}/likes`,
-        {
-          headers: {
-            'Authorization': `Bearer ${await tokenManager.getAccessToken()}`
-          }
+      const response = await fetchGet({
+       url: `${API_URL}/posts/${postId}/comments/${comment.comment_id}/likes`,
         }
       );
 
-      if (!response.ok) throw new Error('Failed to fetch likes');
+      //if (!response.ok) throw new Error('Failed to fetch likes');
 
-      const data = await response.json();
+      const data = response;
       console.log(data);
       setSelectedLikes(data.likes);
       setLikesModalVisible(true);

@@ -14,6 +14,7 @@ import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
 import { tokenManager } from "../utils/tokenManager";
 import { Colors } from '../constants/Color';
+import { fetchGet, fetchPost } from "../utils/fetchCalls";
 
 const API_URL = SERVER_URL;
 
@@ -29,32 +30,28 @@ export const CommentInput = ({ postId, onCommentAdded }) => {
     try {
       const token = await tokenManager.getAccessToken();
       const currentUserId = await tokenManager.getUserId();
-      const response = await fetch(`${API_URL}/posts/${postId}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
+      const response = await fetchPost({
+        url: `${API_URL}/posts/${postId}/comments`,
+        body: {
           content: comment.trim()
-        })
+        }
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to add comment');
-      }
+    //   if (!response.ok) {
+    //     throw new Error('Failed to add comment');
+    //   }
 
-      const data = await response.json();
+      const data = response;
 
-      const userResponse = await fetch(`${API_URL}/users/${currentUserId}`, {
-        method: 'GET'
+      const userResponse = await fetchGet({
+        url: `${API_URL}/users/${currentUserId}`,
       });
 
-      if (!userResponse.ok) {
-        throw new Error('Failed to add comment');
-      }
+    //   if (!userResponse.ok) {
+    //     throw new Error('Failed to add comment');
+    //   }
 
-      const userData = await userResponse.json();
+      const userData = userResponse;
       console.log(userData);
 
 

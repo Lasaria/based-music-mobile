@@ -20,6 +20,7 @@ import { CommentCard } from '../../components/CommentCard';
 import { CommentsSection } from '../../components/CommentsSection';
 import { PostCard } from '../../components/PostCard';
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
+import { fetchGet } from "../../utils/fetchCalls";
 
 const API_URL = SERVER_URL;
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -128,10 +129,11 @@ const Following = () => {
         if (!hasMore && pageNum > 1) return;
 
         try {
-            const response = await fetch(`${API_URL}/posts?page=${pageNum}&limit=10`);
-            if (!response.ok) throw new Error('Failed to fetch posts');
+            const response = await fetchGet({
+                url: `${API_URL}/posts?page=${pageNum}&limit=10`});
+            //if (!response.ok) throw new Error('Failed to fetch posts');
 
-            const data = await response.json();
+            const data = response;
 
             // Check if we've reached the end of the posts
             if (data.length < 10) {

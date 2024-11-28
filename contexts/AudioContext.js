@@ -10,6 +10,8 @@ import { Audio } from "expo-av";
 import { tokenManager } from "../utils/tokenManager";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { QueueContext } from "./QueueContext";
+import { fetchGet, fetchPost, fetchPut, fetchDelete } from "../utils/fetchCalls";
+
 
 export const AudioContext = createContext();
 
@@ -341,14 +343,14 @@ const toggleRepeat = () => {
   const fetchTrackInfo = async (trackId) => {
     debug("Fetching track info", trackId);
     try {
-      const url = `${BASE_URL}/tracks?track_id=${trackId}`;
-      const response = await fetch(url);
+      const response = await fetchGet({
+        url: `${BASE_URL}/tracks?track_id=${trackId}`});
 
-      if (!response.ok) {
-        throw new Error(`Server responded with status ${response.status}`);
-      }
+      // if (!response.ok) {
+      //   throw new Error(`Server responded with status ${response.status}`);
+      // }
 
-      const data = await response.json();
+      const data = response;
       const track = data.track;
 
       if (!track) {
