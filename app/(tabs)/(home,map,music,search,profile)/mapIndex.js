@@ -56,8 +56,16 @@ const MapScreen = () => {
           await AsyncStorage.setItem(`${CACHE_KEY}_timestamp`, now.toString());
         }
 
-        // const data = await MapService.getAllMapData();
-        // setMapData(data)
+        // console.log("Fetching new data");
+        //   const data = await MapService.getAllMapData();
+        //   //console.log(data.data);
+
+        //   //data.data.map((item, index) => {console.log(item.name)});
+        //   setMapData(data);
+
+
+        // // const data = await MapService.getAllMapData();
+        // // setMapData(data)
         
 
       } catch (error) {
@@ -68,7 +76,7 @@ const MapScreen = () => {
     getMaps();
   }, []);
 
-  console.log("MAPDATA0: ", mapData?.data[0]);
+  //console.log("MAPDATA0: ", mapData?.data[0]);
 
   
 
@@ -257,7 +265,7 @@ const MapScreen = () => {
  
 
   const handlePolygonPress = (item) => {
-    console.log("ITEM: ", item);
+    //console.log("ITEM: ", item);
     const polygons = JSON.parse(item.polygons);
 
     // Check which venues fall inside the polygon
@@ -284,27 +292,32 @@ const MapScreen = () => {
 
     return mapData.data.map((item, index) => {
       // Parse the polygons and outline JSON strings
+    //   if (item.level == 3) {
+    //     //console.log(item.level);
+    //     return <></>;
+    //   }
       const polygons = JSON.parse(item.polygons);
       const outline = JSON.parse(item.outline);
+      console.log(item.boundary_id);
 
       return (
         <React.Fragment key={index}>
           {/* FillLayer for polygons */}
-          {/* <MapboxGL.ShapeSource
+          <MapboxGL.ShapeSource
             id={`polygon-source-${item.boundary_id}`}
             shape={polygons}
             onPress={() => handlePolygonPress(item)} // Capture the polygon press
           >
             <MapboxGL.FillLayer
               id={`polygon-fill-${item.boundary_id}`}
-              minZoomLevel={item.level == 1 ? 0 : 9} // Visible from the lowest zoom level
-                maxZoomLevel={item.level == 1 ? 9 : 22} // Hidden at zoom level 10 and above
+              minZoomLevel={item.level == 1 ? 0 : item.level == 2 ? 9 : 22}
+              maxZoomLevel={item.level == 1 ? 9 : item.level == 2 ? 30 : 40}
                 style={{
                     fillColor: "hsla(260, 100%, 40%, 0.26)",
                     fillOpacity: 0.5,
                 }}
             />
-          </MapboxGL.ShapeSource> */}
+          </MapboxGL.ShapeSource>
 
           {/* LineLayer for outline */}
           <MapboxGL.ShapeSource
@@ -313,8 +326,8 @@ const MapScreen = () => {
           >
             <MapboxGL.LineLayer
               id={`outline-line-${item.boundary_id}`}
-              minZoomLevel={item.level == 1 ? 0 : 9}
-              maxZoomLevel={item.level == 1 ? 9 : 22}
+              minZoomLevel={item.level == 1 ? 0 : item.level == 2 ? 9 : 22}
+              maxZoomLevel={item.level == 1 ? 9 : item.level == 2 ? 30 : 40}
                 style={{
                     lineColor: "#ffe8a3", // Color of the boundary line
                     lineWidth: 3, // Thickness of the boundary line
