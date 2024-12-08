@@ -18,7 +18,7 @@ export const QueueProvider = ({ children }) => {
 
   // Save queue whenever it changes
   useEffect(() => {
-    console.log("[QueueProvider] Queue updated, saving to storage:", queue);
+    //console.log("[QueueProvider] Queue updated, saving to storage:", queue);
     saveQueue();
   }, [queue]);
 
@@ -28,7 +28,7 @@ export const QueueProvider = ({ children }) => {
       const savedQueue = await AsyncStorage.getItem(QUEUE_STORAGE_KEY);
       if (savedQueue) {
         const parsedQueue = JSON.parse(savedQueue);
-        console.log("[loadQueue] Successfully loaded queue:", parsedQueue);
+        // console.log("[loadQueue] Successfully loaded queue:", parsedQueue);
         setQueue(parsedQueue);
       } else {
         console.log("[loadQueue] No saved queue found");

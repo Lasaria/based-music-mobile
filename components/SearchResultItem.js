@@ -10,13 +10,15 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { AudioContext } from "../contexts/AudioContext";
 
-const SearchResultItem = ({ item, onPress,disablePlay = false }) => {
+const SearchResultItem = ({ item, onPress, disablePlay = false }) => {
   const {
     trackInfo,
     isPlaying,
     togglePlayPause,
     isPlayerReady,
     updateCurrentTrack,
+    currentTrackId,
+    checkSoundStatus,
   } = useContext(AudioContext);
 
   const formatDuration = (duration) => {
@@ -24,75 +26,32 @@ const SearchResultItem = ({ item, onPress,disablePlay = false }) => {
     const minutes = Math.floor(duration / 60);
     const seconds = Math.floor(duration % 60);
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  }
+  };
 
   const handlePress = () => {
     if (disablePlay) {
-      onPress(); // Only call onPress without triggering play if disablePlay is true
-    } else {
-      handlePlay(item);
+      onPress();
+      return;
     }
+    handlePlay(item);
   };
 
   const handlePlay = async (item) => {
+    console.log("SearchResultItem - original item:", item);
 
-    console.log("\n=== [START] SearchResultItem.handlePlay ===");
-
-    // Extract and validate track ID
-    const trackId = item.track_id || item.id;
     const itemType = item.type || item.content_type;
 
-    console.log("[SearchResultItem] Play requested:", {
-      type: itemType,
-      id: trackId,
-      currentTrack: trackInfo?.track_id,
-      isPlayerReady,
-      item: item,
-    });
-
-    // Validate item type
-    if (itemType !== "song") {
-      console.log("[SearchResultItem] Non-song item, navigating to detail");
-      onPress(item);
-      return;
-    }
-
-    // Validate track ID
-    if (!trackId) {
-      console.error("[SearchResultItem] Invalid track ID:", trackId);
-      Alert.alert(
-        "Playback Error",
-        "Unable to play this track. Track ID is missing."
-      );
-      return;
-    }
-
-    try {
-      // Check if this is the current track
-      if (trackInfo?.track_id === trackId && isPlayerReady) {
-        console.log("[SearchResultItem] Toggling current track playback");
-        await togglePlayPause();
-        return;
-      }
-
-      // Load and play new track
-      console.log("[SearchResultItem] Loading new track:", trackId);
+    if (itemType === "song") {
+      const trackId = item.id || item.track_id;
+      console.log("SearchResultItem - passing trackId:", trackId);
       await updateCurrentTrack(trackId);
 
-      // Only attempt to play if the track was loaded successfully
-      if (isPlayerReady) {
-        await togglePlayPause();
+      // Add this to automatically start playback
+      await togglePlayPause();
+    } else {
+      if (typeof onPress === "function") {
+        onPress(item);
       }
-    } catch (error) {
-      console.error("[SearchResultItem] Playback error:", {
-        message: error.message,
-        stack: error.stack,
-      });
-
-      Alert.alert(
-        "Playback Error",
-        "Unable to play this track. Please try again later."
-      );
     }
   };
 
@@ -140,9 +99,10 @@ const SearchResultItem = ({ item, onPress,disablePlay = false }) => {
     }
   };
 
+  // Check if this item is the current track and adjust display accordingly
   const isCurrentTrack =
     (item.type === "song" || item.content_type === "song") &&
-    trackInfo?.track_id === (item.track_id || item.id);
+    (item.track_id === currentTrackId || item.id === currentTrackId);
   const showPlayingState = isCurrentTrack && isPlaying;
 
   const renderActionButton = () => {
