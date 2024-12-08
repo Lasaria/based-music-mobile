@@ -17,6 +17,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import MessageBubble from "../../../components/messageBubble";
 import { jwtDecode } from "jwt-decode";
 import { AuthService } from "../../../services/AuthService";
+import useChatSocket from "../../../hooks/useChatSocket"
 
 export default function ChatScreen() {
   const [currentUserId] = useState(async () => {
@@ -30,11 +31,13 @@ export default function ChatScreen() {
     }
   });
 
+  //const { messages, sendMessage, deleteMessage, isConnected } = useChatSocket(chatId);
+
   const { otherUserId, otherUserName } = useLocalSearchParams();
   const [chatId, setChatId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
-  const [isConnected, setIsConnected] = useState(false);
+  // const [isConnected, setIsConnected] = useState(false);
   const [ws, setWs] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const flatListRef = useRef(null);
@@ -61,29 +64,29 @@ export default function ChatScreen() {
     );
   };
 
-  const deleteMessage = async (message) => {
-    if (!ws || !chatId) return;
+  // const deleteMessage = async (message) => {
+  //   if (!ws || !chatId) return;
 
-    try {
-      const accessToken = await tokenManager.getAccessToken();
+  //   try {
+  //     const accessToken = await tokenManager.getAccessToken();
 
-      const deleteData = {
-        type: "delete_message",
-        chatId,
-        messageId: message.message_id,
-        timestamp: new Date().toISOString(),
-        token: accessToken,
-      };
+  //     const deleteData = {
+  //       type: "delete_message",
+  //       chatId,
+  //       messageId: message.message_id,
+  //       timestamp: new Date().toISOString(),
+  //       token: accessToken,
+  //     };
 
-      ws.send(JSON.stringify(deleteData));
+  //     ws.send(JSON.stringify(deleteData));
 
-      // Optimistically remove message from UI
-      setMessages((prev) => prev.filter(msg => msg.message_id !== message.message_id));
-    } catch (err) {
-      console.log("[chatScreen.js] Error deleting message:", err);
-      Alert.alert("Error", "Failed to delete message. Please try again.");
-    }
-  };
+  //     // Optimistically remove message from UI
+  //     setMessages((prev) => prev.filter(msg => msg.message_id !== message.message_id));
+  //   } catch (err) {
+  //     console.log("[chatScreen.js] Error deleting message:", err);
+  //     Alert.alert("Error", "Failed to delete message. Please try again.");
+  //   }
+  // };
 
   useEffect(() => {
     if (flatListRef.current && messages.length > 0) {
@@ -97,111 +100,186 @@ export default function ChatScreen() {
     let isMounted = true;
 
     const initializeChat = async () => {
-      try {
-        const response = await ChatService.initializeChat(otherUserId);
-        if (isMounted && response.success) {
-          setChatId(response.chatId);
-          setMessages(response.messages || []);
+        try {
+            const response = await ChatService.initializeChat(otherUserId);
+            if (isMounted && response.success) {
+                setChatId(response.chatId);
+                setIsLoading(false);
+            }
+        } catch (error) {
+            console.error("Error initializing chat:", error);
+            setIsLoading(false);
         }
-      } catch (error) {
-        console.error("Error initializing chat:", error);
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
     };
 
     initializeChat();
 
     return () => {
-      isMounted = false;
+        isMounted = false;
     };
-  }, [otherUserId]);
+}, [otherUserId]);
 
-  useEffect(() => {
+// Move the hook usage inside a useEffect
+const { sendMessage, deleteMessage, isConnected } = useChatSocket(chatId);
+
+// Add error state
+const [error, setError] = useState(null);
+
+// Add loading state for messages
+const [isMessagesLoading, setIsMessagesLoading] = useState(true);
+
+// Add useEffect to load messages when chatId is available
+useEffect(() => {
     if (!chatId) return;
 
-    let ws = null;
-    const connectWebSocket = () => {
-      const token = tokenManager.getAccessToken();
-      ws = new WebSocket(`ws://localhost:3000/ws?token=${token}`);
-
-      ws.onopen = () => {
-        console.log("WebSocket connected");
-        setIsConnected(true);
-        setWs(ws);
-      };
-
-      ws.onmessage = (event) => {
-        const message = JSON.parse(event.data);
-        console.log("WebSocket message received:", message);
-
-        switch (message.type) {
-          case "new_message":
-            if (message.data.chatId === chatId) {
-              setMessages((prev) => [...prev, message.data]);
+    const loadMessages = async () => {
+        try {
+            const response = await ChatService.getChatMessages(chatId);
+            if (response.success) {
+                setMessages(response.messages);
             }
-            break;
-          case "message_deleted":
-            if (message.data.chatId === chatId) {
-              setMessages((prev) =>
-                prev.filter(msg => msg.message_id !== message.data.messageId)
-              );
-            }
-            break;
+        } catch (error) {
+            console.error("Error loading messages:", error);
+            setError("Failed to load messages");
+        } finally {
+            setIsMessagesLoading(false);
         }
-      };
-
-      ws.onclose = () => {
-        console.log("WebSocket disconnected");
-        setIsConnected(false);
-        setWs(null);
-      };
-
-      ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
-      };
     };
 
-    connectWebSocket();
+    loadMessages();
+}, [chatId]);
 
-    return () => {
-      if (ws) {
-        ws.close();
-      }
-    };
-  }, [chatId]);
+  // useEffect(() => {
+  //   let isMounted = true;
 
-  const sendMessage = async () => {
-    if (!inputText.trim() || !ws || !chatId) return;
-    try {
-      const accessToken = await tokenManager.getAccessToken()
+  //   const initializeChat = async () => {
+  //     try {
+  //       const response = await ChatService.initializeChat(otherUserId);
+  //       if (isMounted && response.success) {
+  //         setChatId(response.chatId);
+  //         setMessages(response.messages || []);
+  //       }
+  //     } catch (error) {
+  //       console.error("Error initializing chat:", error);
+  //     } finally {
+  //       if (isMounted) {
+  //         setIsLoading(false);
+  //       }
+  //     }
+  //   };
 
-      const messageData = {
-        type: "chat_message",
-        chatId,
-        recipientId: otherUserId,
-        content: inputText.trim(),
-        timestamp: new Date().toISOString(),
-        token: accessToken,
-      };
+  //   initializeChat();
 
-      ws.send(JSON.stringify(messageData));
+  //   return () => {
+  //     isMounted = false;
+  //   };
+  // }, [otherUserId]);
 
-      const newMessage = {
-        message_id: Date.now().toString(),
-        content: inputText.trim(),
-        timestamp: new Date().toISOString(),
-        chatId: chatId,
-      };
+  // useEffect(() => {
+  //   if (!chatId) return;
 
-      setMessages((prev) => [...prev, newMessage]);
-      setInputText("");
-    } catch (err) {
-      console.log("[chatScreen.js] Error fetching token while sending message", err)
-    }
-  };
+  //   let ws = null;
+  //   const connectWebSocket = () => {
+  //     const token = tokenManager.getAccessToken();
+  //     console.log('Connecting WebSocket with chatId:', chatId);
+
+  //     ws = new WebSocket(`ws://localhost:3000/ws?token=${token}`);
+
+  //     ws.onopen = () => {
+  //       console.log("WebSocket connected");
+  //       setIsConnected(true);
+  //       setWs(ws);
+  //     };
+
+  //     ws.onmessage = (event) => {
+  //       const message = JSON.parse(event.data);
+  //       console.log("WebSocket message received:", message);
+
+  //       switch (message.type) {
+  //         case "new_message":
+  //           console.log('New message received:', message.data);
+  //           // setMessages((prev) => {
+  //           //     // Check if message already exists to prevent duplicates
+  //           //     const messageExists = prev.some(m => m.message_id === message.data.message_id);
+  //           //     if (!messageExists) {
+  //           //         return [...prev, message.data];
+  //           //     }
+  //           //     return prev;
+  //           // });
+  //           if (message.data.chat_id === chatId) {
+  //             setMessages((prev) => {
+  //               // Check if message already exists
+  //               const exists = prev.some(m => m.message_id === message.data.message_id);
+  //               if (!exists) {
+  //                 console.log('Adding new message to state');
+  //                 return [...prev, message.data];
+  //               }
+  //               console.log('Message already exists in state');
+  //               return prev;
+  //             });
+  //           } else {
+  //             console.log('Message for different chat:', message.data.chat_id);
+  //           }
+  //           break;
+  //         case "message_deleted":
+  //           if (message.data.chatId === chatId) {
+  //             setMessages((prev) =>
+  //               prev.filter(msg => msg.message_id !== message.data.messageId)
+  //             );
+  //           }
+  //           break;
+  //       }
+  //     };
+
+  //     ws.onclose = () => {
+  //       console.log("WebSocket disconnected");
+  //       setIsConnected(false);
+  //       setWs(null);
+  //     };
+
+  //     ws.onerror = (error) => {
+  //       console.error("WebSocket error:", error);
+  //     };
+  //   };
+
+  //   connectWebSocket();
+
+  //   return () => {
+  //     if (ws) {
+  //       ws.close();
+  //     }
+  //   };
+  // }, [chatId]);
+
+  // const sendMessage = async () => {
+  //   if (!inputText.trim() || !ws || !chatId) return;
+  //   try {
+  //     const accessToken = await tokenManager.getAccessToken()
+
+  //     const messageData = {
+  //       type: "chat_message",
+  //       chatId,
+  //       recipientId: otherUserId,
+  //       content: inputText.trim(),
+  //       timestamp: new Date().toISOString(),
+  //       token: accessToken,
+  //     };
+
+  //     ws.send(JSON.stringify(messageData));
+
+  //     const newMessage = {
+  //       message_id: Date.now().toString(),
+  //       content: inputText.trim(),
+  //       timestamp: new Date().toISOString(),
+  //       chatId: chatId,
+  //     };
+
+  //     setMessages((prev) => [...prev, newMessage]);
+  //     setInputText("");
+  //   } catch (err) {
+  //     console.log("[chatScreen.js] Error fetching token while sending message", err)
+  //   }
+  // };
 
   if (isLoading) {
     return (
@@ -224,7 +302,7 @@ export default function ChatScreen() {
         ref={flatListRef}
         data={messages}
         renderItem={({ item }) => {
-          const isOwnMessage = item.sender_id ? item.sender_id.toString() === currentUserId._j : true;
+          const isOwnMessage = item.user_id ? item.user_id.toString() === currentUserId._j : true;
           return (
             <TouchableOpacity
               onLongPress={() => handleLongPress(item)}

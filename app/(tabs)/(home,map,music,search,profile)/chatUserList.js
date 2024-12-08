@@ -22,6 +22,7 @@ export default function UserListScreen({ navigation }) {
         try {
             setError(null);
             const response = await ChatService.getAllChatUsers();
+            console.log(response);
             setUsers(response);
         } catch (err) {
             console.error("Failed to fetch users:", err);
