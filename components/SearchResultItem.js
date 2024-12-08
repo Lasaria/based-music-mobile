@@ -40,14 +40,18 @@ const SearchResultItem = ({ item, onPress, disablePlay = false }) => {
     console.log("SearchResultItem - original item:", item);
 
     const itemType = item.type || item.content_type;
+    const trackId = item.id || item.track_id;
 
     if (itemType === "song") {
-      const trackId = item.id || item.track_id;
-      console.log("SearchResultItem - passing trackId:", trackId);
-      await updateCurrentTrack(trackId);
-
-      // Add this to automatically start playback
-      await togglePlayPause();
+      // Check if this is the current playing track
+      if (trackId === currentTrackId) {
+        // If it's the current track, just toggle play/pause
+        await togglePlayPause();
+      } else {
+        // If it's a new track, load and play it
+        await updateCurrentTrack(trackId);
+        await togglePlayPause();
+      }
     } else {
       if (typeof onPress === "function") {
         onPress(item);
