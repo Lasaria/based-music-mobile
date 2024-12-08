@@ -64,11 +64,6 @@ const HomeScreen = ({ }) => {
       <Text style={styles.title}>Welcome to Based Music!</Text>
       <Button title="Sign Out" onPress={handleSignOut} />
       <Button title="Refresh Tokens" onPress={handleRefreshTokens} />
-      {/* Listener Profile Button */}
-      <Button
-        title="Listener Profile"
-        onPress={() => router.push("/listenerProfile")}
-      />
       <Button title="Music" onPress={playMusic} />
       <Button title="upload" onPress={() => router.push("/uploadScreen")} />
       <Button title="Create a Post" onPress={() => router.push("/createPost")} />

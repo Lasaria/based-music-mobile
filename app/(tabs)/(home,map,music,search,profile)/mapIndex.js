@@ -41,27 +41,27 @@ const MapScreen = () => {
         const cachedTimestamp = await AsyncStorage.getItem(`${CACHE_KEY}_timestamp`);
 
         const now = Date.now();
-        if (cachedData && cachedTimestamp && now - parseInt(cachedTimestamp) < CACHE_DURATION) {
-          // If cache is valid, use cached data
-          console.log("Using cached data");
-          setMapData(JSON.parse(cachedData));
-        } else {
-          // Otherwise, fetch new data from server
-          console.log("Fetching new data");
-          const data = await MapService.getAllMapData();
-          setMapData(data);
+        // if (cachedData && cachedTimestamp && now - parseInt(cachedTimestamp) < CACHE_DURATION) {
+        //   // If cache is valid, use cached data
+        //   console.log("Using cached data");
+        //   setMapData(JSON.parse(cachedData));
+        // } else {
+        //   // Otherwise, fetch new data from server
+        //   console.log("Fetching new data");
+        //   const data = await MapService.getAllMapData();
+        //   setMapData(data);
 
-          // Store the data and timestamp in AsyncStorage
-          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data));
-          await AsyncStorage.setItem(`${CACHE_KEY}_timestamp`, now.toString());
-        }
+        //   // Store the data and timestamp in AsyncStorage
+        //   await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data));
+        //   await AsyncStorage.setItem(`${CACHE_KEY}_timestamp`, now.toString());
+        // }
 
         // console.log("Fetching new data");
-        //   const data = await MapService.getAllMapData();
-        //   //console.log(data.data);
+          const data = await MapService.getAllMapData();
+          //console.log(data.data);
 
-        //   //data.data.map((item, index) => {console.log(item.name)});
-        //   setMapData(data);
+          //data.data.map((item, index) => {console.log(item.name)});
+          setMapData(data);
 
 
         // // const data = await MapService.getAllMapData();
