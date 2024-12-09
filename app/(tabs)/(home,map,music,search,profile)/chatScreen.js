@@ -10,6 +10,9 @@ import {
   RefreshControl,
   TextInput,
   Alert,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Text } from "react-native";
 import { ChatService } from "../../../services/ChatService";
@@ -17,6 +20,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import MessageBubble from "../../../components/messageBubble";
 import { jwtDecode } from "jwt-decode";
 import { AuthService } from "../../../services/AuthService";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function ChatScreen() {
   const [currentUserId] = useState(async () => {
@@ -46,18 +50,19 @@ export default function ChatScreen() {
   const handleLongPress = (message) => {
     Alert.alert(
       "Delete Message",
-      "Are you sure you want to delete this message? This action cannot be undone.",
+      "Are you sure you want to delete this message?",
       [
         {
           text: "Cancel",
-          style: "cancel"
+          style: "cancel",
         },
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => deleteMessage(message)
-        }
-      ]
+          onPress: () => deleteMessage(message),
+        },
+      ],
+      { cancelable: true }
     );
   };
 
@@ -76,12 +81,12 @@ export default function ChatScreen() {
       };
 
       ws.send(JSON.stringify(deleteData));
-
-      // Optimistically remove message from UI
-      setMessages((prev) => prev.filter(msg => msg.message_id !== message.message_id));
+      setMessages((prev) =>
+        prev.filter((msg) => msg.message_id !== message.message_id)
+      );
     } catch (err) {
       console.log("[chatScreen.js] Error deleting message:", err);
-      Alert.alert("Error", "Failed to delete message. Please try again.");
+      Alert.alert("Error", "Failed to delete message", [{ text: "OK" }]);
     }
   };
 
@@ -146,7 +151,7 @@ export default function ChatScreen() {
           case "message_deleted":
             if (message.data.chatId === chatId) {
               setMessages((prev) =>
-                prev.filter(msg => msg.message_id !== message.data.messageId)
+                prev.filter((msg) => msg.message_id !== message.data.messageId)
               );
             }
             break;
@@ -176,7 +181,7 @@ export default function ChatScreen() {
   const sendMessage = async () => {
     if (!inputText.trim() || !ws || !chatId) return;
     try {
-      const accessToken = await tokenManager.getAccessToken()
+      const accessToken = await tokenManager.getAccessToken();
 
       const messageData = {
         type: "chat_message",
@@ -199,86 +204,113 @@ export default function ChatScreen() {
       setMessages((prev) => [...prev, newMessage]);
       setInputText("");
     } catch (err) {
-      console.log("[chatScreen.js] Error fetching token while sending message", err)
+      console.log("[chatScreen.js] Error sending message:", err);
+      Alert.alert("Error", "Failed to send message", [{ text: "OK" }]);
     }
   };
 
   if (isLoading) {
     return (
-      <View style={[styles.container, styles.centerContent]}>
+      <SafeAreaView style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#007AFF" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerText}>{otherUserName || "Chat"}</Text>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.container}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={handleBack}
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-back" size={24} color="#007AFF" />
+            <Text style={styles.backButtonText}>Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerText}>{otherUserName || "Chat"}</Text>
+          <View style={styles.connectionIndicator}>
+            <View
+              style={[
+                styles.connectionDot,
+                { backgroundColor: isConnected ? "#34C759" : "#FF3B30" },
+              ]}
+            />
+          </View>
+        </View>
 
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        renderItem={({ item }) => {
-          const isOwnMessage = item.sender_id ? item.sender_id.toString() === currentUserId._j : true;
-          return (
-            <TouchableOpacity
-              onLongPress={() => handleLongPress(item)}
-              delayLongPress={500}
-            >
-              <MessageBubble
-                message={item}
-                isOwnMessage={isOwnMessage}
-              />
-            </TouchableOpacity>
-          );
-        }}
-        keyExtractor={(item) => item.message_id || Date.now().toString()}
-        contentContainerStyle={styles.messageList}
-        onContentSizeChange={() => {
-          if (flatListRef.current) {
-            flatListRef.current.scrollToEnd({ animated: true });
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          renderItem={({ item }) => {
+            const isOwnMessage = item.sender_id
+              ? item.sender_id.toString() === currentUserId._j
+              : true;
+            return (
+              <TouchableOpacity
+                onLongPress={() => handleLongPress(item)}
+                delayLongPress={500}
+                activeOpacity={0.9}
+              >
+                <MessageBubble message={item} isOwnMessage={isOwnMessage} />
+              </TouchableOpacity>
+            );
+          }}
+          keyExtractor={(item) => item.message_id || Date.now().toString()}
+          contentContainerStyle={styles.messageList}
+          onContentSizeChange={() =>
+            flatListRef.current?.scrollToEnd({ animated: true })
           }
-        }}
-        onLayout={() => {
-          if (flatListRef.current) {
-            flatListRef.current.scrollToEnd({ animated: true });
-          }
-        }}
-      />
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          value={inputText}
-          onChangeText={setInputText}
-          placeholder="Type a message..."
-          style={styles.input}
-          multiline
-          maxHeight={100}
+          onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={15}
+          maxToRenderPerBatch={10}
+          windowSize={10}
         />
-        <TouchableOpacity
-          onPress={sendMessage}
-          style={[
-            styles.sendButton,
-            !inputText.trim() && styles.sendButtonDisabled,
-          ]}
-          disabled={!inputText.trim()}
-        >
-          <Text style={styles.sendButtonText}>Send</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder="Message"
+            placeholderTextColor="#8E8E93"
+            style={styles.input}
+            multiline
+            maxHeight={100}
+            returnKeyType="default"
+            enablesReturnKeyAutomatically
+          />
+          <TouchableOpacity
+            onPress={sendMessage}
+            style={[
+              styles.sendButton,
+              !inputText.trim() && styles.sendButtonDisabled,
+            ]}
+            disabled={!inputText.trim()}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="send"
+              size={20}
+              color="#FFFFFF"
+              style={styles.sendIcon}
+            />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#F2F2F7",
   },
   centerContent: {
     justifyContent: "center",
@@ -287,67 +319,90 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    backgroundColor: "#fff",
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#C6C6C8",
   },
   headerText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "600",
-    marginLeft: 20,
+    color: "#000000",
     flex: 1,
+    textAlign: "center",
+    marginRight: 40, // Offset for back button
   },
   backButton: {
-    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    position: "absolute",
+    left: 16,
+    zIndex: 1,
   },
   backButtonText: {
+    fontSize: 17,
     color: "#007AFF",
-    fontSize: 16,
+    marginLeft: 4,
+  },
+  connectionIndicator: {
+    position: "absolute",
+    right: 16,
+    zIndex: 1,
+  },
+  connectionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   messageList: {
     paddingVertical: 16,
-    justifyContent: "flex-start",
-    flexGrow: 1,
+    paddingHorizontal: 12,
   },
   inputContainer: {
     flexDirection: "row",
-    padding: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
-    backgroundColor: "#fff",
+    padding: 12,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#C6C6C8",
     alignItems: "flex-end",
   },
   input: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    marginRight: 10,
-    backgroundColor: "#fff",
+    minHeight: 36,
     maxHeight: 100,
-    minHeight: 40,
+    borderRadius: 18,
+    backgroundColor: "#F2F2F7",
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 8,
+    marginRight: 8,
+    fontSize: 16,
+    color: "#000000",
   },
   sendButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#007AFF",
     justifyContent: "center",
     alignItems: "center",
-    padding: 10,
-    backgroundColor: "#007AFF",
-    borderRadius: 20,
-    height: 40,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   sendButtonDisabled: {
-    opacity: 0.5,
+    backgroundColor: "#C7C7CC",
   },
-  sendButtonText: {
-    color: "#fff",
-    fontWeight: "600",
+  sendIcon: {
+    marginLeft: 2, // Adjust for visual center
   },
 });
