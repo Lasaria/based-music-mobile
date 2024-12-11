@@ -16,7 +16,8 @@ import { axiosGet } from "../../../utils/axiosCalls";
 import { tokenManager } from "../../../utils/tokenManager";
 import { AudioContext } from "../../../contexts/AudioContext";
 import Toast from "react-native-toast-message";
-import SongList from "../../../components/SongComponent";
+import SongItem from "../../../components/SongItem";
+import SongList from "../../../components/SongList";
 import LibraryItem from "../../../components/RenderLibraryItem";
 import { SERVER_URL, AUTHSERVER_URL } from "@env";
 import PopularRecommendations from "../../../components/PopularRecommendations";
@@ -38,6 +39,7 @@ function MusicScreen() {
   const [isArtists, setIsArtists] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { updateCurrentTrack, isPlaying, trackInfo } = useContext(AudioContext);
+
   // Get user ID on component mount
   useEffect(() => {
     const getUserId = async () => {
@@ -72,7 +74,6 @@ function MusicScreen() {
         queryParams.append("lastEvaluatedKey", lastEvaluatedKey);
       }
 
-      // Add this block for search
       if (searchQuery) {
         queryParams.append("search", searchQuery);
       }
@@ -81,8 +82,7 @@ function MusicScreen() {
         url: `${SERVER_URL}/library/${userId}?${queryParams.toString()}`,
         isAuthenticated: true,
       });
-      console.log("Library response:", JSON.stringify(response.items, null, 2));
-      // Modified to merge data for pagination
+
       setLibraryData(() =>
         resetData ? response.items : [...libraryData, ...response.items]
       );
@@ -119,11 +119,6 @@ function MusicScreen() {
         url: `${SERVER_URL}/albums?limit=50`,
       });
 
-      console.log("albums data: ", response.albums);
-
-      // console.log("Albums response:", JSON.stringify(response.items, null, 2));
-
-      // Merge data for pagination or reset
       setAlbumsData(() =>
         resetData ? response.albums : [...albumsData, ...response.albums]
       );
@@ -139,22 +134,9 @@ function MusicScreen() {
   };
 
   const handlePlay = async (item) => {
-    console.log("Playing item:", item);
-    // if (!isPlayerReady) {
-    //   Toast.show({
-    //     type: "error",
-    //     text1: "Player not ready",
-    //     text2: "Please wait a moment and try again",
-    //   });
-    //   return;
-    // }
-
     if (item.content_type === "song") {
-      console.log("MUSICLibrary [Handleplay()] item", item);
       updateCurrentTrack(item);
     } else if (item.content_type === "playlist") {
-      // route to playlist screen
-      console.log("route to playlist screen");
       router.push({
         pathname: "/playlistScreen",
         params: {
@@ -167,16 +149,16 @@ function MusicScreen() {
         text1: "Invalid item",
         text2: "Please select a song or playlist to play",
       });
-      return;
     }
   };
-  // Initial fetch when userId is available
+
   useEffect(() => {
     if (userId) {
       fetchLibraryData(true);
       fetchAllAlbums(true);
     }
   }, [userId, contentType]);
+
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (userId) {
@@ -188,14 +170,52 @@ function MusicScreen() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  const renderLibraryItem = ({ item }) => (
-    <LibraryItem
-      item={item}
-      isPlaying={isPlaying}
-      trackInfo={trackInfo}
-      onPlay={handlePlay}
-      SERVER_URL={SERVER_URL}
-    />
+  const renderLibraryItem = ({ item }) => {
+    if (item.content_type === "song") {
+      return (
+        <SongItem
+          item={item}
+          variant="detailed"
+          showArtist={true}
+          showDuration={true}
+          showPlayCount={true}
+        />
+      );
+    }
+
+    return (
+      <LibraryItem
+        item={item}
+        isPlaying={isPlaying}
+        trackInfo={trackInfo}
+        onPlay={handlePlay}
+        SERVER_URL={SERVER_URL}
+      />
+    );
+  };
+
+  const renderAlbumItem = ({ item }) => (
+    <TouchableOpacity
+      onPress={() => {
+        router.push({
+          pathname: "albumComponent",
+          params: { album_id: item.album_id },
+        });
+      }}
+    >
+      <SongItem
+        item={{
+          ...item,
+          title: item.title || "Untitled Album",
+          artist_name: item.genre || "Unknown Artist",
+          image_url: item.cover_image_url,
+        }}
+        variant="search"
+        showDuration={false}
+        disablePlay={true}
+        style={styles.albumItem}
+      />
+    </TouchableOpacity>
   );
 
   const displayPlaylist = () => {
@@ -204,7 +224,7 @@ function MusicScreen() {
     setIsAlbums(false);
     setIsArtists(false);
     setContentType("playlist");
-    setLastEvaluatedKey(null); // Reset pagination
+    setLastEvaluatedKey(null);
     setHasMore(true);
   };
 
@@ -226,8 +246,6 @@ function MusicScreen() {
     setContentType("album");
     setLastEvaluatedKey(null);
     setHasMore(true);
-
-    console.log("album screen");
   };
 
   const displayArtists = () => {
@@ -244,11 +262,9 @@ function MusicScreen() {
     <ScrollView style={styles.forYouContainer}>
       <PopularRecommendations
         onTrackPress={(track) => {
-          // Handle track selection - we can add more functionality here (e.g. play track)
           updateCurrentTrack(track);
         }}
       />
-      {/* we can add more recommendation sections here in the future */}
     </ScrollView>
   );
 
@@ -346,6 +362,7 @@ function MusicScreen() {
           songs={libraryData}
           loading={loading}
           onEndReached={() => hasMore && fetchLibraryData()}
+          onPlay={handlePlay} // Pass the handlePlay function
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>
