@@ -1,0 +1,15 @@
+diff --git a/node_modules/react-native-bottom-sheet/android/build.gradle b/node_modules/react-native-bottom-sheet/android/build.gradle
+index 73ccb40..3bf3853 100644
+--- a/node_modules/react-native-bottom-sheet/android/build.gradle
++++ b/node_modules/react-native-bottom-sheet/android/build.gradle
+@@ -35,7 +35,7 @@ android {
+ }
+ 
+ dependencies {
+-    compile 'com.android.support:appcompat-v7:23.0.1'
+-    compile 'com.facebook.react:react-native:0.17.+'
+-    compile 'com.cocosw:bottomsheet:1.+@aar'
++    implementation 'com.android.support:appcompat-v7:23.0.1'
++    implementation 'com.facebook.react:react-native:0.17.+'
++    implementation 'com.cocosw:bottomsheet:1.+@aar'
+ }
