@@ -266,7 +266,7 @@ const MapScreen = () => {
 
   const handlePolygonPress = (item) => {
     //console.log("ITEM: ", item);
-    const polygons = JSON.parse(item.polygons);
+    const polygons = item.polygons;
 
     // Check which venues fall inside the polygon
     const venuesInsidePolygon = venueData.filter((venue) => {
@@ -296,22 +296,27 @@ const MapScreen = () => {
     //     //console.log(item.level);
     //     return <></>;
     //   }
-      const polygons = JSON.parse(item.polygons);
-      const outline = JSON.parse(item.outline);
-      console.log(item.boundary_id);
+      const polygons = item.polygons;
+      const outline = item.outline;
+      console.log(item.area_id);
+
+       // Special handling for "dc" area_id
+       const isDc = item.area_id === "dc";
+       const minZoomLevel = isDc ? 8 : item.level === "zone" ? 0 : item.level === "subzone" ? 8 : 10;
+       const maxZoomLevel = isDc ? 100 : item.level === "zone" ? 8 : item.level === "subzone" ? 10 : 100;
 
       return (
         <React.Fragment key={index}>
           {/* FillLayer for polygons */}
           <MapboxGL.ShapeSource
-            id={`polygon-source-${item.boundary_id}`}
+            id={`polygon-source-${item.area_id}`}
             shape={polygons}
             onPress={() => handlePolygonPress(item)} // Capture the polygon press
           >
             <MapboxGL.FillLayer
-              id={`polygon-fill-${item.boundary_id}`}
-              minZoomLevel={item.level == 1 ? 0 : item.level == 2 ? 9 : 22}
-              maxZoomLevel={item.level == 1 ? 9 : item.level == 2 ? 30 : 40}
+              id={`polygon-fill-${item.area_id}`}
+              minZoomLevel={minZoomLevel}
+              maxZoomLevel={maxZoomLevel}
                 style={{
                     fillColor: "hsla(260, 100%, 40%, 0.26)",
                     fillOpacity: 0.5,
@@ -321,13 +326,13 @@ const MapScreen = () => {
 
           {/* LineLayer for outline */}
           <MapboxGL.ShapeSource
-            id={`outline-source-${item.boundary_id}`}
+            id={`outline-source-${item.area_id}`}
             shape={outline}
           >
             <MapboxGL.LineLayer
-              id={`outline-line-${item.boundary_id}`}
-              minZoomLevel={item.level == 1 ? 0 : item.level == 2 ? 9 : 22}
-              maxZoomLevel={item.level == 1 ? 9 : item.level == 2 ? 30 : 40}
+              id={`outline-line-${item.area_id}`}
+              minZoomLevel={minZoomLevel}
+              maxZoomLevel={maxZoomLevel}
                 style={{
                     lineColor: "#ffe8a3", // Color of the boundary line
                     lineWidth: 3, // Thickness of the boundary line
