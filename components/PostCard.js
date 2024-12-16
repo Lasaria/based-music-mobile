@@ -207,9 +207,9 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
       <Text style={styles.contentText}>{post.content}</Text>
 
       {/* Images */}
-      {post.image_urls?.length > 0 && (
+      {post.media_urls?.length > 0 && (
         <ScrollView horizontal style={styles.imageScrollView}>
-          {post.image_urls.map((url, index) => (
+          {post.media_urls.map((url, index) => (
             <Image
               key={index}
               source={{ uri: url }}

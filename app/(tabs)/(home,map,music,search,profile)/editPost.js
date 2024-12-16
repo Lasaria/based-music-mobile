@@ -92,7 +92,7 @@ try {
 
       // Add removed images
       if (removedImages.length > 0) {
-        formData.append('removed_images', JSON.stringify(removedImages));
+        formData.append('removed_media', JSON.stringify(removedImages));
       }
 
       // Add new images

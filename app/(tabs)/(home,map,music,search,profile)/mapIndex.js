@@ -84,6 +84,7 @@ const MapScreen = () => {
   // Hardcoded venue data
   const venueData = [
     { name: "Ultra Bar DC", latitude: 38.8963, longitude: -77.0241 },
+    { name: "TEST", latitude: 38.90604, longitude: -76.926205 },
     { name: "Decades DC", latitude: 38.9066, longitude: -77.0426 },
     {
       name: "Bravo Bravo",
