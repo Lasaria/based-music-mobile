@@ -91,7 +91,7 @@ export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl,
   const [showEditPhotosScreen, setShowEditPhotosScreen] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [followersModalVisible, setFollowersModalVisible] = useState(false);
-  //const [userId, setUserId] = useState(userData.id);
+  const [id, setId] = useState(userId || tokenManager.getUserId());
   const [isOptionsModalVisible, setOptionsModalVisible] = useState(false);
   
   // Dynamic State variables for user interaction
@@ -123,11 +123,21 @@ export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl,
   // FETCH ARTIST PROFILE FROM THE SERVER
   const fetchUserProfile = async () => {
     //try {
-      // const userId = params.userId || await tokenManager.getUserId();
-      console.log("FOLLOWING USER ID: ", userId);
+      if (isSelfProfile) {
+        setIsFollowing(true);
+        return;
+      }
+      const myId = await tokenManager.getUserId();
+      if (userId === myId) {
+        setIsFollowing(true);
+        return null;
+      }
+      if (userId) {
+        console.log("FOLLOWING USER ID: ", userId);
       const following = await UserService.checkIsFollowing(userId); // Update function to fetch user profile
       // /isFollowing/:followee_id
       setIsFollowing(following);
+      }
   };
 
   // Follow Actions for user
@@ -362,7 +372,7 @@ export const ArtistProfileScreen = ({ userData, onUpdateProfile, refreshControl,
   useEffect(() => {
     fetchUserProfile();
     navigation.setOptions({ headerShown: !loading });
-  }, [avatarUri, loading, userId, userData]);
+  }, [avatarUri, loading, userId, userData, isSelfProfile]);
 
   // TOP HEADER PART
   useLayoutEffect(() => {

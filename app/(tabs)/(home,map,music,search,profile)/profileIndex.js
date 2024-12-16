@@ -7,6 +7,9 @@ import { tokenManager } from '../../../utils/tokenManager';
 import ArtistProfileScreen from './artistProfile';
 import ListenerProfileScreen from './listenerProfile';
 
+const DEFAULT_PROFILE_IMAGE = 'https://i.sstatic.net/dr5qp.jpg';
+const DEFAULT_COVER_IMAGE = 'https://plus.unsplash.com/premium_photo-1700604012249-e2f3c5645695?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OXx8bWF0dGUlMjBibGFja3xlbnwwfHwwfHx8MA%3D%3D';
+
 const ProfileScreen = () => {
   const [loading, setLoading] = useState(true);
   //const [userType, setUserType] = useState(null);

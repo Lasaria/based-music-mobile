@@ -387,11 +387,12 @@ export const UserService = {
 
     // Check if a user is following a another user
     checkIsFollowing: async (followee_id) => {
+        console.log("Followee: ", followee_id);
         try {
             const response = await axiosGet({
                 url: `${serverURL}/follow/isFollowing/${followee_id}`
             })
-            console.log("Check if following: ", response);
+            console.log("Check if following: ", response, `${serverURL}/follow/isFollowing/${followee_id}`);
             return response.isFollowing;
         } catch (err) {
             console.error(`Error checking if user is following user ${followee_id}:`, err.message);
