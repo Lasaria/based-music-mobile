@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Image, TouchableOpacity, StyleSheet, Alert, Dimensions, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { Video } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
+import * as VideoThumbnails from 'expo-video-thumbnails';
 import { Colors } from '../../../constants/Color';
 import Animated, {
   useAnimatedScrollHandler,
@@ -22,24 +25,24 @@ const API_URL = SERVER_URL;
 const CreatePostScreen = () => {
   const navigation = useNavigation();
   const [content, setContent] = useState('');
-  const [images, setImages] = useState([]);
+  const [media, setMedia] = useState([]); // Changed from images to media to handle both
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showAddIcon, setShowAddIcon] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  const inputHeight = useSharedValue(70); // Initial height of the TextInput container
+  const inputHeight = useSharedValue(70);
 
   const suggestedTags = ['Creative', 'DJ', 'LiveMusic', 'Vibes', 'Beat', 'Studio', 'Concert', 'Instrument'];
 
-  //  Request permissions for iOS
+  // Request permissions for iOS
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
+      const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (mediaStatus !== 'granted') {
         Alert.alert(
           'Permission required',
-          'Sorry, we need camera roll permissions to upload images!'
+          'Sorry, we need media library permissions to upload photos and videos!'
         );
         return false;
       }
@@ -47,32 +50,28 @@ const CreatePostScreen = () => {
     }
   };
 
-  // Pick images from gallery
-  const pickImage = async () => {
-    if (!(await requestPermissions())) return;
-
+  // Validate file size
+  const validateFileSize = async (uri) => {
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultipleSelection: true,
-        quality: 0.8,
-        aspect: [4, 3],
-      });
-
-      if (!result.canceled) {
-        // Limit to 4 images
-        const newImages = result.assets.slice(0, 4 - images.length);
-        setImages([...images, ...newImages]);
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      const maxSize = 100 * 1024 * 1024; // 100MB limit
+      if (fileInfo.size > maxSize) {
+        Alert.alert('Error', 'File size must be less than 100MB');
+        return false;
       }
+      return true;
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick image');
-      console.error('Error picking image:', error);
+      console.error('Error checking file size:', error);
+      return false;
     }
   };
 
-  // Remove image
-  const removeImage = (index) => {
-    setImages(images.filter((_, i) => i !== index));
+  // Add tag
+  const addTag = () => {
+    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
+      setTags([...tags, tagInput.trim()]);
+      setTagInput('');
+    }
   };
 
   // Toggle tags
@@ -84,12 +83,102 @@ const CreatePostScreen = () => {
     }
   };
 
-  // Add tag
-  const addTag = () => {
-    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setTags([...tags, tagInput.trim()]);
-      setTagInput('');
+  // Pick media from gallery
+  const pickMedia = async () => {
+    if (!(await requestPermissions())) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        allowsMultipleSelection: true,
+        quality: 0.8,
+        aspect: [4, 3],
+        videoMaxDuration: 60, // 60 second limit
+      });
+
+      if (!result.canceled) {
+        // Process and validate selected media
+        const processedMedia = await Promise.all(
+          result.assets.map(async (asset) => {
+            if (!(await validateFileSize(asset.uri))) return null;
+
+            return {
+              ...asset,
+              type: asset.type || (asset.uri.endsWith('.mp4') ? 'video' : 'image'),
+              thumbnail: asset.type === 'video' ? await generateThumbnail(asset.uri) : null
+            };
+          })
+        );
+
+        // Filter out invalid media and limit to 4 items
+        const validMedia = processedMedia
+          .filter(item => item !== null)
+          .slice(0, 4 - media.length);
+
+        setMedia([...media, ...validMedia]);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to pick media');
+      console.error('Error picking media:', error);
     }
+  };
+
+  // Generate video thumbnail
+  const generateThumbnail = async (videoUri) => {
+    try {
+      const thumbnail = await VideoThumbnails.getThumbnailAsync(videoUri, {
+        time: 0,
+        quality: 0.5,
+      });
+      return thumbnail.uri;
+    } catch (error) {
+      console.error('Error generating thumbnail:', error);
+      return null;
+    }
+  };
+
+  // Remove media
+  const removeMedia = (index) => {
+    setMedia(media.filter((_, i) => i !== index));
+  };
+
+  // Render media item
+  const renderMediaItem = (item, index) => {
+    if (item.type === 'video') {
+      return (
+        <View style={styles.mediaContainer} key={index}>
+          <Video
+            source={{ uri: item.uri }}
+            style={styles.media}
+            useNativeControls
+            resizeMode="cover"
+            isLooping
+            shouldPlay={false}
+          />
+          <View style={styles.videoBadge}>
+            <Feather name="video" size={16} color="white" />
+          </View>
+          <TouchableOpacity
+            style={styles.removeButton}
+            onPress={() => removeMedia(index)}
+          >
+            <Ionicons name="close" size={20} color="white" />
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.mediaContainer} key={index}>
+        <Image source={{ uri: item.uri }} style={styles.media} />
+        <TouchableOpacity
+          style={styles.removeButton}
+          onPress={() => removeMedia(index)}
+        >
+          <Ionicons name="close" size={20} color="white" />
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   // Create post
@@ -102,40 +191,30 @@ const CreatePostScreen = () => {
     setIsLoading(true);
 
     try {
-      // Create FormData object
       const formData = new FormData();
       formData.append('content', content);
       formData.append('tags', JSON.stringify(tags));
 
-      // Append images with the correct field name 'files'
-      images.forEach((image, index) => {
-        const imageUri = image.uri;
-        const filename = imageUri.split('/').pop();
+      // Append media files
+      media.forEach((item, index) => {
+        const uri = item.uri;
+        const filename = uri.split('/').pop();
         const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : 'image/jpeg'; // Default to jpeg if no extension
+        const type = item.type === 'video' 
+          ? 'video/mp4'
+          : match ? `image/${match[1]}` : 'image/jpeg';
 
         formData.append('files', {
-          uri: imageUri,
+          uri: uri,
           name: filename,
           type,
         });
       });
 
-      // Get the authentication token
-      const token = await tokenManager.getAccessToken();
-
-      // Make API request
       const response = await fetchPost({
         url: `${API_URL}/posts`,
         body: formData,
       });
-
-    //   if (!response.ok) {
-    //     const errorData = await response.json();
-    //     throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    //   }
-
-    //   const data = await response.json();
 
       Alert.alert('Success', 'Post created successfully!', [
         {
@@ -154,30 +233,8 @@ const CreatePostScreen = () => {
     }
   };
 
-  // Helper function to get auth token - implement based on your storage method
-  const getAuthToken = async () => {
-    try {
-      // Example using AsyncStorage:
-      // return await AsyncStorage.getItem('userToken');
-
-      // Or if you're using a secure store:
-      // return await SecureStore.getItemAsync('userToken');
-
-      // Replace this with your actual token retrieval logic
-      return 'your-auth-token';
-    } catch (error) {
-      console.error('Error getting auth token:', error);
-      throw error;
-    }
-  };
-
-  // Validate file type
-  const validateFileType = (uri) => {
-    const allowedTypes = ['jpg', 'jpeg', 'png', 'heic'];
-    const extension = uri.split('.').pop().toLowerCase();
-    return allowedTypes.includes(extension);
-  };
-
+  // [Previous animation and other helper functions remain the same]
+  // ... [Keep all the animation setup code from the original file]
   const handleFocus = () => {
     setIsFocused(true);
     inputHeight.value = withSpring(175);  // Target height when focused
@@ -204,7 +261,7 @@ const CreatePostScreen = () => {
     setShowAddIcon(text.trim().length >= 3); // Add icon if user types at least 3 letters
   };
 
-  const isPostEnabled = content.trim() && images.length > 0;
+  const isPostEnabled = content.trim() && media.length > 0;
 
   // Animation Scroll Handling
   const scrollY = useSharedValue(0);
@@ -259,7 +316,7 @@ const CreatePostScreen = () => {
       zIndex: containerThreeOffset.value === 0 ? 3 : 1,
     };
   });
-
+  
   const headerStyle = useAnimatedStyle(() => {
     return {
       position: 'absolute',
@@ -273,9 +330,7 @@ const CreatePostScreen = () => {
   return (
     <View style={styles.container}>
       <Animated.View style={headerStyle}>
-        <View
-          style={styles.header}
-        >
+        <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={24} color="white" />
           </TouchableOpacity>
@@ -307,8 +362,8 @@ const CreatePostScreen = () => {
               multiline
               value={content}
               onChangeText={setContent}
-              onFocus={handleFocus}  // Trigger the focus function
-              onBlur={handleBlur}    // Trigger the blur function
+              onFocus={handleFocus}
+              onBlur={handleBlur}
             />
             <Text style={styles.wordCount}>
               {content.length} / 1000
@@ -319,34 +374,29 @@ const CreatePostScreen = () => {
         <Animated.View style={[styles.containerBox, containerTwoStyle]}>
           <View style={styles.sectionHeader}>
             <Feather name="image" size={24} color='#8c8e96' />
-            <Text style={styles.sectionTitle}>Upload Photos</Text>
-            <Text style={styles.imageLimit}>{images.length}/4</Text>
+            <Text style={styles.sectionTitle}>Upload Media</Text>
+            <Text style={styles.imageLimit}>{media.length}/4</Text>
           </View>
-          <View style={styles.imageGrid}>
-            {images.map((image, index) => (
-              <View key={index} style={styles.imageContainer}>
-                <Image source={{ uri: image.uri }} style={styles.image} />
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => removeImage(index)}
-                >
-                  <Ionicons name="close" size={20} color="white" />
-                </TouchableOpacity>
-              </View>
-            ))}
-            {images.length < 4 && (
-              <TouchableOpacity style={[styles.imageContainer, styles.addImageButton]} onPress={pickImage}>
+          <View style={styles.mediaGrid}>
+            {media.map((item, index) => renderMediaItem(item, index))}
+            {media.length < 4 && (
+              <TouchableOpacity 
+                style={[styles.mediaContainer, styles.addMediaButton]} 
+                onPress={pickMedia}
+              >
                 <Ionicons name="add-circle-outline" size={28} color="#8c8e96" />
+                <Text style={styles.addMediaText}>Add Photo or Video</Text>
               </TouchableOpacity>
             )}
-            <Text style={styles.note}>
-              Add up to 4 images to make your post more engaging
-            </Text>
-
           </View>
+          <Text style={styles.note}>
+            Add up to 4 photos or videos (max 60 seconds each)
+          </Text>
         </Animated.View>
 
+        {/* Tags section remains the same */}
         <Animated.View style={[styles.containerBox, containerThreeStyle]}>
+          {/* ... [Keep the existing tags section code] */}
           <View style={styles.sectionHeader}>
             <Feather name="tag" size={20} color='#8c8e96' />
             <Text style={styles.sectionTitle}>Add Tags</Text>
@@ -412,6 +462,7 @@ const CreatePostScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  // ... [Keep all existing styles]
   container: {
     flex: 1,
     backgroundColor: '#121212',
@@ -600,14 +651,54 @@ const styles = StyleSheet.create({
   selectedSuggestedText: {
     color: 'white',
   },
+  // Add new styles for media handling
+  mediaGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  mediaContainer: {
+    width: '48%',
+    height: 150,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  media: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  videoBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 16,
+    padding: 6,
+  },
+  removeButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 16,
+    padding: 4,
+  },
+  addMediaButton: {
+    borderWidth: 2,
+    borderColor: '#8c8e96',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(140, 142, 150, 0.1)',
+  },
+  addMediaText: {
+    color: '#8c8e96',
+    fontSize: 12,
+    marginTop: 4,
+  },
 });
 
 export default CreatePostScreen;
-
-
-
-
-
-
-
-

@@ -11,6 +11,9 @@
       "extends": "development",
       "ios": {
         "simulator": true
+      },
+      "android": {
+        "gradleCommand": ":app:assembleDebug"
       }
     },
     "preview": {

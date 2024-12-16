@@ -12,7 +12,8 @@ import {
   Dimensions,
   Text,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Video } from 'expo-av';
+import { Ionicons, Feather } from '@expo/vector-icons';
 import { tokenManager } from "../utils/tokenManager";
 import { router } from 'expo-router';
 
@@ -30,11 +31,11 @@ import { fetchGet, fetchDelete, fetchPost } from "../utils/fetchCalls";
 import { SERVER_URL, AUTHSERVER_URL } from '@env';
 
 const API_URL = SERVER_URL;
+const { width } = Dimensions.get('window');
 
-// PostCard.js - Component for individual posts
 export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => {
+  // Existing state variables
   const [showComments, setShowComments] = useState(false);
-
   const [comments, setComments] = useState([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [isLiked, setIsLiked] = useState(post.liked || false);
@@ -43,7 +44,47 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
   const [likesModalVisible, setLikesModalVisible] = useState(false);
   const [selectedLikes, setSelectedLikes] = useState([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // New state for video
+  const [videoStatus, setVideoStatus] = useState({});
 
+  // Helper function to determine if a media item is a video
+  const isVideo = (url) => {
+    return url.toLowerCase().match(/\.(mp4|mov|webm|avi)$/);
+  };
+
+  // Render media item (image or video)
+  const renderMediaItem = (url, index) => {
+    if (isVideo(url)) {
+      return (
+        <View key={index} style={styles.mediaContainer}>
+          <Video
+            source={{ uri: url }}
+            style={styles.postVideo}
+            useNativeControls
+            resizeMode="cover"
+            isLooping
+            onPlaybackStatusUpdate={status => 
+              setVideoStatus(prev => ({...prev, [url]: status}))
+            }
+          />
+          <View style={styles.videoBadge}>
+            <Feather name="video" size={16} color="white" />
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <Image
+        key={index}
+        source={{ uri: url }}
+        style={styles.postImage}
+      />
+    );
+  };
+
+  // [Previous functions remain the same]
   useEffect(() => {
     checkLikeStatus();
   }, []);
@@ -206,16 +247,15 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
       {/* Content */}
       <Text style={styles.contentText}>{post.content}</Text>
 
-      {/* Images */}
+      {/* Media (Images and Videos) */}
       {post.media_urls?.length > 0 && (
-        <ScrollView horizontal style={styles.imageScrollView}>
-          {post.media_urls.map((url, index) => (
-            <Image
-              key={index}
-              source={{ uri: url }}
-              style={styles.postImage}
-            />
-          ))}
+        <ScrollView 
+          horizontal 
+          style={styles.mediaScrollView}
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+        >
+          {post.media_urls.map((url, index) => renderMediaItem(url, index))}
         </ScrollView>
       )}
 
@@ -279,11 +319,9 @@ export const PostCard = ({ post, currentUserId, onPostDeleted, onEditPost }) => 
   );
 };
 
-
-const { width } = Dimensions.get('window');
-
 const styles = StyleSheet.create({
-  // Additional styles for author info with profile image
+  // [Previous styles remain the same...]
+    // Additional styles for author info with profile image
   authorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -697,4 +735,37 @@ const styles = StyleSheet.create({
   loadingIndicator: {
     padding: 20,
   },
+  // Updated and new styles for media handling
+  mediaScrollView: {
+    height: width * 0.7,
+    marginVertical: 12,
+  },
+  mediaContainer: {
+    width: width - 64,
+    height: width * 0.7,
+    marginRight: 8,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  postImage: {
+    width: width - 64,
+    height: width * 0.7,
+    borderRadius: 8,
+    marginRight: 8,
+    resizeMode: 'cover',
+  },
+  postVideo: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+  },
+  videoBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 16,
+    padding: 6,
+  },
+  // [Rest of the existing styles...]
 });
